@@ -6,6 +6,7 @@ import {
   BillingInterval,
   CheckoutSessionParams,
   CheckoutSessionResult,
+  PaymentProvider,
   PLANS_CONFIG,
   PlanKey,
   WebhookEvent,
@@ -70,9 +71,10 @@ export class BillingService {
   async handleWebhook(
     payload: string,
     signature: string,
-    secret?: string
+    secret?: string,
+    customProvider?: PaymentProvider
   ): Promise<{ success: boolean; eventId?: string; duplicate?: boolean; error?: string }> {
-    const provider = getPaymentProvider();
+    const provider = customProvider || getPaymentProvider();
 
     // 1. Verify Webhook Cryptographic Signature
     const verification = await provider.verifyWebhookSignature(payload, signature, secret);

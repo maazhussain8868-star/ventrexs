@@ -56,65 +56,33 @@ export class PaymentService {
 
     if (payError) throw payError;
 
-    // 4. Update Invoice Balance (Halal Integrity: remaining = original - paid)
-    const newPaid = Number(invoice.amount_paid) + paymentAmount;
-    const newRemaining = Math.max(0, Number(invoice.original_amount) - newPaid);
-    const isPaid = newRemaining === 0;
-    const newStatus = isPaid ? 'paid' : 'partially_paid';
-
-    const { data: updatedInvoice, error: updateError } = await this.client
+    // 4. Fetch the authoritative trigger-updated invoice state
+    const { data: updatedInvoice, error: fetchUpdatedError } = await this.client
       .from('invoices')
-      .update({
-        amount_paid: newPaid,
-        remaining_balance: newRemaining,
-        status: newStatus,
-        paid_date: isPaid ? new Date().toISOString().split('T')[0] : invoice.paid_date,
-      })
+      .select('*')
       .eq('id', params.invoice_id)
-      .select()
       .single();
 
-    if (updateError) throw updateError;
+    if (fetchUpdatedError) {
+      console.warn('Notice fetching trigger-updated invoice state:', fetchUpdatedError.message);
+    }
 
-    // 5. Add Timeline Event
-    await this.client.from('invoice_events').insert({
-      invoice_id: params.invoice_id,
-      business_id: params.business_id,
-      event_type: 'payment_received',
-      title: `Payment Received ($${paymentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
-      description: `Settled via ${params.method}${params.reference ? ` • Ref: ${params.reference}` : ''}${params.notes ? ` • Note: ${params.notes}` : ''}`,
-      metadata: {
-        payment_id: payment.id,
-        amount: paymentAmount,
-        method: params.method,
-        remaining_balance: newRemaining,
-      },
-    });
+    // 5. Add In-App Notification
+    try {
+      await this.client.from('notifications').insert({
+        business_id: params.business_id,
+        type: 'payment',
+        title: `Payment Received: $${paymentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        message: `Payment applied to invoice ${invoice.invoice_number} via ${params.method}.`,
+        link_url: `/invoices/${invoice.id}`,
+        read: false,
+      });
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.warn('Payment notification insert notice:', errMsg);
+    }
 
-    // 6. Add Audit Log
-    await this.client.from('audit_logs').insert({
-      business_id: params.business_id,
-      action: 'RECORD_PAYMENT',
-      entity: 'payment',
-      entity_id: payment.id,
-      metadata: {
-        invoice_id: params.invoice_id,
-        amount: paymentAmount,
-        method: params.method,
-      },
-    });
-
-    // 7. Add In-App Notification
-    await this.client.from('notifications').insert({
-      business_id: params.business_id,
-      type: 'payment',
-      title: `Payment Received: $${paymentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-      message: `Payment applied to invoice ${invoice.invoice_number} via ${params.method}.`,
-      link_url: `/invoices/${invoice.id}`,
-      read: false,
-    });
-
-    return { payment, invoice: updatedInvoice };
+    return { payment, invoice: updatedInvoice || invoice };
   }
 
   async getPaymentsByInvoice(invoiceId: string) {

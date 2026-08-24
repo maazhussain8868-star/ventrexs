@@ -281,6 +281,55 @@ CREATE TRIGGER trg_customers_updated_at BEFORE UPDATE ON public.customers FOR EA
 CREATE TRIGGER trg_invoices_updated_at BEFORE UPDATE ON public.invoices FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+-- Trigger on business creation: automatically assigns creator as primary owner & initializes Starter subscription
+CREATE OR REPLACE FUNCTION public.handle_new_business_owner()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF auth.uid() IS NOT NULL THEN
+        INSERT INTO public.business_members (
+            business_id,
+            user_id,
+            role,
+            is_primary
+        ) VALUES (
+            NEW.id,
+            auth.uid(),
+            'owner',
+            true
+        )
+        ON CONFLICT (business_id, user_id) DO NOTHING;
+
+        INSERT INTO public.subscriptions (
+            business_id,
+            plan,
+            billing_cycle,
+            status,
+            price_amount,
+            currency,
+            period_start,
+            period_end
+        ) VALUES (
+            NEW.id,
+            'Starter',
+            'monthly',
+            'trialing',
+            19.00,
+            'USD',
+            timezone('utc'::text, now()),
+            timezone('utc'::text, now() + INTERVAL '14 days')
+        )
+        ON CONFLICT (business_id) DO NOTHING;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_create_business_owner
+    AFTER INSERT ON public.businesses
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_new_business_owner();
+
 -- Trigger on payment insert: Validates payment <= remaining balance, updates invoice balance & status, creates timeline event
 CREATE OR REPLACE FUNCTION public.handle_payment_applied()
 RETURNS TRIGGER AS $$
@@ -433,9 +482,9 @@ CREATE POLICY "Members can view business memberships"
     ON public.business_members FOR SELECT
     USING (public.is_business_member(business_id));
 
-CREATE POLICY "Admins or self-creators can insert memberships"
+CREATE POLICY "Admins can insert memberships"
     ON public.business_members FOR INSERT
-    WITH CHECK (user_id = auth.uid() OR public.is_business_admin(business_id));
+    WITH CHECK (public.is_business_admin(business_id));
 
 CREATE POLICY "Admins can update memberships"
     ON public.business_members FOR UPDATE
@@ -586,9 +635,21 @@ CREATE POLICY "Members can view subscriptions"
     ON public.subscriptions FOR SELECT
     USING (public.is_business_member(business_id));
 
-CREATE POLICY "Admins can update subscriptions"
+CREATE POLICY "Service role updates subscriptions"
     ON public.subscriptions FOR UPDATE
-    USING (public.is_business_admin(business_id));
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+CREATE POLICY "Service role inserts subscriptions"
+    ON public.subscriptions FOR INSERT
+    TO service_role
+    WITH CHECK (true);
+
+CREATE POLICY "Service role deletes subscriptions"
+    ON public.subscriptions FOR DELETE
+    TO service_role
+    USING (true);
 
 -- 13. AUDIT_LOGS
 CREATE POLICY "Members can view audit logs"

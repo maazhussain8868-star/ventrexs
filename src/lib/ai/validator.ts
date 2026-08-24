@@ -31,6 +31,103 @@ export interface ValidationResult {
   errors: string[];
 }
 
+export interface FinancialBoundsInput {
+  original_amount: number;
+  amount_paid: number;
+  remaining_balance: number;
+}
+
+/**
+ * Validates financial figures to guarantee ledger integrity, non-negativity, finite bounds, and consistency.
+ * Deterministic and fails closed on any violation.
+ */
+export function validateFinancialBounds(values: Partial<FinancialBoundsInput>): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Check original_amount
+  if (values.original_amount !== undefined) {
+    const val = Number(values.original_amount);
+    if (typeof values.original_amount === 'boolean' || isNaN(val) || !Number.isFinite(val)) {
+      errors.push('original_amount must be a valid finite number.');
+    } else if (val < 0) {
+      errors.push('original_amount cannot be negative.');
+    } else if (val > 100_000_000) {
+      errors.push('original_amount exceeds maximum permissible limit ($100,000,000.00).');
+    }
+  }
+
+  // Check amount_paid
+  if (values.amount_paid !== undefined) {
+    const val = Number(values.amount_paid);
+    if (typeof values.amount_paid === 'boolean' || isNaN(val) || !Number.isFinite(val)) {
+      errors.push('amount_paid must be a valid finite number.');
+    } else if (val < 0) {
+      errors.push('amount_paid cannot be negative.');
+    } else if (val > 100_000_000) {
+      errors.push('amount_paid exceeds maximum permissible limit ($100,000,000.00).');
+    }
+  }
+
+  // Check remaining_balance
+  if (values.remaining_balance !== undefined) {
+    const val = Number(values.remaining_balance);
+    if (typeof values.remaining_balance === 'boolean' || isNaN(val) || !Number.isFinite(val)) {
+      errors.push('remaining_balance must be a valid finite number.');
+    } else if (val < 0) {
+      errors.push('remaining_balance cannot be negative.');
+    } else if (val > 100_000_000) {
+      errors.push('remaining_balance exceeds maximum permissible limit ($100,000,000.00).');
+    }
+  }
+
+  // If type/nan/inf/sign errors exist, fail closed immediately
+  if (errors.length > 0) {
+    return { isValid: false, errors };
+  }
+
+  const original_amount = Number(values.original_amount);
+  const amount_paid = Number(values.amount_paid);
+  const remaining_balance = Number(values.remaining_balance);
+
+  // Check paid <= original
+  if (
+    values.amount_paid !== undefined &&
+    values.original_amount !== undefined &&
+    amount_paid > original_amount
+  ) {
+    errors.push(`amount_paid ($${amount_paid}) cannot exceed original_amount ($${original_amount}).`);
+  }
+
+  // Check remaining_balance <= original
+  if (
+    values.remaining_balance !== undefined &&
+    values.original_amount !== undefined &&
+    remaining_balance > original_amount
+  ) {
+    errors.push(`remaining_balance ($${remaining_balance}) cannot exceed original_amount ($${original_amount}).`);
+  }
+
+  // Check ledger invariant: remaining_balance === original_amount - amount_paid
+  if (
+    values.original_amount !== undefined &&
+    values.amount_paid !== undefined &&
+    values.remaining_balance !== undefined
+  ) {
+    const calculatedRemaining = Number((original_amount - amount_paid).toFixed(2));
+    const normalizedRemaining = Number(remaining_balance.toFixed(2));
+    if (Math.abs(normalizedRemaining - calculatedRemaining) > 0.001) {
+      errors.push(
+        `Ledger invariant violation: remaining_balance ($${normalizedRemaining}) must equal original_amount - amount_paid ($${calculatedRemaining}).`
+      );
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
 export function validateAICollectionOutput(
   raw: any,
   expectedBalance?: number
@@ -88,11 +185,36 @@ export function validateAICollectionOutput(
 
   // 6. Validate Confidence
   let confidence = Number(raw.confidence);
-  if (isNaN(confidence) || confidence < 0 || confidence > 1) {
+  if (isNaN(confidence) || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
     confidence = 0.90;
   }
 
-  // 7. HALAL-FIRST HARD RULE AUDIT
+  // 7. Validate numerical financial bounds if provided in raw AI output
+  if (
+    raw.original_amount !== undefined ||
+    raw.amount_paid !== undefined ||
+    raw.remaining_balance !== undefined ||
+    raw.amount !== undefined
+  ) {
+    const boundCheck = validateFinancialBounds({
+      original_amount: raw.original_amount,
+      amount_paid: raw.amount_paid,
+      remaining_balance: raw.remaining_balance ?? raw.amount,
+    });
+    if (!boundCheck.isValid) {
+      errors.push(...boundCheck.errors);
+    }
+  }
+
+  // 8. Validate expectedBalance if passed
+  if (expectedBalance !== undefined) {
+    const exp = Number(expectedBalance);
+    if (typeof expectedBalance === 'boolean' || isNaN(exp) || !Number.isFinite(exp) || exp < 0) {
+      errors.push('expectedBalance must be a valid non-negative finite number.');
+    }
+  }
+
+  // 9. HALAL-FIRST HARD RULE AUDIT
   const combinedText = `${reason} ${message_draft_subject || ''} ${message_draft}`;
   for (const pattern of FORBIDDEN_FINANCIAL_PATTERNS) {
     if (pattern.test(combinedText)) {

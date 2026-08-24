@@ -32,11 +32,11 @@ export class SMSConsentService {
       };
     }
 
-    // 2. Opt-in consent check
-    if (customer.sms_consent === false) {
+    // 2. Affirmative opt-in consent check (Strict default false)
+    if (!customer.sms_consent) {
       return {
         canSend: false,
-        reason: 'CONSENT REQUIRED: Customer does not have active SMS communication consent recorded.',
+        reason: 'CONSENT REQUIRED: Customer does not have active affirmative SMS communication consent recorded.',
       };
     }
 

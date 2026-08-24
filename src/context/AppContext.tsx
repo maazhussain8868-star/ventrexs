@@ -22,6 +22,14 @@ import {
 } from '@/data/mockData';
 import { createClient } from '@/lib/supabase/client';
 import { createSupabaseServices } from '@/lib/supabase/services';
+import {
+  createInvoiceAction,
+  updateInvoiceAction,
+  recordPaymentAction,
+  createCustomerAction,
+  updateCustomerAction,
+  deleteInvoiceAction,
+} from '@/app/actions';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface ToastMessage {
@@ -54,15 +62,15 @@ interface AppContextType {
   toasts: ToastMessage[];
   
   // Invoice actions
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'timeline' | 'remainingBalance' | 'paymentsReceived' | 'originalAmountDue' | 'daysOverdue'> & { id?: string; originalAmountDue?: number; paymentsReceived?: number; remainingBalance?: number; daysOverdue?: number }) => Invoice;
-  updateInvoice: (invoice: Invoice) => void;
-  deleteInvoice: (id: string) => void;
+  addInvoice: (invoice: Omit<Invoice, 'id' | 'timeline' | 'remainingBalance' | 'paymentsReceived' | 'originalAmountDue' | 'daysOverdue'> & { id?: string; originalAmountDue?: number; paymentsReceived?: number; remainingBalance?: number; daysOverdue?: number }) => Promise<Invoice | null> | Invoice;
+  updateInvoice: (invoice: Invoice) => Promise<void> | void;
+  deleteInvoice: (id: string) => Promise<void> | void;
   recordPayment: (invoiceId: string, amount: number, method: PaymentMethod, note?: string) => Promise<void>;
   sendInvoiceReminder: (invoiceId: string, customSubject?: string, customBody?: string) => void;
   
   // Customer actions
-  addCustomer: (customer: Omit<Customer, 'id'>) => Customer;
-  updateCustomer: (customer: Customer) => void;
+  addCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer | null> | Customer;
+  updateCustomer: (customer: Customer) => Promise<void> | void;
   
   // Copilot actions
   approveRecommendation: (id: string, customDraft?: { subject?: string; message?: string; channel?: 'email' | 'sms' | 'whatsapp' }) => Promise<void> | void;
@@ -99,7 +107,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [businessId, setBusinessId] = useState<string | null>('11111111-1111-1111-1111-111111111111');
+  const [businessId, setBusinessId] = useState<string | null>(() =>
+    process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? '11111111-1111-1111-1111-111111111111' : null
+  );
   const [isOnline, setIsOnline] = useState(true);
 
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
@@ -149,16 +159,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Initialize Supabase Auth Session listener
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        try {
+          const { data: members } = await supabase
+            .from('business_members')
+            .select('business_id')
+            .eq('user_id', session.user.id)
+            .limit(1);
+          if (members && members.length > 0) {
+            setBusinessId(members[0].business_id);
+          }
+        } catch {
+          // Fallback ignored
+        }
+      }
     }).catch(err => {
       console.warn('Supabase session load notice:', err);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        try {
+          const { data: members } = await supabase
+            .from('business_members')
+            .select('business_id')
+            .eq('user_id', session.user.id)
+            .limit(1);
+          if (members && members.length > 0) {
+            setBusinessId(members[0].business_id);
+          }
+        } catch {
+          // Fallback ignored
+        }
+      } else {
+        setBusinessId(process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? '11111111-1111-1111-1111-111111111111' : null);
+      }
     });
 
     setIsInitialized(true);
@@ -188,6 +228,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Auth Operations
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
     try {
       const { user: authUser, session: authSession } = await services.auth.signIn({ email, password });
       setUser(authUser);
@@ -200,9 +242,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       setIsLoading(false);
       return { success: true };
-    } catch (err: any) {
-      // In demo mode or if Supabase is offline, simulate login with demo profile
-      console.warn('Supabase signIn fallback:', err?.message);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Invalid email or password.';
+      if (!isDemoMode) {
+        setIsLoading(false);
+        showToast({
+          title: 'Authentication Failed',
+          description: errMsg,
+          type: 'error',
+        });
+        return { success: false, error: errMsg };
+      }
+
+      // In explicit demo mode, simulate login with demo profile
+      console.warn('Supabase signIn demo fallback:', errMsg);
       setProfile(prev => ({ ...prev, email }));
       showToast({
         title: 'Signed In (Demo Workspace)',
@@ -216,6 +269,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signUp = async (params: { email: string; password: string; name: string; businessName: string }) => {
     setIsLoading(true);
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
     try {
       const { user: authUser, session: authSession, business } = await services.auth.signUp(params);
       setUser(authUser);
@@ -241,8 +296,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       setIsLoading(false);
       return { success: true };
-    } catch (err: any) {
-      console.warn('Supabase signUp fallback:', err?.message);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to create account.';
+      if (!isDemoMode) {
+        setIsLoading(false);
+        showToast({
+          title: 'Registration Failed',
+          description: errMsg,
+          type: 'error',
+        });
+        return { success: false, error: errMsg };
+      }
+
+      console.warn('Supabase signUp demo fallback:', errMsg);
       setProfile(prev => ({
         ...prev,
         name: params.name,
@@ -256,7 +322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
 
       showToast({
-        title: 'Workspace Initialized',
+        title: 'Workspace Initialized (Demo)',
         description: `Welcome to PayPilot AI, ${params.name}!`,
         type: 'success',
       });
@@ -281,8 +347,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Add Invoice (Strict Halal Rule: remaining_balance = original_amount - payments_received)
-  const addInvoice = (invoiceData: Omit<Invoice, 'id' | 'timeline' | 'remainingBalance' | 'paymentsReceived' | 'originalAmountDue' | 'daysOverdue'> & { id?: string; originalAmountDue?: number; paymentsReceived?: number; remainingBalance?: number; daysOverdue?: number }): Invoice => {
-    const id = invoiceData.id || `inv-${Date.now()}`;
+  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'timeline' | 'remainingBalance' | 'paymentsReceived' | 'originalAmountDue' | 'daysOverdue'> & { id?: string; originalAmountDue?: number; paymentsReceived?: number; remainingBalance?: number; daysOverdue?: number }): Promise<Invoice | null> => {
     const origAmount = invoiceData.originalAmountDue ?? invoiceData.totalAmount;
     const paidSoFar = invoiceData.paymentsReceived ?? 0;
     const remaining = origAmount - paidSoFar;
@@ -292,6 +357,101 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nowTime = new Date().getTime();
     const diffDays = Math.max(0, Math.floor((nowTime - dueTime) / (1000 * 60 * 60 * 24)));
 
+    // In production with authenticated session, route through Server Action first
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const res = await createInvoiceAction({
+          business_id: businessId,
+          customer_id: invoiceData.customerId,
+          invoice_number: invoiceData.number,
+          original_amount: origAmount,
+          subtotal: invoiceData.subtotal ?? origAmount,
+          currency: 'USD',
+          issue_date: invoiceData.issueDate,
+          due_date: invoiceData.dueDate,
+          notes: invoiceData.notes,
+          items: invoiceData.items?.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            line_total: item.amount,
+          })) || [],
+        });
+
+        if (!res.success || !res.data) {
+          showToast({
+            title: 'Failed to Create Invoice',
+            description: res.error || 'Server rejected invoice creation.',
+            type: 'error'
+          });
+          return null;
+        }
+
+        const serverInvoice: Invoice = {
+          ...invoiceData,
+          id: res.data.id,
+          number: res.data.invoice_number,
+          originalAmountDue: Number(res.data.original_amount),
+          paymentsReceived: Number(res.data.amount_paid),
+          remainingBalance: Number(res.data.remaining_balance),
+          daysOverdue: invoiceData.status === 'overdue' ? (invoiceData.daysOverdue ?? diffDays) : 0,
+          timeline: [
+            {
+              id: 't-' + Date.now(),
+              type: 'created',
+              title: 'Invoice Created',
+              description: `Created for ${invoiceData.customerName}`,
+              timestamp: 'Just now'
+            },
+            ...(invoiceData.status !== 'draft' ? [{
+              id: 't-sent-' + Date.now(),
+              type: 'sent' as const,
+              title: 'Sent to Customer',
+              description: `Delivered to ${invoiceData.customerEmail}`,
+              timestamp: 'Just now'
+            }] : [])
+          ]
+        };
+
+        setInvoices(prev => [serverInvoice, ...prev]);
+
+        // Update customer stats
+        setCustomers(prev => prev.map(c => {
+          if (c.id === invoiceData.customerId || c.name.toLowerCase() === serverInvoice.customerName.toLowerCase() || c.company.toLowerCase() === serverInvoice.customerCompany.toLowerCase()) {
+            const isOverdue = serverInvoice.status === 'overdue';
+            const isDue = serverInvoice.status === 'due';
+            const unpaid = isOverdue || isDue ? serverInvoice.remainingBalance : 0;
+            return {
+              ...c,
+              totalOutstanding: c.totalOutstanding + unpaid,
+              outstandingReceivables: c.outstandingReceivables + unpaid,
+              overdueCount: isOverdue ? c.overdueCount + 1 : c.overdueCount,
+              activeInvoicesCount: c.activeInvoicesCount + 1
+            };
+          }
+          return c;
+        }));
+
+        showToast({
+          title: `Invoice ${serverInvoice.number} Created`,
+          description: `Saved as ${serverInvoice.status.toUpperCase()} for $${serverInvoice.totalAmount.toLocaleString()}`,
+          type: 'success'
+        });
+
+        return serverInvoice;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Server error creating invoice';
+        showToast({
+          title: 'Invoice Creation Error',
+          description: errMsg,
+          type: 'error'
+        });
+        return null;
+      }
+    }
+
+    // Demo Mode fallback
+    const id = invoiceData.id || `inv-${Date.now()}`;
     const newInvoice: Invoice = {
       ...invoiceData,
       id,
@@ -319,7 +479,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setInvoices(prev => [newInvoice, ...prev]);
 
-    // Update customer stats
     setCustomers(prev => prev.map(c => {
       if (c.name.toLowerCase() === newInvoice.customerName.toLowerCase() || c.company.toLowerCase() === newInvoice.customerCompany.toLowerCase()) {
         const isOverdue = newInvoice.status === 'overdue';
@@ -346,7 +505,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Update Invoice
-  const updateInvoice = (updated: Invoice) => {
+  const updateInvoice = async (updated: Invoice) => {
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const res = await updateInvoiceAction(updated.id, {
+          due_date: updated.dueDate,
+          notes: updated.notes,
+          status: updated.status,
+          priority: updated.priority,
+        });
+        if (!res.success) {
+          showToast({
+            title: 'Update Failed',
+            description: res.error || 'Server rejected invoice update.',
+            type: 'error'
+          });
+          return;
+        }
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Failed to update invoice.';
+        showToast({ title: 'Update Failed', description: errMsg, type: 'error' });
+        return;
+      }
+    }
+
     setInvoices(prev => prev.map(inv => inv.id === updated.id ? updated : inv));
     showToast({
       title: `Invoice ${updated.number} Updated`,
@@ -355,11 +537,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Delete Invoice
-  const deleteInvoice = (id: string) => {
+  const deleteInvoice = async (id: string) => {
     const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const res = await deleteInvoiceAction(id, businessId);
+        if (!res.success) {
+          showToast({
+            title: 'Delete Failed',
+            description: res.error || 'Server rejected invoice deletion.',
+            type: 'error'
+          });
+          return;
+        }
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Failed to delete invoice.';
+        showToast({ title: 'Delete Failed', description: errMsg, type: 'error' });
+        return;
+      }
+    }
+
     setInvoices(prev => prev.filter(i => i.id !== id));
     showToast({
-      title: `Invoice ${inv?.number || ''} Deleted`,
+      title: `Invoice ${inv.number || ''} Deleted`,
       type: 'info'
     });
   };
@@ -372,6 +574,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    if (amount <= 0 || isNaN(amount) || !Number.isFinite(amount)) {
+      showToast({ title: 'Invalid Payment Amount', description: 'Payment must be a positive number.', type: 'error' });
+      return;
+    }
+
     if (amount > targetInv.remainingBalance + 0.001) {
       showToast({
         title: 'Payment Exceeds Balance',
@@ -379,6 +586,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         type: 'error',
       });
       return;
+    }
+
+    // In production with authenticated session, route through Server Action
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const res = await recordPaymentAction({
+          business_id: businessId,
+          invoice_id: invoiceId,
+          amount,
+          method,
+          notes: note,
+        });
+        if (!res.success) {
+          showToast({
+            title: 'Payment Failed',
+            description: res.error || 'Server rejected payment recording.',
+            type: 'error',
+          });
+          return;
+        }
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Failed to record payment on server.';
+        showToast({ title: 'Payment Failed', description: errMsg, type: 'error' });
+        return;
+      }
     }
 
     setInvoices(prev => prev.map(inv => {
@@ -474,7 +706,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Add Customer
-  const addCustomer = (customerData: Omit<Customer, 'id'>): Customer => {
+  const addCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer | null> => {
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const res = await createCustomerAction({
+          business_id: businessId,
+          name: customerData.name,
+          company: customerData.company,
+          email: customerData.email,
+          phone: customerData.phone,
+          sms_consent: false,
+          whatsapp_consent: false,
+        });
+
+        if (!res.success || !res.data) {
+          showToast({
+            title: 'Customer Creation Failed',
+            description: res.error || 'Server rejected customer creation.',
+            type: 'error'
+          });
+          return null;
+        }
+
+        const serverCustomer: Customer = {
+          ...customerData,
+          id: res.data.id,
+          outstandingReceivables: 0,
+          paymentsReceived: 0,
+          totalOutstanding: 0,
+          totalPaid: 0,
+          overdueCount: 0,
+          activeInvoicesCount: 0,
+        };
+
+        setCustomers(prev => [serverCustomer, ...prev]);
+        showToast({
+          title: `Customer ${serverCustomer.company} Added`,
+          type: 'success'
+        });
+        return serverCustomer;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Failed to create customer.';
+        showToast({ title: 'Customer Creation Failed', description: errMsg, type: 'error' });
+        return null;
+      }
+    }
+
+    // Demo Mode
     const id = `cust-${Date.now()}`;
     const newCustomer: Customer = {
       ...customerData,
@@ -483,6 +761,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       paymentsReceived: customerData.totalPaid
     };
     setCustomers(prev => [newCustomer, ...prev]);
+
     showToast({
       title: `Customer ${newCustomer.company} Added`,
       type: 'success'
@@ -491,7 +770,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Update Customer
-  const updateCustomer = (updated: Customer) => {
+  const updateCustomer = async (updated: Customer) => {
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const res = await updateCustomerAction(updated.id, {
+          name: updated.name,
+          company: updated.company,
+          email: updated.email,
+          phone: updated.phone,
+        });
+
+        if (!res.success) {
+          showToast({
+            title: 'Update Customer Failed',
+            description: res.error || 'Server rejected customer update.',
+            type: 'error'
+          });
+          return;
+        }
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Failed to update customer.';
+        showToast({ title: 'Update Customer Failed', description: errMsg, type: 'error' });
+        return;
+      }
+    }
+
     setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
     showToast({
       title: `${updated.company} Updated`,
@@ -508,21 +811,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const body = customDraft?.message || rec.draftBody;
     const ch = customDraft?.channel || 'email';
 
-    // 1. Optimistic UI update
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const { approveAIRecommendationAction } = await import('@/app/actions');
+        const res = await approveAIRecommendationAction(id, {
+          subject: sub,
+          message: body,
+          channel: ch,
+        });
+        if (!res.success) {
+          showToast({
+            title: 'Approval Failed',
+            description: res.error || 'Server rejected recommendation approval.',
+            type: 'error',
+          });
+          return;
+        }
+      } catch (e: any) {
+        showToast({
+          title: 'Approval Failed',
+          description: e?.message || 'Server error approving recommendation.',
+          type: 'error',
+        });
+        return;
+      }
+    }
+
     sendInvoiceReminder(rec.invoiceId, sub, body);
     setRecommendations(prev => prev.map(r => r.id === id ? { ...r, status: 'sent' } : r));
-
-    // 2. Persist real communication draft in Supabase via Server Action
-    try {
-      const { approveAIRecommendationAction } = await import('@/app/actions');
-      await approveAIRecommendationAction(id, {
-        subject: sub,
-        message: body,
-        channel: ch,
-      });
-    } catch (e: any) {
-      console.warn('AI recommendation approval persistence notice:', e?.message);
-    }
 
     showToast({
       title: 'Recommendation Approved & Draft Saved',
@@ -533,13 +849,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Dismiss Recommendation
   const dismissRecommendation = async (id: string) => {
-    setRecommendations(prev => prev.map(r => r.id === id ? { ...r, status: 'dismissed' } : r));
-    try {
-      const { dismissAIRecommendationAction } = await import('@/app/actions');
-      await dismissAIRecommendationAction(id);
-    } catch (e: any) {
-      console.warn('AI recommendation dismissal notice:', e?.message);
+    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      try {
+        const { dismissAIRecommendationAction } = await import('@/app/actions');
+        const res = await dismissAIRecommendationAction(id);
+        if (!res.success) {
+          showToast({
+            title: 'Dismissal Failed',
+            description: res.error || 'Server rejected dismissal.',
+            type: 'error',
+          });
+          return;
+        }
+      } catch (e: any) {
+        showToast({
+          title: 'Dismissal Failed',
+          description: e?.message || 'Server error dismissing recommendation.',
+          type: 'error',
+        });
+        return;
+      }
     }
+
+    setRecommendations(prev => prev.map(r => r.id === id ? { ...r, status: 'dismissed' } : r));
     showToast({
       title: 'Recommendation Dismissed',
       type: 'info'

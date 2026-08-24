@@ -68,7 +68,7 @@ export default function CreateInvoicePage() {
     }));
   };
 
-  const handleSave = (status: 'draft' | 'due') => {
+  const handleSave = async (status: 'draft' | 'due') => {
     if (!selectedCustomer) {
       showToast({ title: 'Please select a customer', type: 'error' });
       return;
@@ -79,8 +79,8 @@ export default function CreateInvoicePage() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const created = addInvoice({
+    try {
+      const created = await addInvoice({
         number: invoiceNumber,
         customerId: selectedCustomer.id,
         customerName: selectedCustomer.name,
@@ -107,9 +107,14 @@ export default function CreateInvoicePage() {
         }
       });
 
+      if (created) {
+        router.push(`/invoices/${created.id}`);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
       setIsSubmitting(false);
-      router.push(`/invoices/${created.id}`);
-    }, 400);
+    }
   };
 
   return (

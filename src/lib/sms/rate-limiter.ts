@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../supabase/types';
+import { createAdminClient } from '../supabase/admin';
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -16,24 +17,49 @@ export interface RateLimiter {
 /**
  * Production-ready distributed rate limiter backed by Postgres (Supabase rate_limits table)
  * Compatible with Redis/Upstash by conforming to the RateLimiter interface.
+ * Server-side operations utilize service-role admin client to comply with RLS lockdowns.
  */
 export class DistributedRateLimiter implements RateLimiter {
   private inMemoryFallback: Map<string, { count: number; expiresAt: number }> = new Map();
+  private dbClient: SupabaseClient<Database> | null = null;
 
   constructor(
-    private client?: SupabaseClient<Database> | null,
+    client?: SupabaseClient<Database> | null,
     private maxPerMinute = 10,
     private windowSeconds = 60
-  ) {}
+  ) {
+    if (client !== undefined) {
+      this.dbClient = client;
+    } else if (typeof window === 'undefined' && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        this.dbClient = createAdminClient();
+      } catch {
+        this.dbClient = null;
+      }
+    }
+  }
+
+  private getEffectiveClient(): SupabaseClient<Database> | null {
+    if (this.dbClient !== null && this.dbClient !== undefined) return this.dbClient;
+    if (this.dbClient === null) return null; // Explicit in-memory mode
+    if (typeof window === 'undefined' && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        return createAdminClient();
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
 
   async checkRateLimit(key: string): Promise<RateLimitResult> {
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + this.windowSeconds * 1000);
+    const effectiveClient = this.getEffectiveClient();
 
     // If Supabase client is available, check persistent distributed table
-    if (this.client) {
+    if (effectiveClient) {
       try {
-        const { data: record, error } = await this.client
+        const { data: record, error } = await effectiveClient
           .from('rate_limits')
           .select('*')
           .eq('key', key)
@@ -52,7 +78,7 @@ export class DistributedRateLimiter implements RateLimiter {
             }
           }
         }
-      } catch (e) {
+      } catch {
         // Fallback to in-memory check
       }
     }
@@ -76,6 +102,7 @@ export class DistributedRateLimiter implements RateLimiter {
   async recordSend(key: string): Promise<void> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.windowSeconds * 1000);
+    const effectiveClient = this.getEffectiveClient();
 
     // 1. Update in-memory cache
     const local = this.inMemoryFallback.get(key);
@@ -86,23 +113,23 @@ export class DistributedRateLimiter implements RateLimiter {
     }
 
     // 2. Update persistent distributed database record if Supabase client is active
-    if (this.client) {
+    if (effectiveClient) {
       try {
-        const { data: existing } = await this.client
+        const { data: existing } = await effectiveClient
           .from('rate_limits')
           .select('*')
           .eq('key', key)
           .single();
 
         if (existing && new Date(existing.expires_at).getTime() > now.getTime()) {
-          await this.client
+          await effectiveClient
             .from('rate_limits')
             .update({
               count: existing.count + 1,
             })
             .eq('key', key);
         } else {
-          await this.client
+          await effectiveClient
             .from('rate_limits')
             .upsert({
               key,
@@ -111,26 +138,28 @@ export class DistributedRateLimiter implements RateLimiter {
               expires_at: expiresAt.toISOString(),
             });
         }
-      } catch (e: any) {
-        console.warn('Distributed rate limit write notice:', e?.message);
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        console.warn('Distributed rate limit write notice:', errMsg);
       }
     }
   }
 
   async reset(key?: string): Promise<void> {
+    const effectiveClient = this.getEffectiveClient();
     if (key) {
       this.inMemoryFallback.delete(key);
-      if (this.client) {
+      if (effectiveClient) {
         try {
-          await this.client.from('rate_limits').delete().eq('key', key);
-        } catch (e) {}
+          await effectiveClient.from('rate_limits').delete().eq('key', key);
+        } catch {}
       }
     } else {
       this.inMemoryFallback.clear();
-      if (this.client) {
+      if (effectiveClient) {
         try {
-          await this.client.from('rate_limits').delete().neq('key', '');
-        } catch (e) {}
+          await effectiveClient.from('rate_limits').delete().neq('key', '');
+        } catch {}
       }
     }
   }

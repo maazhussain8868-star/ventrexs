@@ -40,6 +40,6 @@ ALTER TABLE public.processed_webhook_events ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow webhook idempotency access" ON public.processed_webhook_events
     FOR ALL
-    TO authenticated, service_role
+    TO service_role
     USING (true)
     WITH CHECK (true);

@@ -7,6 +7,7 @@ import { RecordPaymentParams } from '@/lib/supabase/services/payments';
 import { CreateCommunicationParams } from '@/lib/supabase/services/communications';
 import { CreateNotificationParams } from '@/lib/supabase/services/notifications';
 import { CustomerInsert, CustomerUpdate } from '@/lib/supabase/services/customers';
+import { assertUserBelongsToBusiness } from '@/lib/auth/server-authorization';
 import { revalidatePath } from 'next/cache';
 
 // Helper to get authenticated server services
@@ -28,7 +29,8 @@ async function getAuthContext() {
  */
 export async function createCustomerAction(data: CustomerInsert) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, data.business_id);
     const customer = await services.customers.createCustomer(data);
     
     await services.audit.logAction({
@@ -52,7 +54,13 @@ export async function createCustomerAction(data: CustomerInsert) {
  */
 export async function updateCustomerAction(id: string, updates: CustomerUpdate) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    const existing = await services.customers.getCustomerById(id);
+    if (!existing) {
+      return { success: false, error: 'Customer not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, existing.business_id);
+
     const customer = await services.customers.updateCustomer(id, updates);
     
     await services.audit.logAction({
@@ -76,7 +84,8 @@ export async function updateCustomerAction(id: string, updates: CustomerUpdate) 
  */
 export async function createInvoiceAction(params: CreateInvoiceParams) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, params.business_id);
     const invoice = await services.invoices.createInvoice(params);
 
     await services.audit.logAction({
@@ -101,7 +110,13 @@ export async function createInvoiceAction(params: CreateInvoiceParams) {
  */
 export async function updateInvoiceAction(id: string, updates: any) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    const existing = await services.invoices.getInvoiceById(id);
+    if (!existing) {
+      return { success: false, error: 'Invoice not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, existing.business_id);
+
     const invoice = await services.invoices.updateInvoice(id, updates);
 
     await services.audit.logAction({
@@ -126,17 +141,25 @@ export async function updateInvoiceAction(id: string, updates: any) {
  */
 export async function deleteInvoiceAction(id: string, businessId?: string) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    const existing = await services.invoices.getInvoiceById(id);
+    if (!existing) {
+      return { success: false, error: 'Invoice not found' };
+    }
+    const targetBusinessId = businessId || existing.business_id;
+    if (businessId && existing.business_id !== businessId) {
+      return { success: false, error: 'SECURITY_VIOLATION: Invoice does not belong to specified business' };
+    }
+    await assertUserBelongsToBusiness(supabase, targetBusinessId);
+
     await services.invoices.deleteInvoice(id);
 
-    if (businessId) {
-      await services.audit.logAction({
-        business_id: businessId,
-        action: 'DELETE_INVOICE',
-        entity: 'invoice',
-        entity_id: id,
-      });
-    }
+    await services.audit.logAction({
+      business_id: targetBusinessId,
+      action: 'DELETE_INVOICE',
+      entity: 'invoice',
+      entity_id: id,
+    });
 
     revalidatePath('/invoices');
     revalidatePath('/dashboard');
@@ -151,7 +174,8 @@ export async function deleteInvoiceAction(id: string, businessId?: string) {
  */
 export async function recordPaymentAction(params: RecordPaymentParams) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, params.business_id);
     const result = await services.payments.recordPayment(params);
 
     revalidatePath('/invoices');
@@ -170,8 +194,12 @@ export async function recordPaymentAction(params: RecordPaymentParams) {
  */
 export async function getInvoiceAction(id: string) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
     const invoice = await services.invoices.getInvoiceById(id);
+    if (!invoice) {
+      return { success: false, error: 'Invoice not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, invoice.business_id);
     return { success: true, data: invoice };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to get invoice' };
@@ -183,7 +211,8 @@ export async function getInvoiceAction(id: string) {
  */
 export async function getDashboardMetricsAction(businessId: string) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, businessId);
     const metrics = await services.metrics.getDashboardMetrics(businessId);
     return { success: true, data: metrics };
   } catch (error: any) {
@@ -196,7 +225,8 @@ export async function getDashboardMetricsAction(businessId: string) {
  */
 export async function getCollectionsAction(businessId: string) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, businessId);
     const collections = await services.metrics.getCollectionsMetrics(businessId);
     return { success: true, data: collections };
   } catch (error: any) {
@@ -209,7 +239,12 @@ export async function getCollectionsAction(businessId: string) {
  */
 export async function getCustomerHistoryAction(customerId: string) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    const customer = await services.customers.getCustomerById(customerId);
+    if (!customer) {
+      return { success: false, error: 'Customer not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, customer.business_id);
     const history = await services.customers.getCustomerHistory(customerId);
     return { success: true, data: history };
   } catch (error: any) {
@@ -222,7 +257,8 @@ export async function getCustomerHistoryAction(customerId: string) {
  */
 export async function createNotificationAction(params: CreateNotificationParams) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, params.business_id);
     const notification = await services.notifications.createNotification(params);
     revalidatePath('/notifications');
     return { success: true, data: notification };
@@ -236,7 +272,8 @@ export async function createNotificationAction(params: CreateNotificationParams)
  */
 export async function createCommunicationDraftAction(params: CreateCommunicationParams) {
   try {
-    const { services } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, params.business_id);
     const communication = await services.communications.createCommunication(params);
     revalidatePath('/follow-up');
     revalidatePath('/copilot');
@@ -252,6 +289,7 @@ export async function createCommunicationDraftAction(params: CreateCommunication
 export async function runAICopilotAnalysisAction(businessId: string, invoiceId?: string) {
   try {
     const { supabase } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, businessId);
     const { AICopilotService } = await import('@/lib/ai/copilot-service');
     const copilot = new AICopilotService(supabase);
 
@@ -284,6 +322,16 @@ export async function approveAIRecommendationAction(
 ) {
   try {
     const { supabase } = await getServerServices();
+    const { data: rec, error: recErr } = await supabase
+      .from('ai_recommendations')
+      .select('business_id')
+      .eq('id', recommendationId)
+      .single();
+    if (recErr || !rec) {
+      return { success: false, error: 'Recommendation not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, rec.business_id);
+
     const { AICopilotService } = await import('@/lib/ai/copilot-service');
     const copilot = new AICopilotService(supabase);
     const result = await copilot.approveRecommendation(recommendationId, customDraft);
@@ -304,6 +352,16 @@ export async function approveAIRecommendationAction(
 export async function dismissAIRecommendationAction(recommendationId: string) {
   try {
     const { supabase } = await getServerServices();
+    const { data: rec, error: recErr } = await supabase
+      .from('ai_recommendations')
+      .select('business_id')
+      .eq('id', recommendationId)
+      .single();
+    if (recErr || !rec) {
+      return { success: false, error: 'Recommendation not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, rec.business_id);
+
     const { AICopilotService } = await import('@/lib/ai/copilot-service');
     const copilot = new AICopilotService(supabase);
     const result = await copilot.dismissRecommendation(recommendationId);
@@ -327,6 +385,7 @@ export async function generateAICustomDraftAction(
 ) {
   try {
     const { supabase } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, businessId);
     const { AICopilotService } = await import('@/lib/ai/copilot-service');
     const copilot = new AICopilotService(supabase);
     const result = await copilot.generateCustomDraft(invoiceId, businessId, tone, channel);
@@ -346,10 +405,22 @@ export async function sendApprovedCommunicationAction(params: {
 }) {
   try {
     const { supabase } = await getServerServices();
+    let targetBusinessId = params.businessId;
+    if (!targetBusinessId) {
+      const { data: comm } = await supabase
+        .from('communications')
+        .select('business_id')
+        .eq('id', params.communicationId)
+        .single();
+      if (!comm) return { success: false, error: 'Communication not found' };
+      targetBusinessId = comm.business_id;
+    }
+    await assertUserBelongsToBusiness(supabase, targetBusinessId, params.userId);
+
     const { EmailService } = await import('@/lib/email/email-service');
     const emailService = new EmailService(supabase);
 
-    const result = await emailService.sendApprovedEmail(params);
+    const result = await emailService.sendApprovedEmail({ ...params, businessId: targetBusinessId });
 
     revalidatePath('/copilot');
     revalidatePath('/follow-up');
@@ -371,10 +442,22 @@ export async function sendApprovedSMSAction(params: {
 }) {
   try {
     const { supabase } = await getServerServices();
+    let targetBusinessId = params.businessId;
+    if (!targetBusinessId) {
+      const { data: comm } = await supabase
+        .from('communications')
+        .select('business_id')
+        .eq('id', params.communicationId)
+        .single();
+      if (!comm) return { success: false, error: 'Communication not found' };
+      targetBusinessId = comm.business_id;
+    }
+    await assertUserBelongsToBusiness(supabase, targetBusinessId, params.userId);
+
     const { SMSService } = await import('@/lib/sms/sms-service');
     const smsService = new SMSService(supabase);
 
-    const result = await smsService.sendApprovedSMS(params);
+    const result = await smsService.sendApprovedSMS({ ...params, businessId: targetBusinessId });
 
     revalidatePath('/copilot');
     revalidatePath('/follow-up');
@@ -394,7 +477,13 @@ export async function optOutCustomerSMSAction(params: {
   reason?: string;
 }) {
   try {
-    const { supabase } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    const customer = await services.customers.getCustomerById(params.customerId);
+    if (!customer) {
+      return { success: false, error: 'Customer not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, customer.business_id);
+
     const { SMSConsentService } = await import('@/lib/sms/consent-service');
     const consentService = new SMSConsentService(supabase);
 
@@ -418,10 +507,22 @@ export async function sendApprovedWhatsAppAction(params: {
 }) {
   try {
     const { supabase } = await getServerServices();
+    let targetBusinessId = params.businessId;
+    if (!targetBusinessId) {
+      const { data: comm } = await supabase
+        .from('communications')
+        .select('business_id')
+        .eq('id', params.communicationId)
+        .single();
+      if (!comm) return { success: false, error: 'Communication not found' };
+      targetBusinessId = comm.business_id;
+    }
+    await assertUserBelongsToBusiness(supabase, targetBusinessId, params.userId);
+
     const { WhatsAppService } = await import('@/lib/whatsapp/whatsapp-service');
     const whatsappService = new WhatsAppService(supabase);
 
-    const result = await whatsappService.sendApprovedWhatsApp(params);
+    const result = await whatsappService.sendApprovedWhatsApp({ ...params, businessId: targetBusinessId });
 
     revalidatePath('/copilot');
     revalidatePath('/follow-up');
@@ -441,7 +542,13 @@ export async function optOutCustomerWhatsAppAction(params: {
   reason?: string;
 }) {
   try {
-    const { supabase } = await getServerServices();
+    const { supabase, services } = await getServerServices();
+    const customer = await services.customers.getCustomerById(params.customerId);
+    if (!customer) {
+      return { success: false, error: 'Customer not found' };
+    }
+    await assertUserBelongsToBusiness(supabase, customer.business_id);
+
     const { WhatsAppConsentService } = await import('@/lib/whatsapp/consent-service');
     const consentService = new WhatsAppConsentService(supabase);
 
@@ -469,6 +576,7 @@ export async function createCheckoutSessionAction(params: {
 }) {
   try {
     const { supabase } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, params.businessId);
     const { BillingService } = await import('@/lib/billing/billing-service');
     const billingService = new BillingService(supabase);
 
@@ -476,26 +584,6 @@ export async function createCheckoutSessionAction(params: {
     return { success: true, data: result };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create checkout session' };
-  }
-}
-
-/**
- * 23. Process Payment Provider Webhook
- */
-export async function handlePaymentWebhookAction(payload: string, signature: string, secret?: string) {
-  try {
-    const { supabase } = await getServerServices();
-    const { BillingService } = await import('@/lib/billing/billing-service');
-    const billingService = new BillingService(supabase);
-
-    const result = await billingService.handleWebhook(payload, signature, secret);
-
-    revalidatePath('/pricing');
-    revalidatePath('/dashboard');
-    revalidatePath('/settings');
-    return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to handle payment webhook' };
   }
 }
 
@@ -509,6 +597,7 @@ export async function cancelSubscriptionAction(params: {
 }) {
   try {
     const { supabase } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, params.businessId);
     const { BillingService } = await import('@/lib/billing/billing-service');
     const billingService = new BillingService(supabase);
 
@@ -529,6 +618,7 @@ export async function cancelSubscriptionAction(params: {
 export async function getSubscriptionEntitlementsAction(businessId: string) {
   try {
     const { supabase } = await getServerServices();
+    await assertUserBelongsToBusiness(supabase, businessId);
     const { BillingService } = await import('@/lib/billing/billing-service');
     const billingService = new BillingService(supabase);
 

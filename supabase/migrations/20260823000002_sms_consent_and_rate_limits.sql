@@ -29,9 +29,9 @@ CREATE INDEX IF NOT EXISTS idx_rate_limits_expires ON public.rate_limits(expires
 -- Enable RLS on rate_limits table
 ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
 
--- Allow authenticated and service role to manage rate limits
+-- Allow only service_role to manage rate limits (strict security: no tenant/public access)
 CREATE POLICY "Allow rate limit access" ON public.rate_limits
     FOR ALL
-    TO authenticated, service_role
+    TO service_role
     USING (true)
     WITH CHECK (true);

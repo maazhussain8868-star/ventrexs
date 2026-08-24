@@ -38,14 +38,14 @@ export default function CustomersPage() {
     );
   }, [customers, searchQuery]);
 
-  const handleAddCustomerSubmit = (e: React.FormEvent) => {
+  const handleAddCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!company || !name || !email) {
       showToast({ title: 'Please fill in required fields', type: 'error' });
       return;
     }
 
-    addCustomer({
+    const created = await addCustomer({
       name,
       company,
       email,
@@ -63,12 +63,14 @@ export default function CustomersPage() {
       preferredContact: 'email'
     });
 
-    setIsAddModalOpen(false);
-    setCompany('');
-    setName('');
-    setEmail('');
-    setPhone('');
-    setAddress('');
+    if (created) {
+      setIsAddModalOpen(false);
+      setCompany('');
+      setName('');
+      setEmail('');
+      setPhone('');
+      setAddress('');
+    }
   };
 
   return (

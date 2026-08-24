@@ -1,17 +1,19 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../supabase/types';
-import { getSMSProvider } from './providers/factory';
 import { DistributedRateLimiter } from './rate-limiter';
+import { SMSProvider, SendApprovedSMSParams } from './types';
+import { getSMSProvider } from './providers/factory';
 import { validateAndNormalizePhoneNumber } from './phone-validator';
 import { SMSConsentService } from './consent-service';
 import { validateAICollectionOutput } from '../ai/validator';
-import { SendApprovedSMSParams, SMSSendResult } from './types';
 
 export class SMSService {
+  private provider: SMSProvider;
   private rateLimiter: DistributedRateLimiter;
   private consentService: SMSConsentService;
 
   constructor(private client: SupabaseClient<Database>) {
+    this.provider = getSMSProvider();
     this.rateLimiter = new DistributedRateLimiter(client, 10, 60);
     this.consentService = new SMSConsentService(client);
   }
@@ -44,9 +46,23 @@ export class SMSService {
       throw new Error(`Communication not found: ${commError?.message || 'Invalid ID'}`);
     }
 
-    const customer = (comm as any).customers;
-    const invoice = (comm as any).invoices;
-    const business = (comm as any).businesses;
+    const commWithRelations = comm as unknown as {
+      customers?: {
+        phone?: string;
+        sms_consent?: boolean;
+        sms_consent_at?: string | null;
+        sms_consent_source?: string | null;
+        sms_opted_out?: boolean;
+        sms_opted_out_at?: string | null;
+        sms_opt_out_reason?: string | null;
+      };
+      invoices?: {
+        remaining_balance?: number;
+      };
+    };
+
+    const customer = commWithRelations.customers;
+    const invoice = commWithRelations.invoices;
     const commBusinessId = comm.business_id;
 
     // 2. Multi-Tenant Authorization Check
@@ -73,9 +89,9 @@ export class SMSService {
     }
     const normalizedPhone = phoneValidation.normalized;
 
-    // 5. TCPA / CTIA Consent & Opt-Out Verification
+    // 5. TCPA / CTIA Consent & Opt-Out Verification (Strict Default: false)
     const consentCheck = SMSConsentService.verifyConsent({
-      sms_consent: customer?.sms_consent ?? true,
+      sms_consent: customer?.sms_consent ?? false,
       sms_consent_at: customer?.sms_consent_at,
       sms_consent_source: customer?.sms_consent_source,
       sms_opted_out: customer?.sms_opted_out ?? false,
@@ -230,8 +246,9 @@ export class SMSService {
           error_message: errorMessage,
         })
         .eq('id', id);
-    } catch (e: any) {
-      console.warn('Failed to update SMS communication failure status:', e?.message);
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.warn('Failed to update SMS communication failure status:', errMsg);
     }
   }
 }
