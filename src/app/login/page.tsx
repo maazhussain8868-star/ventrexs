@@ -29,7 +29,10 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (res.success) {
-      router.push('/dashboard');
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const redirectTo = params?.get('redirectTo');
+      const targetUrl = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard';
+      router.push(targetUrl);
     } else {
       setError(res.error || 'Failed to sign in. Please verify your credentials.');
     }
@@ -43,7 +46,10 @@ export default function LoginPage() {
         title: `Signed in with ${provider}`,
         type: 'success'
       });
-      router.push('/dashboard');
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const redirectTo = params?.get('redirectTo');
+      const targetUrl = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard';
+      router.push(targetUrl);
     }, 500);
   };
 
@@ -55,7 +61,7 @@ export default function LoginPage() {
           <Link href="/" className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-xs mb-1 hover:scale-105 transition-transform">
             <span className="material-symbols-outlined text-[28px] fill-icon">payments</span>
           </Link>
-          <h1 className="text-2xl font-bold text-primary tracking-tight">PayPilot AI</h1>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">Ventrexs AI</h1>
           <p className="text-xs sm:text-sm text-on-surface-variant">Sign in to your account</p>
         </div>
 

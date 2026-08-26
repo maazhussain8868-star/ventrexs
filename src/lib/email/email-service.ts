@@ -107,7 +107,7 @@ export class EmailService {
 
     // 8. Render Email Template
     const rendered = renderInvoiceFollowUpEmail({
-      businessName: business?.name || 'PayPilot AI Workspace',
+      businessName: business?.name || 'Ventrexs AI Workspace',
       businessEmail: business?.email || undefined,
       businessPhone: business?.phone || undefined,
       customerName: customer?.name || 'Valued Client',
@@ -124,12 +124,12 @@ export class EmailService {
     const provider = getEmailProvider();
     const sendResult = await provider.sendEmail({
       to: recipientEmail,
-      subject: comm.subject || `Invoice ${invoice?.invoice_number || ''} Statement - ${business?.name || 'PayPilot'}`,
+      subject: comm.subject || `Invoice ${invoice?.invoice_number || ''} Statement - ${business?.name || 'Ventrexs'}`,
       text: rendered.text,
       html: rendered.html,
       headers: {
-        'X-PayPilot-Communication-Id': communicationId,
-        'X-PayPilot-Business-Id': commBusinessId,
+        'X-Ventrexs-Communication-Id': communicationId,
+        'X-Ventrexs-Business-Id': commBusinessId,
       },
     });
 

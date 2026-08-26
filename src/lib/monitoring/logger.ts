@@ -1,5 +1,5 @@
 /**
- * PayPilot AI — Production-Safe Monitoring & Structured Logger
+ * Ventrexs AI — Production-Safe Monitoring & Structured Logger
  * Sanitizes all metadata, ensures zero secret/credential leakage, and emits structured logs.
  */
 

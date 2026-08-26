@@ -163,6 +163,26 @@ export default function AdminDashboardPage() {
             </div>
             <ChevronRight className="w-5 h-5 text-outline-variant" />
           </div>
+
+          {/* Demo Access & Dual-Approval Center */}
+          <a
+            href="/admin/demo-access"
+            className="w-full bg-surface-container-lowest border border-primary/30 rounded-2xl p-4 sm:p-5 flex items-center justify-between hover:bg-primary/5 transition-colors shadow-xs"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="bg-primary/10 text-primary p-2.5 rounded-xl">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="block text-sm font-bold text-on-surface flex items-center gap-2">
+                  Demo Access & Two-Person Approval Gate
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">New</span>
+                </span>
+                <span className="block text-xs text-on-surface-variant">Generate 24h cryptographic demo links and review 2-person owner approval requests</span>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-primary" />
+          </a>
         </div>
       </div>
 

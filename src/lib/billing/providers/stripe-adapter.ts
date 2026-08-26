@@ -27,7 +27,7 @@ export class StripePaymentProviderAdapter implements PaymentProvider {
       'success_url': params.successUrl,
       'cancel_url': params.cancelUrl,
       'line_items[0][price_data][currency]': 'usd',
-      'line_items[0][price_data][product_data][name]': `PayPilot AI ${params.plan} Plan (${params.interval})`,
+      'line_items[0][price_data][product_data][name]': `Ventrexs AI ${params.plan} Plan (${params.interval})`,
       'line_items[0][price_data][unit_amount]': amountInCents.toString(),
       'line_items[0][price_data][recurring][interval]': isAnnual ? 'year' : 'month',
       'line_items[0][quantity]': '1',
@@ -176,12 +176,12 @@ export class StripePaymentProviderAdapter implements PaymentProvider {
         id: parsed.id,
         provider: this.name,
         type: parsed.type,
-        businessId: metadata.business_id || dataObj.client_reference_id,
+        businessId: metadata.business_id || metadata.businessId || dataObj.client_reference_id,
         plan: metadata.plan,
         interval: metadata.interval,
         providerCustomerId: dataObj.customer,
         providerSubscriptionId: dataObj.subscription || dataObj.id,
-        status: dataObj.status === 'active' ? 'active' : dataObj.status === 'past_due' ? 'past_due' : 'active',
+        status: dataObj.status === 'past_due' ? 'past_due' : dataObj.status === 'canceled' || dataObj.status === 'cancelled' ? 'cancelled' : dataObj.status === 'active' ? 'active' : parsed.type === 'invoice.payment_failed' ? 'past_due' : 'active',
         currentPeriodStart: dataObj.current_period_start
           ? new Date(dataObj.current_period_start * 1000).toISOString()
           : new Date().toISOString(),
@@ -233,5 +233,64 @@ export class StripePaymentProviderAdapter implements PaymentProvider {
       const errMsg = e instanceof Error ? e.message : String(e);
       return { success: false, error: errMsg || 'Failed to contact Stripe cancellation endpoint' };
     }
+  }
+
+  async reactivateSubscription(
+    providerSubscriptionId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const endpoint = `https://api.stripe.com/v1/subscriptions/${providerSubscriptionId}`;
+      const bodyParams = new URLSearchParams({ cancel_at_period_end: 'false' });
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.secretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: bodyParams.toString(),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        return { success: false, error: err?.error?.message || response.statusText };
+      }
+
+      return { success: true };
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      return { success: false, error: errMsg || 'Failed to contact Stripe reactivation endpoint' };
+    }
+  }
+
+  async createCustomerPortalSession(params: {
+    businessId: string;
+    providerCustomerId: string;
+    returnUrl: string;
+  }): Promise<{ portalUrl: string; provider: string }> {
+    const bodyParams = new URLSearchParams({
+      customer: params.providerCustomerId,
+      return_url: params.returnUrl,
+    });
+
+    const response = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.secretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: bodyParams.toString(),
+    });
+
+    const session = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Stripe Portal Error: ${session?.error?.message || response.statusText}`);
+    }
+
+    return {
+      portalUrl: session.url,
+      provider: this.name,
+    };
   }
 }

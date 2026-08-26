@@ -3,10 +3,19 @@ import { cookies } from 'next/headers';
 import { Database } from './types';
 
 export async function createServerSupabaseClient() {
-  const cookieStore = await cookies();
+  let cookieStore: any;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    cookieStore = {
+      get: () => undefined,
+      set: () => {},
+      remove: () => {},
+    };
+  }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://paypilot-demo.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'paypilot-demo-anon-key';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ventrexs-demo.supabase.co';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ventrexs-demo-anon-key';
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {

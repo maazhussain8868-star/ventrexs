@@ -1,5 +1,5 @@
 /**
- * PayPilot AI — Production Environment Validator
+ * Ventrexs AI — Production Environment Validator
  * Enforces strict environment variable integrity and prevents accidental dev mock usage in production.
  */
 
@@ -30,7 +30,7 @@ export function validateProductionEnvironment(): EnvValidationResult {
 
   if (!supabaseUrl) {
     missingVariables.push('NEXT_PUBLIC_SUPABASE_URL');
-  } else if (isProduction && (supabaseUrl.includes('localhost') || supabaseUrl.includes('paypilot-demo'))) {
+  } else if (isProduction && (supabaseUrl.includes('localhost') || supabaseUrl.includes('ventrexs-demo') || supabaseUrl.includes('flowvexa-demo') || supabaseUrl.includes('paypilot-demo'))) {
     errors.push('CRITICAL: NEXT_PUBLIC_SUPABASE_URL cannot point to localhost or demo project in production');
   }
 

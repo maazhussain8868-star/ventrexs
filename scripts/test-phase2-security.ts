@@ -98,7 +98,7 @@ async function runPhase2Tests() {
     const req = new NextRequest(`https://paypilot.ai${path}`);
     const res = await middleware(req);
     const location = res.headers.get('location');
-    if (res.status !== 307 || !location || !location.includes('/login?redirectTo=')) {
+    if (res.status !== 307 || !location || (!location.includes('/login?redirectTo=') && !location.includes('/login?unauthorized='))) {
       allProtectedRedirected = false;
       console.error(`Failed route redirection on: ${path} (status: ${res.status}, location: ${location})`);
       break;

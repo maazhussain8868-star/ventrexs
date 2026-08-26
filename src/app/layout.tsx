@@ -2,9 +2,10 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { ToastContainer } from '@/components/ui/Toast';
+import { BRAND } from '@/config/brand';
 
 export const viewport: Viewport = {
-  themeColor: '#2563eb',
+  themeColor: '#070B14',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -12,41 +13,55 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'PayPilot AI — Halal-First Accounts Receivable & Collection Copilot',
-    template: '%s | PayPilot AI',
+    default: `${BRAND.name} — ${BRAND.tagline}`,
+    template: `%s | ${BRAND.name}`,
   },
-  description:
-    'Automate polite, truthful invoice reminders, maintain financial ledger integrity, and accelerate cash flow without interest, late penalties, or debt financing.',
+  description: BRAND.description,
   keywords: [
-    'accounts receivable',
-    'invoice reminders',
-    'cash flow automation',
-    'halal fintech',
+    'AI-powered CRM',
+    'business operations platform',
+    'AI receptionist',
+    'service business software',
+    'invoice automation',
+    'job scheduling',
+    'field operations',
+    'ethical fintech',
     'zero interest billing',
-    'collection copilot',
-    'ethical receivables',
+    'business intelligence',
   ],
-  authors: [{ name: 'PayPilot AI' }],
-  metadataBase: new URL('https://paypilot.ai'),
+  authors: [{ name: BRAND.name }],
+  metadataBase: new URL(BRAND.domain),
   openGraph: {
-    title: 'PayPilot AI — Ethical Accounts Receivable & Collections Copilot',
-    description:
-      'Human-in-the-loop AI reminders for SMB accounts receivable with verified ledger balance enforcement and multi-channel delivery.',
-    url: 'https://paypilot.ai',
-    siteName: 'PayPilot AI',
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: BRAND.description,
+    url: BRAND.domain,
+    siteName: BRAND.name,
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PayPilot AI — Ethical Accounts Receivable Copilot',
-    description:
-      'Human-in-the-loop AI reminders for SMB accounts receivable with verified ledger balance enforcement.',
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: BRAND.description,
   },
   robots: {
     index: true,
     follow: true,
   },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: BRAND.name,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web, Cloud',
+  offers: {
+    '@type': 'Offer',
+    price: '49.00',
+    priceCurrency: 'USD',
+  },
+  description: BRAND.description,
 };
 
 export default function RootLayout({
@@ -55,20 +70,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="light">
+    <html lang="en" className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
-      <body className="bg-background text-on-background antialiased min-h-screen">
+      <body className="bg-[#070B14] text-slate-100 antialiased min-h-screen">
         <AppProvider>
           {children}
           <ToastContainer />

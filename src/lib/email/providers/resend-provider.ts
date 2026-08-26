@@ -3,7 +3,7 @@ import { EmailMessage, EmailProvider, EmailSendResult } from '../types';
 export class ResendEmailProvider implements EmailProvider {
   name = 'Resend Production Email Provider';
 
-  constructor(private apiKey: string, private defaultFrom = 'PayPilot AI <billing@paypilot.ai>') {}
+  constructor(private apiKey: string, private defaultFrom = 'Ventrexs AI <notifications@ventrexs.com>') {}
 
   async sendEmail(message: EmailMessage): Promise<EmailSendResult> {
     const timestamp = new Date().toISOString();

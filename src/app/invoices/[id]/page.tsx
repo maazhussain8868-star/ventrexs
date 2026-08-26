@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { RecordPaymentModal } from '@/components/invoices/RecordPaymentModal';
+import { RequestPaymentModal } from '@/components/invoices/RequestPaymentModal';
 import { useApp } from '@/context/AppContext';
 import { 
   ArrowLeft, 
@@ -21,7 +22,9 @@ import {
   Phone, 
   Clock, 
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Share2,
+  CreditCard
 } from 'lucide-react';
 
 export default function InvoiceDetailsPage() {
@@ -33,6 +36,7 @@ export default function InvoiceDetailsPage() {
   const invoice = invoices.find(i => i.id === invoiceId || i.number === invoiceId) || invoices[0];
 
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [isRequestPaymentOpen, setIsRequestPaymentOpen] = useState(false);
 
   if (!invoice) {
     return (
@@ -171,7 +175,7 @@ export default function InvoiceDetailsPage() {
           <section className="bg-surface-container-low border border-primary/25 rounded-2xl p-5 sm:p-6 relative overflow-hidden shadow-xs">
             <div className="flex items-center gap-2 mb-2 relative z-10">
               <Sparkles className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-bold text-primary">PayPilot AI Collection Recommendation</h3>
+              <h3 className="text-sm font-bold text-primary">Ventrexs AI Collection Recommendation</h3>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary">
                 {invoice.aiSuggestion.confidence}% Match
               </span>
@@ -296,6 +300,16 @@ export default function InvoiceDetailsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {invoice.remainingBalance > 0 && (
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setIsRequestPaymentOpen(true)}
+                leftIcon={<Share2 className="w-4 h-4 text-primary" />}
+              >
+                Request Payment
+              </Button>
+            )}
             <Button
               variant="primary"
               size="md"
@@ -314,6 +328,14 @@ export default function InvoiceDetailsPage() {
         onClose={() => setIsRecordPaymentOpen(false)}
         invoice={invoice}
       />
+
+      {/* Request Payment Modal */}
+      <RequestPaymentModal
+        isOpen={isRequestPaymentOpen}
+        onClose={() => setIsRequestPaymentOpen(false)}
+        invoice={invoice}
+      />
     </AppShell>
   );
 }
+

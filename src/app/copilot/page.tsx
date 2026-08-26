@@ -53,7 +53,7 @@ export default function CopilotPage() {
           <EmptyState
             icon={<Sparkles className="w-8 h-8 text-primary" />}
             title="All Recommendations Reviewed!"
-            description="You're all caught up! PayPilot AI is continuously monitoring your invoice aging and will surface new ethical collection insights automatically."
+            description="You're all caught up! Ventrexs AI is continuously monitoring your invoice aging and will surface new ethical collection insights automatically."
             actionLabel="View Invoices"
             onAction={() => router.push('/invoices')}
           />

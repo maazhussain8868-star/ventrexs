@@ -64,7 +64,7 @@ export class AICopilotService {
         tone: c.tone,
         status: c.status,
       })),
-      businessName: business?.name || 'PayPilot AI Workspace',
+      businessName: business?.name || 'Ventrexs AI Workspace',
       businessCurrency: business?.currency || 'USD ($)',
     };
 
@@ -327,7 +327,7 @@ export class AICopilotService {
       customerCompany: customer?.company || 'Accounts Payable Team',
       customerEmail: customer?.email || '',
       customerPhone: customer?.phone || undefined,
-      businessName: business?.name || 'PayPilot AI Workspace',
+      businessName: business?.name || 'Ventrexs AI Workspace',
       businessCurrency: business?.currency || 'USD ($)',
     };
 

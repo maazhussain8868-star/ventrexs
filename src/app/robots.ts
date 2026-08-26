@@ -1,14 +1,30 @@
 import { MetadataRoute } from 'next';
+import { BRAND } from '@/config/brand';
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/pricing', '/login', '/signup'],
-        disallow: ['/dashboard', '/invoices', '/customers', '/collections', '/copilot', '/follow-up', '/reports', '/settings', '/admin', '/notifications'],
+        allow: ['/', '/pricing', '/features', '/about', '/security', '/contact', '/privacy', '/terms', '/demo'],
+        disallow: [
+          '/dashboard',
+          '/leads',
+          '/pipeline',
+          '/jobs',
+          '/invoices',
+          '/customers',
+          '/collections',
+          '/copilot',
+          '/follow-up',
+          '/reports',
+          '/settings',
+          '/admin',
+          '/agency',
+          '/notifications',
+        ],
       },
     ],
-    sitemap: 'https://paypilot.ai/sitemap.xml',
+    sitemap: `${BRAND.domain}/sitemap.xml`,
   };
 }

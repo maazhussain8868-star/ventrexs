@@ -7,7 +7,23 @@ import { Sidebar } from './Sidebar';
 import { TopHeader } from './TopHeader';
 import { BottomNav } from './BottomNav';
 import { useApp } from '@/context/AppContext';
-import { X, Sparkles } from 'lucide-react';
+import { 
+  X, 
+  Home, 
+  UserCheck, 
+  Kanban, 
+  Users, 
+  Calendar, 
+  Wrench, 
+  FileText, 
+  DollarSign, 
+  Sparkles, 
+  BarChart3, 
+  Bell, 
+  Settings, 
+  User, 
+  ArrowLeft 
+} from 'lucide-react';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -26,20 +42,26 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const pathname = usePathname();
-  const { profile, notifications } = useApp();
+  const { profile, businessProfile, notifications, leads } = useApp();
+  
   const unreadNotifs = notifications.filter(n => !n.read).length;
+  const newLeadsCount = leads?.filter(l => l.status === 'NEW').length || 0;
+  const currentBusinessName = businessProfile?.name || profile.businessName || 'Ventrexs Workspace';
 
   const mobileNavItems = [
-    { label: 'Dashboard', href: '/dashboard', mIcon: 'home' },
-    { label: 'Invoices', href: '/invoices', mIcon: 'description' },
-    { label: 'Customers', href: '/customers', mIcon: 'group' },
-    { label: 'Collections', href: '/collections', mIcon: 'payments' },
-    { label: 'AI Copilot', href: '/copilot', mIcon: 'smart_toy', isAi: true },
-    { label: 'Reports', href: '/reports', mIcon: 'monitoring' },
-    { label: 'Notifications', href: '/notifications', mIcon: 'notifications', badge: unreadNotifs > 0 ? unreadNotifs : undefined },
-    { label: 'Pricing', href: '/pricing', mIcon: 'workspace_premium' },
-    { label: 'Settings', href: '/settings', mIcon: 'settings' },
-    { label: 'Admin Dashboard', href: '/admin', mIcon: 'admin_panel_settings' },
+    { label: 'Dashboard', href: '/dashboard', icon: <Home className="w-4 h-4" /> },
+    { label: 'Leads', href: '/leads', icon: <UserCheck className="w-4 h-4" />, badge: newLeadsCount > 0 ? `${newLeadsCount}` : undefined },
+    { label: 'Pipeline', href: '/pipeline', icon: <Kanban className="w-4 h-4" /> },
+    { label: 'Contacts', href: '/contacts', icon: <Users className="w-4 h-4" /> },
+    { label: 'Appointments', href: '/appointments', icon: <Calendar className="w-4 h-4" /> },
+    { label: 'Jobs', href: '/jobs', icon: <Wrench className="w-4 h-4" /> },
+    { label: 'Invoices', href: '/invoices', icon: <FileText className="w-4 h-4" /> },
+    { label: 'Payments', href: '/collections', icon: <DollarSign className="w-4 h-4" /> },
+    { label: 'Follow-ups', href: '/follow-up', icon: <span className="material-symbols-outlined text-[18px]">phone_in_talk</span> },
+    { label: 'AI Copilot', href: '/copilot', icon: <Sparkles className="w-4 h-4 text-primary" />, isAi: true },
+    { label: 'Reports', href: '/reports', icon: <BarChart3 className="w-4 h-4" /> },
+    { label: 'Notifications', href: '/notifications', icon: <Bell className="w-4 h-4" />, badge: unreadNotifs > 0 ? `${unreadNotifs}` : undefined },
+    { label: 'Settings', href: '/settings', icon: <Settings className="w-4 h-4" /> },
   ];
 
   return (
@@ -50,14 +72,14 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* Mobile Drawer Backdrop */}
       {mobileDrawerOpen && (
         <div
-          className="fixed inset-0 z-50 bg-[#0F172A]/50 backdrop-blur-xs md:hidden"
+          className="fixed inset-0 z-50 bg-[#0F172A]/50 backdrop-blur-xs md:hidden animate-in fade-in"
           onClick={() => setMobileDrawerOpen(false)}
         />
       )}
 
       {/* Mobile Drawer */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-surface p-6 flex flex-col gap-4 border-r border-outline-variant shadow-2xl transition-transform duration-300 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-surface p-5 flex flex-col gap-4 border-r border-outline-variant shadow-2xl transition-transform duration-300 md:hidden ${
           mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -66,11 +88,13 @@ export const AppShell: React.FC<AppShellProps> = ({
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-on-primary">
               <span className="material-symbols-outlined text-[18px] fill-icon">payments</span>
             </div>
-            <span className="font-bold text-lg text-primary">PayPilot AI</span>
+            <span className="font-bold text-base text-primary">Ventrexs Service OS</span>
           </div>
           <button
+            type="button"
             onClick={() => setMobileDrawerOpen(false)}
-            className="p-1.5 rounded-full hover:bg-surface-container-low text-on-surface-variant"
+            className="p-1.5 rounded-xl hover:bg-surface-container-low text-on-surface-variant min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Close menu"
           >
             <X className="w-5 h-5" />
           </button>
@@ -82,15 +106,15 @@ export const AppShell: React.FC<AppShellProps> = ({
           onClick={() => setMobileDrawerOpen(false)}
           className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/60"
         >
-          <img src={profile.avatarUrl} alt={profile.name} className="w-9 h-9 rounded-full object-cover" />
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-on-surface truncate">{profile.businessName}</p>
+          <img src={profile.avatarUrl} alt={profile.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-on-surface truncate">{currentBusinessName}</p>
             <p className="text-[11px] text-on-surface-variant">{profile.plan} Plan</p>
           </div>
         </Link>
 
         {/* Drawer Links */}
-        <nav className="flex-1 overflow-y-auto flex flex-col gap-1 py-2">
+        <nav className="flex-1 overflow-y-auto flex flex-col gap-1 py-1">
           {mobileNavItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
             return (
@@ -98,56 +122,78 @@ export const AppShell: React.FC<AppShellProps> = ({
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileDrawerOpen(false)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors ${
                   isActive
-                    ? 'bg-surface-container-high text-primary font-bold'
-                    : 'text-on-surface-variant hover:bg-surface-container-low'
+                    ? 'bg-primary text-on-primary shadow-xs'
+                    : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <span className={`material-symbols-outlined text-[20px] ${isActive ? 'fill-icon text-primary' : ''}`}>
-                    {item.mIcon}
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={isActive ? 'text-primary' : 'text-on-surface-variant'}>
+                    {item.icon}
                   </span>
-                  <span>{item.label}</span>
+                  <span className="truncate">{item.label}</span>
                 </div>
-                {item.badge && (
-                  <span className="px-2 py-0.5 rounded-full text-xs bg-error text-on-error font-bold">
-                    {item.badge}
-                  </span>
-                )}
-                {item.isAi && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-bold">
-                    AI
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {item.badge && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary text-on-primary font-bold">
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.isAi && (
+                    <span className="px-1.5 py-0.2 rounded text-[9px] bg-primary/10 text-primary font-extrabold">
+                      AI
+                    </span>
+                  )}
+                </div>
               </Link>
             );
           })}
         </nav>
 
-        <div className="pt-3 border-t border-outline-variant text-[11px] text-outline">
-          PayPilot AI • v2.4.0
+        <div className="pt-3 border-t border-outline-variant text-[10px] text-outline flex items-center justify-between">
+          <span>Ventrexs Service OS</span>
+          <span>v13.0.0</span>
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Live Demo Status Banner */}
+        {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+          <div className="bg-gradient-to-r from-amber-500/15 via-primary/10 to-amber-500/15 border-b border-amber-500/30 px-4 py-1.5 text-xs text-on-surface flex items-center justify-between z-30">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 font-extrabold text-[10px] tracking-wider uppercase border border-amber-500/40">
+                VENTREXS AI — LIVE DEMO
+              </span>
+              <span className="font-semibold hidden sm:inline text-on-surface-variant text-[11px]">
+                Demo Environment • Apex Services (biz_01) • Zero External Provider Charges
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link href="/" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                Exit Demo
+              </Link>
+            </div>
+          </div>
+        )}
+
         <TopHeader onMenuClick={() => setMobileDrawerOpen(true)} title={title} />
 
         {/* Optional Page Subheader / Breadcrumbs */}
         {(showBack || actions) && (
-          <div className="px-4 lg:px-8 py-3 bg-surface-container-low/50 border-b border-outline-variant flex items-center justify-between gap-4">
+          <div className="px-4 lg:px-8 py-2.5 bg-surface-container-low/40 border-b border-outline-variant flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               {showBack && (
                 <Link
                   href={backUrl}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-on-primary-fixed-variant px-2.5 py-1.5 rounded-lg hover:bg-surface-container-high transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-on-primary-fixed-variant px-2.5 py-1.5 rounded-lg hover:bg-surface-container-high transition-colors min-h-[36px]"
                 >
-                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  <ArrowLeft className="w-4 h-4" />
                   Back
                 </Link>
               )}
-              {title && <span className="text-sm font-semibold text-on-surface md:hidden">{title}</span>}
+              {title && <span className="text-xs font-semibold text-on-surface md:hidden">{title}</span>}
             </div>
             {actions && <div className="flex items-center gap-2">{actions}</div>}
           </div>

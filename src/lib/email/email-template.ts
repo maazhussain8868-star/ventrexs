@@ -1,3 +1,5 @@
+import { BRAND } from '@/config/brand';
+
 export interface EmailTemplateParams {
   businessName: string;
   businessEmail?: string;
@@ -28,7 +30,7 @@ export function renderInvoiceFollowUpEmail(params: EmailTemplateParams): { text:
   } = params;
 
   const balanceFormatted = `$${remainingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-  const payUrl = `https://paypilot.ai/pay/${invoiceId}`;
+  const payUrl = `https://${BRAND.domain}/pay/${invoiceId}`;
 
   // Plaintext version
   const text = `${messageBody}

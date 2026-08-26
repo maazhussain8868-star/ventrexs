@@ -10,6 +10,12 @@ import { RecommendationService } from './recommendations';
 import { NotificationService } from './notifications';
 import { MetricsService } from './metrics';
 import { AuditService } from './audit';
+import { LeadService } from './leads';
+import { OperationsService } from './operations';
+import { ReceptionistBackendService } from './receptionist';
+import { EstimatesService } from './estimates';
+import { ReputationService } from './reputation';
+import { AnalyticsService } from './analytics';
 
 export * from './auth';
 export * from './business';
@@ -21,6 +27,12 @@ export * from './recommendations';
 export * from './notifications';
 export * from './metrics';
 export * from './audit';
+export * from './leads';
+export * from './operations';
+export * from './receptionist';
+export * from './estimates';
+export * from './reputation';
+export * from './analytics';
 
 export function createSupabaseServices(client: SupabaseClient<Database>) {
   return {
@@ -34,5 +46,11 @@ export function createSupabaseServices(client: SupabaseClient<Database>) {
     notifications: new NotificationService(client),
     metrics: new MetricsService(client),
     audit: new AuditService(client),
+    leads: new LeadService(client),
+    operations: new OperationsService(client),
+    receptionist: new ReceptionistBackendService(client),
+    estimates: new EstimatesService(client),
+    reputation: new ReputationService(client),
+    analytics: new AnalyticsService(client),
   };
 }

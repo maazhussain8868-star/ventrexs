@@ -67,7 +67,7 @@ export default function SignupPage() {
           </Link>
           <h1 className="text-2xl font-bold text-primary tracking-tight">Create your account</h1>
           <p className="text-xs sm:text-sm text-on-surface-variant">
-            Start your 14-day free trial of PayPilot AI
+            Start your 14-day free trial of Ventrexs AI
           </p>
         </div>
 

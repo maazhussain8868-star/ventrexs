@@ -1,14 +1,17 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../supabase/types';
 import { getPaymentProvider } from './providers/factory';
-import { EntitlementService } from './entitlements';
+import { EntitlementService, UsageSummary } from './entitlements';
 import {
   BillingInterval,
   CheckoutSessionParams,
   CheckoutSessionResult,
+  CustomerPortalParams,
+  CustomerPortalResult,
   PaymentProvider,
   PLANS_CONFIG,
   PlanKey,
+  UsageMetric,
   WebhookEvent,
 } from './types';
 
@@ -30,6 +33,7 @@ export class BillingService {
     customerName?: string;
     successUrl: string;
     cancelUrl: string;
+    userId?: string;
   }): Promise<CheckoutSessionResult> {
     const provider = getPaymentProvider();
 
@@ -49,7 +53,19 @@ export class BillingService {
       cancelUrl: params.cancelUrl,
     });
 
-    // Write audit log
+    // Write subscription event & audit log
+    await this.client.from('subscription_events').insert({
+      business_id: params.businessId,
+      user_id: params.userId || null,
+      event_type: 'CHECKOUT_INITIATED',
+      to_plan: params.plan,
+      metadata: {
+        interval: params.interval,
+        sessionId: session.sessionId,
+        provider: provider.name,
+      },
+    });
+
     await this.client.from('audit_logs').insert({
       business_id: params.businessId,
       action: 'CHECKOUT_SESSION_CREATED',
@@ -66,7 +82,48 @@ export class BillingService {
   }
 
   /**
-   * 2. Process incoming payment provider webhook with strict signature validation & idempotency
+   * 2. Create customer billing portal session for self-serve management
+   */
+  async createCustomerPortalSession(params: {
+    businessId: string;
+    returnUrl: string;
+    userId?: string;
+  }): Promise<CustomerPortalResult> {
+    const { data: sub } = await this.client
+      .from('subscriptions')
+      .select('provider_customer_id, provider')
+      .eq('business_id', params.businessId)
+      .maybeSingle();
+
+    if (!sub || !sub.provider_customer_id) {
+      throw new Error('No linked Stripe customer found. Please subscribe to a paid plan first.');
+    }
+
+    const provider = getPaymentProvider();
+    if (!provider.createCustomerPortalSession) {
+      throw new Error('Customer portal is not supported by current provider.');
+    }
+
+    const result = await provider.createCustomerPortalSession({
+      businessId: params.businessId,
+      providerCustomerId: sub.provider_customer_id,
+      returnUrl: params.returnUrl,
+    });
+
+    await this.client.from('subscription_events').insert({
+      business_id: params.businessId,
+      user_id: params.userId || null,
+      event_type: 'PORTAL_SESSION_ACCESSED',
+      metadata: {
+        providerCustomerId: sub.provider_customer_id,
+      },
+    });
+
+    return result;
+  }
+
+  /**
+   * 3. Process incoming payment provider webhook with strict signature validation & idempotency
    */
   async handleWebhook(
     payload: string,
@@ -92,7 +149,7 @@ export class BillingService {
       .from('processed_webhook_events')
       .select('id')
       .eq('id', event.id)
-      .single();
+      .maybeSingle();
 
     if (existingEvent) {
       return {
@@ -106,9 +163,13 @@ export class BillingService {
 
     // 3. Process Webhook Event Type
     if (
+      event.type === 'checkout.session.completed' ||
       event.type === 'checkout_completed' ||
+      event.type === 'customer.subscription.created' ||
       event.type === 'subscription_created' ||
+      event.type === 'customer.subscription.updated' ||
       event.type === 'subscription_updated' ||
+      event.type === 'invoice.paid' ||
       event.type === 'payment_succeeded'
     ) {
       if (businessId) {
@@ -116,6 +177,15 @@ export class BillingService {
         const planConfig = PLANS_CONFIG[planKey] || PLANS_CONFIG.Starter;
         const isAnnual = event.interval === 'annual';
         const price = isAnnual ? planConfig.priceAnnual : planConfig.priceMonthly;
+
+        // Fetch existing subscription to detect plan upgrade/downgrade
+        const { data: currentSub } = await this.client
+          .from('subscriptions')
+          .select('plan, status')
+          .eq('business_id', businessId)
+          .maybeSingle();
+
+        const isUpgrade = currentSub && currentSub.plan !== planKey;
 
         // Upsert subscription in Supabase
         await this.client.from('subscriptions').upsert(
@@ -137,6 +207,19 @@ export class BillingService {
           { onConflict: 'business_id' }
         );
 
+        // Record Subscription Event
+        await this.client.from('subscription_events').insert({
+          business_id: businessId,
+          event_type: isUpgrade ? 'PLAN_UPGRADED' : 'SUBSCRIPTION_UPDATED',
+          from_plan: currentSub?.plan || null,
+          to_plan: planKey,
+          metadata: {
+            interval: event.interval || 'monthly',
+            provider: event.provider,
+            eventId: event.id,
+          },
+        });
+
         // Audit log
         await this.client.from('audit_logs').insert({
           business_id: businessId,
@@ -150,7 +233,7 @@ export class BillingService {
           },
         });
       }
-    } else if (event.type === 'payment_failed') {
+    } else if (event.type === 'invoice.payment_failed' || event.type === 'payment_failed') {
       if (businessId) {
         await this.client
           .from('subscriptions')
@@ -160,13 +243,22 @@ export class BillingService {
           })
           .eq('business_id', businessId);
 
+        await this.client.from('subscription_events').insert({
+          business_id: businessId,
+          event_type: 'PAYMENT_FAILED',
+          metadata: {
+            eventId: event.id,
+            provider: event.provider,
+          },
+        });
+
         // Create in-app notification
         await this.client.from('notifications').insert({
           business_id: businessId,
           type: 'system',
           title: 'Subscription Payment Failed',
           message: 'Your recent plan renewal payment failed. Please update your billing details to maintain full feature access.',
-          link_url: '/pricing',
+          link_url: '/settings/billing',
         });
 
         await this.client.from('audit_logs').insert({
@@ -179,7 +271,10 @@ export class BillingService {
           },
         });
       }
-    } else if (event.type === 'subscription_cancelled') {
+    } else if (
+      event.type === 'customer.subscription.deleted' ||
+      event.type === 'subscription_cancelled'
+    ) {
       if (businessId) {
         await this.client
           .from('subscriptions')
@@ -188,6 +283,15 @@ export class BillingService {
             updated_at: new Date().toISOString(),
           })
           .eq('business_id', businessId);
+
+        await this.client.from('subscription_events').insert({
+          business_id: businessId,
+          event_type: 'SUBSCRIPTION_CANCELLED',
+          metadata: {
+            eventId: event.id,
+            provider: event.provider,
+          },
+        });
 
         await this.client.from('audit_logs').insert({
           business_id: businessId,
@@ -217,7 +321,7 @@ export class BillingService {
   }
 
   /**
-   * 3. Cancel Subscription (Immediate or at Period End) - Preserves 100% of business ledger records
+   * 4. Cancel Subscription (Immediate or at Period End) - Preserves 100% of business ledger records
    */
   async cancelSubscription(params: {
     businessId: string;
@@ -252,7 +356,17 @@ export class BillingService {
       })
       .eq('business_id', businessId);
 
-    // Audit log
+    await this.client.from('subscription_events').insert({
+      business_id: businessId,
+      user_id: userId || null,
+      event_type: 'CANCELLATION_REQUESTED',
+      metadata: {
+        cancelAtPeriodEnd,
+        previousStatus: sub.status,
+        newStatus,
+      },
+    });
+
     await this.client.from('audit_logs').insert({
       business_id: businessId,
       user_id: userId || null,
@@ -272,9 +386,76 @@ export class BillingService {
   }
 
   /**
-   * 4. Get active subscription details and entitlement info
+   * 5. Reactivate Subscription (Undo at-period-end cancellation)
+   */
+  async reactivateSubscription(params: {
+    businessId: string;
+    userId?: string;
+  }): Promise<{ success: boolean; status: string }> {
+    const { businessId, userId } = params;
+
+    const { data: sub, error } = await this.client
+      .from('subscriptions')
+      .select('*')
+      .eq('business_id', businessId)
+      .single();
+
+    if (error || !sub) {
+      throw new Error('Subscription not found for this business.');
+    }
+
+    const provider = getPaymentProvider();
+    if (sub.provider_subscription_id && provider.reactivateSubscription) {
+      await provider.reactivateSubscription(sub.provider_subscription_id);
+    }
+
+    await this.client
+      .from('subscriptions')
+      .update({
+        cancel_at_period_end: false,
+        status: 'active',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('business_id', businessId);
+
+    await this.client.from('subscription_events').insert({
+      business_id: businessId,
+      user_id: userId || null,
+      event_type: 'SUBSCRIPTION_REACTIVATED',
+      to_plan: sub.plan,
+    });
+
+    await this.client.from('audit_logs').insert({
+      business_id: businessId,
+      user_id: userId || null,
+      action: 'SUBSCRIPTION_REACTIVATED',
+      entity: 'subscription',
+    });
+
+    return {
+      success: true,
+      status: 'active',
+    };
+  }
+
+  /**
+   * 6. Get active subscription details and entitlement info
    */
   async getSubscriptionDetails(businessId: string) {
     return this.entitlementService.getEffectivePlan(businessId);
+  }
+
+  /**
+   * 7. Get usage summaries vs plan caps
+   */
+  async getUsageSummary(businessId: string): Promise<Record<UsageMetric, UsageSummary>> {
+    return this.entitlementService.getAllUsage(businessId);
+  }
+
+  /**
+   * 8. Record metric usage
+   */
+  async recordUsage(businessId: string, metric: UsageMetric, amount: number = 1) {
+    return this.entitlementService.recordUsage(businessId, metric, amount);
   }
 }

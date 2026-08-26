@@ -1,276 +1,410 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
-import { BentoMetricCard } from '@/components/dashboard/BentoMetricCard';
-import { AIInsightCard } from '@/components/dashboard/AIInsightCard';
-import { RecordPaymentModal } from '@/components/invoices/RecordPaymentModal';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { RecordPaymentModal } from '@/components/invoices/RecordPaymentModal';
 import { useApp } from '@/context/AppContext';
 import { Invoice } from '@/types';
-import { ArrowRight, ChevronRight, Plus, Sparkles, CheckCircle2, Clock, ShieldCheck, AlertCircle } from 'lucide-react';
+import {
+  DateRangePreset,
+  ExecutiveDashboardMetrics,
+  LeadFunnelStage,
+  OwnerInsight,
+  DailyBriefing,
+} from '@/lib/analytics/types';
+import { AnalyticsService } from '@/lib/supabase/services/analytics';
+import { DateRangePicker } from '@/components/analytics/DateRangePicker';
+import { ComparisonBadge } from '@/components/analytics/ComparisonBadge';
+import { FunnelChart } from '@/components/analytics/FunnelChart';
+import { OwnerAIInsights } from '@/components/analytics/OwnerAIInsights';
+import { DailyBriefCard } from '@/components/analytics/DailyBriefCard';
+import {
+  Plus,
+  ArrowRight,
+  ChevronRight,
+  ShieldCheck,
+  DollarSign,
+  Users,
+  Wrench,
+  Bot,
+  MessageSquare,
+  Star,
+  FileText,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+  Calendar,
+  Sparkles,
+} from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { 
-    invoices, 
-    totalOutstanding, 
-    overdueAmount, 
-    dueThisWeek, 
-    collectedMtd,
-    sendInvoiceReminder
+  const {
+    invoices,
+    leads,
+    appointments,
+    jobs,
+    businessProfile,
+    profile,
+    businessId,
   } = useApp();
 
+  const [dateRange, setDateRange] = useState<DateRangePreset>('30d');
+  const [metrics, setMetrics] = useState<ExecutiveDashboardMetrics | null>(null);
+  const [funnel, setFunnel] = useState<LeadFunnelStage[]>([]);
+  const [insights, setInsights] = useState<OwnerInsight[]>([]);
+  const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
 
-  // Invoices requiring attention: overdue or due soon with high priority
-  const attentionInvoices = invoices.filter(
-    i => i.status === 'overdue' || (i.status === 'due' && i.priority === 'high')
-  ).slice(0, 4);
+  const analyticsService = new AnalyticsService();
 
-  // Recent settled payments
-  const paidInvoices = invoices.filter(i => i.status === 'paid').slice(0, 4);
+  useEffect(() => {
+    // Load deterministic business intelligence metrics for the selected range
+    const execMetrics = analyticsService.getExecutiveDashboardMetrics(businessId || 'biz_demo', dateRange);
+    const funnelStages = analyticsService.getConversionFunnel();
+    const ownerInsights = analyticsService.generateOwnerInsights();
+    const dailyBrief = analyticsService.generateDailyBriefing(businessProfile?.name || profile.businessName);
+
+    Promise.resolve(execMetrics).then(setMetrics);
+    setFunnel(funnelStages);
+    setInsights(ownerInsights);
+    setBriefing(dailyBrief);
+  }, [dateRange, businessId, businessProfile, profile]);
+
+  const currentBusinessName = businessProfile?.name || profile.businessName;
+  const currentIndustry = businessProfile?.industry || 'HVAC & Field Service';
+
+  // Active work orders
+  const activeJobs = jobs.slice(0, 3);
+  // High priority overdue invoices
+  const attentionInvoices = invoices
+    .filter((i) => i.status === 'overdue' || (i.status === 'due' && i.priority === 'high'))
+    .slice(0, 3);
 
   return (
-    <AppShell title="Dashboard">
-      <div className="flex flex-col gap-6">
-        {/* Dashboard Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-1 border-b border-outline-variant/60">
+    <AppShell title="Executive Business Intelligence">
+      <div className="flex flex-col gap-8 max-w-7xl mx-auto">
+        {/* Cockpit Top Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-outline-variant/60">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">Accounts Receivable Cockpit</h1>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-tertiary-container/15 text-tertiary">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
+                {currentBusinessName}
+              </h1>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-container/20 text-primary">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Ethical AR Engine
+                {currentIndustry} OS
               </span>
             </div>
             <p className="text-xs sm:text-sm text-on-surface-variant flex items-center gap-2">
-              <span>Main Street Bakery & Cafe</span>
+              <span>Owner Command Center & Executive Telemetry</span>
               <span className="text-outline">•</span>
               <span className="flex items-center gap-1 text-tertiary font-semibold">
                 <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-                Real-time Sync Active
+                Real-Time Data
               </span>
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/copilot"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-semibold text-xs hover:bg-surface-container-low transition-colors shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>AI Copilot (3)</span>
-            </Link>
-            <Link
-              href="/invoices/create"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-on-primary font-semibold text-xs sm:text-sm rounded-xl shadow-sm hover:bg-on-primary-fixed-variant transition-all active:scale-[0.98]"
-            >
-              <Plus className="w-4 h-4" />
-              New Invoice
-            </Link>
+          {/* Date Range Preset Selector */}
+          <div className="flex items-center gap-2">
+            <DateRangePicker
+              value={dateRange}
+              onChange={(preset) => setDateRange(preset)}
+            />
           </div>
         </div>
 
-        {/* Bento Grid Metrics — Financial Clarity */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <BentoMetricCard
-            label="Outstanding Receivables"
-            amount={totalOutstanding}
-            type="primary"
-            changeText="Open Capital"
-            subtext="Total unpaid client balance"
-          />
-          <BentoMetricCard
-            label="Overdue Amount"
-            amount={overdueAmount}
-            type="error"
-            changeText={`${attentionInvoices.filter(i => i.status === 'overdue').length} Delinquent`}
-            subtext="Original legitimate balance"
-          />
-          <BentoMetricCard
-            label="Due This Week"
-            amount={dueThisWeek}
-            type="surface"
-            changeText="Upcoming"
-            subtext="On-schedule collections"
-          />
-          <BentoMetricCard
-            label="Payments Received (MTD)"
-            amount={collectedMtd}
-            type="tertiary"
-            changeText="98% Recovered"
-            subtext="Settled directly to bank"
-          />
-        </section>
+        {/* 1. Daily Owner Morning Briefing */}
+        {briefing && <DailyBriefCard briefing={briefing} />}
 
-        {/* AI Copilot Insights Banner matching Stitch */}
-        <AIInsightCard
-          title="AI Accounts Receivable Recommendation"
-          insight="Acme Corp ($4,800.00) is 8 days past due. Historical payment behavior indicates their finance team processes scheduled batch checks on Thursdays. Sending a courteous disbursement confirmation today will expedite approval."
-          actionLabel="Review & Send Follow-up"
-          actionHref="/follow-up?invoiceId=inv-1"
-          confidence={88}
-        />
+        {/* 2. Owner AI Insights & Opportunity Radar */}
+        <OwnerAIInsights insights={insights} />
 
-        {/* Invoices Requiring Attention */}
-        <section className="bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-5 sm:p-6 shadow-xs">
-          <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-error/10 text-error">
-                <AlertCircle className="w-4 h-4" />
+        {/* 3. Executive KPI Clusters */}
+        {metrics && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-on-surface tracking-tight">
+                Core Performance Clusters
+              </h2>
+              <span className="text-xs text-on-surface-variant font-mono">
+                Compared vs. prior {dateRange.toUpperCase()} period
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Cluster A: Revenue */}
+              <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/80 shadow-xs flex flex-col justify-between space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4 text-primary" /> Total Revenue
+                  </span>
+                  <ComparisonBadge trend={metrics.revenue.totalRevenue} />
+                </div>
+                <div>
+                  <span className="text-3xl font-extrabold font-mono text-on-surface">
+                    ${metrics.revenue.totalRevenue.current.toLocaleString()}
+                  </span>
+                  <div className="mt-1 text-xs text-on-surface-variant flex items-center justify-between">
+                    <span>MTD: ${metrics.revenue.revenueThisMonth.toLocaleString()}</span>
+                    <span>Paid: ${metrics.revenue.paidInvoiceAmount.current.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between text-[11px]">
+                  <span className="text-on-surface-variant font-medium">Outstanding Balances:</span>
+                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                    ${metrics.revenue.outstandingBalance.current.toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <div>
-                <h2 className="font-bold text-base sm:text-lg text-on-surface">Invoices Requiring Attention</h2>
-                <p className="text-xs text-on-surface-variant">Overdue accounts sorted by aging days and original balance</p>
+
+              {/* Cluster B: Sales & Conversion */}
+              <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/80 shadow-xs flex flex-col justify-between space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-emerald-600" /> New Leads
+                  </span>
+                  <ComparisonBadge trend={metrics.sales.newLeads} />
+                </div>
+                <div>
+                  <span className="text-3xl font-extrabold font-mono text-on-surface">
+                    {metrics.sales.newLeads.current}
+                  </span>
+                  <div className="mt-1 text-xs text-on-surface-variant flex items-center justify-between">
+                    <span>Qualified: {metrics.sales.qualifiedLeads.current}</span>
+                    <span>Won Deals: {metrics.sales.wonDeals.current}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between text-[11px]">
+                  <span className="text-on-surface-variant font-medium">Lead Conversion Rate:</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {metrics.sales.conversionRate.current}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Cluster C: Operations & Jobs */}
+              <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/80 shadow-xs flex flex-col justify-between space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
+                    <Wrench className="w-4 h-4 text-sky-600" /> Completed Jobs
+                  </span>
+                  <ComparisonBadge trend={metrics.operations.completedJobs} />
+                </div>
+                <div>
+                  <span className="text-3xl font-extrabold font-mono text-on-surface">
+                    {metrics.operations.completedJobs.current}
+                  </span>
+                  <div className="mt-1 text-xs text-on-surface-variant flex items-center justify-between">
+                    <span>In-Progress: {metrics.operations.inProgressJobs}</span>
+                    <span>Scheduled: {metrics.operations.scheduledJobs}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between text-[11px]">
+                  <span className="text-on-surface-variant font-medium">Avg Completion Time:</span>
+                  <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
+                    {metrics.operations.averageCompletionHours.current} hrs
+                  </span>
+                </div>
+              </div>
+
+              {/* Cluster D: AI Receptionist */}
+              <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/80 shadow-xs flex flex-col justify-between space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
+                    <Bot className="w-4 h-4 text-purple-600" /> AI Conversations
+                  </span>
+                  <ComparisonBadge trend={metrics.receptionist.conversations} />
+                </div>
+                <div>
+                  <span className="text-3xl font-extrabold font-mono text-on-surface">
+                    {metrics.receptionist.conversations.current}
+                  </span>
+                  <div className="mt-1 text-xs text-on-surface-variant flex items-center justify-between">
+                    <span>Auto-Booked: {metrics.receptionist.appointmentsBooked.current}</span>
+                    <span>Response: {metrics.receptionist.avgResponseTimeSeconds}s</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-outline-variant/40 flex items-center justify-between text-[11px]">
+                  <span className="text-on-surface-variant font-medium">AI Triage Conversion:</span>
+                  <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
+                    {metrics.receptionist.aiConversionRate.current}%
+                  </span>
+                </div>
               </div>
             </div>
-            <Link href="/invoices" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
-              All Invoices ({invoices.length})
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
+
+            {/* Secondary 4 KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Estimates */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/60 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-on-surface-variant font-medium">
+                    Estimate Approval Rate
+                  </span>
+                  <div className="text-xl font-bold font-mono text-on-surface">
+                    {metrics.sales.estimateApprovalRate.current}%
+                  </div>
+                </div>
+                <ComparisonBadge trend={metrics.sales.estimateApprovalRate} label="" />
+              </div>
+
+              {/* Reputation */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/60 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-on-surface-variant font-medium">
+                    Google Review Rating
+                  </span>
+                  <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                    {metrics.reputation.averageRating.current.toFixed(1)} / 5.0
+                  </div>
+                </div>
+                <ComparisonBadge trend={metrics.reputation.averageRating} label="" />
+              </div>
+
+              {/* Communications */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/60 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-on-surface-variant font-medium">
+                    Carrier Delivery Rate
+                  </span>
+                  <div className="text-xl font-bold font-mono text-on-surface">
+                    {metrics.communications.deliveryRate.current}%
+                  </div>
+                </div>
+                <ComparisonBadge trend={metrics.communications.deliveryRate} label="" />
+              </div>
+
+              {/* Customer Retention */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/60 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-on-surface-variant font-medium">
+                    Repeat Customer Rate
+                  </span>
+                  <div className="text-xl font-bold font-mono text-on-surface">
+                    {metrics.customers.repeatServiceRate}%
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-tertiary">
+                  {metrics.customers.returningCustomers} returning
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 4. CRM & Sales Conversion Funnel */}
+        <FunnelChart stages={funnel} />
+
+        {/* 5. Live Operations Dispatch & Receivables Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Active Work Orders */}
+          <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-on-surface tracking-tight">
+                  Active Field Dispatches
+                </h3>
+                <p className="text-xs text-on-surface-variant">Scheduled and in-progress jobs</p>
+              </div>
+              <Link href="/jobs">
+                <Button variant="ghost" size="sm" className="text-xs gap-1">
+                  <span>View All Jobs</span>
+                  <ChevronRight className="w-3 h-3" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {activeJobs.length === 0 ? (
+                <div className="text-xs text-on-surface-variant py-4 text-center">
+                  No active jobs scheduled today.
+                </div>
+              ) : (
+                activeJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/40 flex items-center justify-between"
+                  >
+                    <div>
+                      <h4 className="text-xs font-bold text-on-surface">{job.title}</h4>
+                      <p className="text-[11px] text-on-surface-variant mt-0.5">
+                        Tech: {job.assignedTechName || 'Unassigned'} • Customer: {job.customerName}
+                      </p>
+                    </div>
+                    <Badge jobStatus={job.status} size="sm" />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-col divide-y divide-outline-variant/60">
-            {attentionInvoices.length === 0 ? (
-              <p className="text-xs text-on-surface-variant py-6 text-center">
-                Excellent! All customer accounts are up to date.
-              </p>
-            ) : (
-              attentionInvoices.map((inv) => {
-                const initials = inv.customerCompany
-                  .split(' ')
-                  .map(w => w[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase();
+          {/* Priority Invoices Requiring Follow-Up */}
+          <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-on-surface tracking-tight">
+                  Receivables Requiring Follow-up
+                </h3>
+                <p className="text-xs text-on-surface-variant">
+                  Invoices reaching net terms or overdue
+                </p>
+              </div>
+              <Link href="/invoices">
+                <Button variant="ghost" size="sm" className="text-xs gap-1">
+                  <span>View Ledger</span>
+                  <ChevronRight className="w-3 h-3" />
+                </Button>
+              </Link>
+            </div>
 
-                return (
+            <div className="space-y-3">
+              {attentionInvoices.length === 0 ? (
+                <div className="text-xs text-on-surface-variant py-4 text-center">
+                  All active receivables are up to date.
+                </div>
+              ) : (
+                attentionInvoices.map((inv) => (
                   <div
                     key={inv.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between py-4 px-2 hover:bg-surface-container-low rounded-xl transition-colors gap-3"
+                    className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/40 flex items-center justify-between"
                   >
-                    {/* Left: Customer & Details */}
-                    <div 
-                      onClick={() => router.push(`/invoices/${inv.id}`)}
-                      className="flex items-center gap-3.5 min-w-0 cursor-pointer flex-1"
+                    <div>
+                      <h4 className="text-xs font-bold text-on-surface">
+                        Invoice #{inv.number}
+                      </h4>
+                      <p className="text-[11px] text-on-surface-variant mt-0.5">
+                        Due: {inv.dueDate} • Balance: ${inv.remainingBalance.toLocaleString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedInvoiceForPayment(inv)}
+                      className="text-xs h-7 px-2.5"
                     >
-                      <div className="w-11 h-11 rounded-xl bg-error-container/40 text-error flex items-center justify-center font-bold text-xs shrink-0 border border-error/20">
-                        {initials}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-on-surface truncate hover:text-primary transition-colors">
-                            {inv.customerCompany}
-                          </p>
-                          <span className="text-[11px] font-bold text-error bg-error/10 px-2 py-0.5 rounded-full">
-                            {inv.daysOverdue > 0 ? `${inv.daysOverdue}d Overdue` : 'Due Soon'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-on-surface-variant mt-0.5">
-                          {inv.number} • Contact: {inv.customerName} • Due {inv.dueDate}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Right: Amounts & Quick Actions */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                      <div className="text-left sm:text-right">
-                        <p className="text-sm sm:text-base font-bold text-on-surface font-mono">
-                          ${inv.remainingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-[10px] text-outline">Original Due: ${inv.originalAmountDue.toLocaleString()}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => sendInvoiceReminder(inv.id)}
-                          className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-semibold text-xs hover:bg-on-primary-fixed-variant transition-colors flex items-center gap-1 shadow-xs"
-                          title="Send Truthful Reminder"
-                        >
-                          <Sparkles className="w-3 h-3" />
-                          <span>Remind</span>
-                        </button>
-                        <button
-                          onClick={() => setSelectedInvoiceForPayment(inv)}
-                          className="px-3 py-1.5 rounded-lg border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
-                        >
-                          Record Pay
-                        </button>
-                        <Link
-                          href={`/invoices/${inv.id}`}
-                          className="p-1.5 text-outline-variant hover:text-primary rounded-lg"
-                        >
-                          <ChevronRight className="w-5 h-5" />
-                        </Link>
-                      </div>
-                    </div>
+                      Record Payment
+                    </Button>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </section>
-
-        {/* Recent Payments Received */}
-        <section className="bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-5 sm:p-6 shadow-xs">
-          <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-tertiary-container/15 text-tertiary">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-bold text-base sm:text-lg text-on-surface">Recent Payments Settled</h2>
-                <p className="text-xs text-on-surface-variant">Cleared direct remittances credited to customer accounts</p>
-              </div>
+                ))
+              )}
             </div>
-            <Link href="/collections" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
-              Collections Ledger
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
-
-          <div className="flex flex-col divide-y divide-outline-variant/60">
-            {paidInvoices.map((inv) => (
-              <div
-                key={inv.id}
-                onClick={() => router.push(`/invoices/${inv.id}`)}
-                className="flex items-center justify-between py-3.5 px-2 hover:bg-surface-container-low rounded-xl transition-colors cursor-pointer group"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-tertiary-container/15 text-tertiary flex items-center justify-center shrink-0 border border-tertiary/20">
-                    <span className="material-symbols-outlined text-[20px] fill-icon">check_circle</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                      {inv.customerCompany}
-                    </p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">
-                      {inv.number} • Paid on {inv.paidDate || 'Recently'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-sm sm:text-base font-bold text-tertiary font-mono">
-                    +${inv.paymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-[11px] text-on-surface-variant">100% Principal Settled</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        </div>
       </div>
 
       {/* Record Payment Modal */}
       {selectedInvoiceForPayment && (
         <RecordPaymentModal
-          isOpen={!!selectedInvoiceForPayment}
-          onClose={() => setSelectedInvoiceForPayment(null)}
           invoice={selectedInvoiceForPayment}
+          isOpen={Boolean(selectedInvoiceForPayment)}
+          onClose={() => setSelectedInvoiceForPayment(null)}
         />
       )}
     </AppShell>
