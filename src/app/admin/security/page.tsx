@@ -21,18 +21,18 @@ export default function AdminSecurityPage() {
       backUrl="/admin"
     >
       <div className="space-y-6">
-        <section className="bg-[#0a0f1d] border border-outline-variant/40 rounded-2xl shadow-xl overflow-hidden divide-y divide-outline-variant/30">
+        <section className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden divide-y divide-slate-100">
           {securityPolicies.map((p, idx) => (
-            <div key={idx} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-container-low/40 transition-colors">
+            <div key={idx} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-purple-400" />
-                  <h3 className="text-sm font-bold text-white">{p.title}</h3>
+                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                  <h3 className="text-sm font-bold text-slate-900">{p.title}</h3>
                 </div>
-                <p className="text-xs text-slate-400 max-w-2xl">{p.desc}</p>
+                <p className="text-xs text-slate-500 max-w-2xl">{p.desc}</p>
               </div>
 
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
                 <CheckCircle2 className="w-3.5 h-3.5" /> {p.status}
               </span>
             </div>

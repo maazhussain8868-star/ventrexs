@@ -9,9 +9,6 @@ import {
   AgencyClient,
   AgencyDomainItem,
   AgencyDeployment,
-  initialAgencyClients,
-  initialAgencyDomains,
-  initialAgencyDeployments,
 } from '@/data/agencyData';
 import { X } from 'lucide-react';
 
@@ -45,7 +42,7 @@ export const AgencyLayout: React.FC<AgencyLayoutProps> = ({
   const pendingOnboardingCount = clients.filter((c) => c.onboardingStage !== 'Live').length;
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-[#F5F7FB] text-slate-900 flex flex-col font-sans antialiased">
       {/* Agency Dedicated Top Bar */}
       <AgencyTopBar
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -70,18 +67,18 @@ export const AgencyLayout: React.FC<AgencyLayoutProps> = ({
         {/* Mobile Drawer */}
         {mobileDrawerOpen && (
           <div
-            className="fixed inset-0 z-50 bg-[#000000]/60 backdrop-blur-xs lg:hidden animate-in fade-in"
+            className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs lg:hidden animate-in fade-in"
             onClick={() => setMobileDrawerOpen(false)}
           >
             <div
-              className="w-72 h-full bg-[#0a0f1d] border-r border-outline-variant/40 p-4"
+              className="w-72 h-full bg-white border-r border-slate-200 p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-outline-variant/40 mb-3">
-                <span className="font-extrabold text-sm text-white">Agency Navigation</span>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+                <span className="font-extrabold text-sm text-slate-900">Agency Navigation</span>
                 <button
                   onClick={() => setMobileDrawerOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -104,7 +101,7 @@ export const AgencyLayout: React.FC<AgencyLayoutProps> = ({
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto space-y-6">
           {children}
         </main>
       </div>

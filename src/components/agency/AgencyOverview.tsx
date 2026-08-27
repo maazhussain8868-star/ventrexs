@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AgencyClient,
   AgencyDeployment,
@@ -29,6 +29,8 @@ import {
   Clock,
   AlertTriangle,
   Zap,
+  ArrowUpRight,
+  Activity,
 } from 'lucide-react';
 
 interface AgencyOverviewProps {
@@ -52,429 +54,454 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
   onManageClient,
   onSwitchContext,
 }) => {
+  const [timeFilter, setTimeFilter] = useState<'7D' | '30D' | '6M' | '1Y'>('6M');
+
   const totalClients = clients.length;
   const activeClients = clients.filter((c) => c.status === 'Active').length;
   const trialClients = clients.filter((c) => c.status === 'Trial').length;
   const pendingOnboarding = clients.filter((c) => c.onboardingStage !== 'Live').length;
   const liveDeployments = deployments.filter((d) => d.status === 'Live').length;
   const totalMrr = clients.reduce((acc, c) => (c.status !== 'Suspended' ? acc + c.mrr : acc), 0);
-  const arr = totalMrr * 12;
-  const mrrGrowth = 18.4;
 
-  const topClients = clients.slice(0, 5);
+  const healthyCount = clients.filter((c) => c.health === 'Healthy').length;
+  const attentionCount = clients.filter((c) => c.health === 'Needs Attention').length;
+  const atRiskCount = clients.filter((c) => c.health === 'At Risk').length;
+
+  const mrrChartData = [
+    { label: 'Mar', value: 1420 },
+    { label: 'Apr', value: 1680 },
+    { label: 'May', value: 1890 },
+    { label: 'Jun', value: 2050 },
+    { label: 'Jul', value: 2190 },
+    { label: 'Aug', value: 2327 },
+  ];
+
+  const onboardingStages = [
+    { name: 'NEW', count: clients.filter((c) => c.onboardingStage === 'New Client').length, stage: 'New Client' },
+    { name: 'SETUP', count: clients.filter((c) => c.onboardingStage === 'Setup').length, stage: 'Setup' },
+    { name: 'BRANDING', count: clients.filter((c) => c.onboardingStage === 'Branding').length, stage: 'Branding' },
+    { name: 'DOMAIN', count: clients.filter((c) => c.onboardingStage === 'Domain').length, stage: 'Domain' },
+    { name: 'CONFIG', count: clients.filter((c) => c.onboardingStage === 'Configuration').length, stage: 'Configuration' },
+    { name: 'LIVE', count: clients.filter((c) => c.onboardingStage === 'Live').length, stage: 'Live' },
+  ];
+
+  const getHealthBadge = (health: string) => {
+    switch (health) {
+      case 'Healthy':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            <CheckCircle2 className="w-3 h-3" /> Healthy
+          </span>
+        );
+      case 'Needs Attention':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+            <Clock className="w-3 h-3" /> Attention
+          </span>
+        );
+      case 'At Risk':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+            <AlertTriangle className="w-3 h-3" /> At Risk
+          </span>
+        );
+      default:
+        return <span className="text-xs text-slate-600">{health}</span>;
+    }
+  };
+
+  const getSubscriptionBadge = (status: string) => {
+    switch (status) {
+      case 'Active':
+        return (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            ACTIVE
+          </span>
+        );
+      case 'Trial':
+        return (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            TRIAL
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+            {status.toUpperCase()}
+          </span>
+        );
+    }
+  };
 
   return (
-    <div className="space-y-8">
-      {/* 1. Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0e1628] via-[#0a0f1d] to-[#070b14] border border-outline-variant/50 p-6 sm:p-8 lg:p-10 shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-        <div className="absolute bottom-0 right-1/3 w-64 h-64 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold font-mono">
-              <Building2 className="w-3.5 h-3.5" />
-              <span>APEX GROWTH MARKETING &bull; RESELLER PARTNER</span>
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Agency Command Center
-            </h1>
-
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Manage your clients, deployments, subscriptions, branding and revenue from one place.
-            </p>
-          </div>
-
-          {/* CTAs */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => onSelectTab('clients')}
-              className="text-xs font-bold border-outline-variant/80 text-white hover:bg-surface-container-low"
-            >
-              View Clients
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={onOpenAddClient}
-              leftIcon={<Plus className="w-4 h-4" />}
-              className="text-xs font-bold shadow-lg shadow-primary/25 bg-primary text-white hover:bg-primary/90"
-            >
-              + Add Client
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. High-Level Agency Intelligence: 7 Key Reseller Metrics */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-primary" />
-            <h2 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
-              Agency Telemetry & Performance
-            </h2>
-          </div>
-          <span className="text-[11px] text-slate-400 font-mono">
-            Auto-synced across 14 tenant containers
-          </span>
+    <div className="space-y-6">
+      {/* 1. Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Agency Dashboard
+          </h1>
+          <p className="text-xs lg:text-sm text-slate-500 mt-0.5">
+            Manage your client portfolio, deployments, subscriptions and reseller operations.
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {/* 1. Total Clients */}
-          <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-1 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Total Clients</span>
-              <Users2 className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <div className="text-2xl font-black text-white font-mono">{totalClients}</div>
-            <div className="text-[10px] text-slate-400 font-mono">Max limit: 25 seats</div>
-          </div>
-
-          {/* 2. Active Clients */}
-          <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-1 hover:border-emerald-500/40 transition-colors">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Active Clients</span>
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-black text-emerald-400 font-mono">{activeClients}</div>
-            <div className="text-[10px] text-emerald-400/80 font-bold">100% good standing</div>
-          </div>
-
-          {/* 3. Monthly Recurring Revenue */}
-          <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-1 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Monthly MRR</span>
-              <CreditCard className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <div className="text-2xl font-black text-white font-mono">${totalMrr.toLocaleString()}</div>
-            <div className="text-[10px] text-slate-400 font-mono">ARR: ${arr.toLocaleString()}</div>
-          </div>
-
-          {/* 4. Trial Clients */}
-          <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-1 hover:border-amber-500/40 transition-colors">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Trial Clients</span>
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-            </div>
-            <div className="text-2xl font-black text-amber-400 font-mono">{trialClients}</div>
-            <div className="text-[10px] text-amber-400/80 font-medium">14-day trials active</div>
-          </div>
-
-          {/* 5. Pending Onboarding */}
-          <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-1 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Pending Setup</span>
-              <GitBranch className="w-3.5 h-3.5 text-sky-400" />
-            </div>
-            <div className="text-2xl font-black text-sky-400 font-mono">{pendingOnboarding}</div>
-            <div className="text-[10px] text-slate-400 font-mono">Setup & DNS pipeline</div>
-          </div>
-
-          {/* 6. Deployments */}
-          <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-1 hover:border-indigo-500/40 transition-colors">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Deployments</span>
-              <Server className="w-3.5 h-3.5 text-indigo-400" />
-            </div>
-            <div className="text-2xl font-black text-white font-mono">{liveDeployments}</div>
-            <div className="text-[10px] text-indigo-400/80 font-bold">99.98% uptime</div>
-          </div>
-
-          {/* 7. MRR Growth */}
-          <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-1 hover:border-emerald-500/40 transition-colors">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[10px] font-bold uppercase tracking-wider">MRR Growth</span>
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-black text-emerald-400 font-mono">+{mrrGrowth}%</div>
-            <div className="text-[10px] text-emerald-400/80 font-bold">+3 upgrades MoM</div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Client Portfolio Highlights & Quick Actions Grid */}
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-base font-bold text-white tracking-tight">
-              Client Portfolio Snapshot
-            </h3>
-            <p className="text-xs text-slate-400">
-              Top performing trade businesses under agency management.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onSelectTab('clients')}
-            className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1 self-start sm:self-auto"
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSelectTab('revenue')}
+            className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
           >
-            <span>View All {totalClients} Clients</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
+            Revenue Report
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onOpenAddClient}
+            leftIcon={<Plus className="w-3.5 h-3.5" />}
+            className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
+          >
+            + Add Client
+          </Button>
         </div>
+      </div>
 
-        {/* Client Rows */}
-        <div className="space-y-3">
-          {topClients.map((client) => (
-            <div
-              key={client.id}
-              className="p-4 sm:p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 hover:border-primary/50 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs group"
-            >
-              {/* Left: Tenant identity */}
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm text-white shrink-0 shadow-sm"
-                  style={{ backgroundColor: client.accentColor }}
-                >
-                  {client.initials}
-                </div>
-
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm text-white truncate group-hover:text-primary transition-colors">
-                      {client.name}
-                    </span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-slate-300">
-                      {client.industry}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                      {client.plan}
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        client.status === 'Active'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : client.status === 'Trial'
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      }`}
-                    >
-                      {client.status}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono">
-                    <span className="flex items-center gap-1 text-slate-300">
-                      <Globe className="w-3 h-3 text-sky-400" />
-                      {client.domain}
-                    </span>
-                    <span>&bull;</span>
-                    <span>{client.lastActivity}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Middle: Onboarding & Health */}
-              <div className="flex items-center gap-6 lg:gap-8 text-xs font-mono">
-                <div>
-                  <span className="text-[10px] text-slate-500 block uppercase font-bold">MRR</span>
-                  <span className="font-black text-white">${client.mrr}/mo</span>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-500 block uppercase font-bold">Pipeline Stage</span>
-                  <span className="font-bold text-slate-300">{client.onboardingStage}</span>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-500 block uppercase font-bold">Client Health</span>
-                  <span
-                    className={`font-bold flex items-center gap-1 ${
-                      client.health === 'Healthy'
-                        ? 'text-emerald-400'
-                        : client.health === 'Needs Attention'
-                        ? 'text-amber-400'
-                        : 'text-red-400'
-                    }`}
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        client.health === 'Healthy'
-                          ? 'bg-emerald-400'
-                          : client.health === 'Needs Attention'
-                          ? 'bg-amber-400'
-                          : 'bg-red-400'
-                      }`}
-                    />
-                    {client.health}
-                  </span>
-                </div>
-              </div>
-
-              {/* Right: Quick Actions */}
-              <div className="flex items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-outline-variant/40">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onManageClient(client)}
-                  className="text-xs text-slate-300 hover:text-white border-outline-variant/60"
-                >
-                  Manage
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => onSwitchContext(client)}
-                  rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                  className="text-xs font-bold bg-primary/90 text-white hover:bg-primary"
-                >
-                  Open Workspace
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 4. Reseller Modules Hub (Onboarding Pipeline, White-Label, Domains, Deployments) */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Module A: Onboarding Pipeline */}
-        <div
-          onClick={() => onSelectTab('onboarding')}
-          className="p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 hover:border-primary/50 transition-all cursor-pointer group space-y-3"
-        >
+      {/* 2. Top 4 Clean KPI Cards */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1 */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Total Clients
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center">
+              <Users2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+              {totalClients}
+            </div>
+            <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              <span>+2 this month</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2 */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Active Clients
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+              {activeClients}
+            </div>
+            <div className="mt-1 text-xs text-slate-500 font-medium">
+              85.7% of portfolio active
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3 */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Monthly Revenue
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+              ${totalMrr.toLocaleString()}
+            </div>
+            <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              <span>+18.4% MRR growth</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4 */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Pending Onboarding
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <GitBranch className="w-4 h-4" />
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-primary transition-colors" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white group-hover:text-primary transition-colors">
-              Onboarding Pipeline
-            </h4>
-            <p className="text-xs text-slate-400 mt-1">
-              6 stages tracking client setup from invitation to live production.
-            </p>
-          </div>
-          <div className="text-[11px] font-mono text-sky-400 font-bold">
-            {pendingOnboarding} clients currently in onboarding
-          </div>
-        </div>
-
-        {/* Module B: White-Label Studio */}
-        <div
-          onClick={() => onSelectTab('whitelabel')}
-          className="p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 hover:border-primary/50 transition-all cursor-pointer group space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-              <Palette className="w-4 h-4" />
+            <div className="text-3xl font-extrabold text-amber-600 tracking-tight font-mono">
+              {pendingOnboarding}
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-primary transition-colors" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-white group-hover:text-primary transition-colors">
-              White-Label Branding
-            </h4>
-            <p className="text-xs text-slate-400 mt-1">
-              Custom logos, theme tokens, login portal copy, and email branding.
-            </p>
-          </div>
-          <div className="text-[11px] font-mono text-purple-400 font-bold">
-            Live Preview & Theme Customizer
-          </div>
-        </div>
-
-        {/* Module C: Custom Domains */}
-        <div
-          onClick={() => onSelectTab('domains')}
-          className="p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 hover:border-primary/50 transition-all cursor-pointer group space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <Globe className="w-4 h-4" />
+            <div className="mt-1 text-xs text-amber-700 font-medium flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              <span>Requires attention</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-primary transition-colors" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-white group-hover:text-primary transition-colors">
-              Custom Domain Center
-            </h4>
-            <p className="text-xs text-slate-400 mt-1">
-              Automated TLS 1.3 certificates and DNS TXT verification records.
-            </p>
-          </div>
-          <div className="text-[11px] font-mono text-emerald-400 font-bold">
-            {domains.filter((d) => d.status === 'Connected').length} Domains Connected
-          </div>
-        </div>
-
-        {/* Module D: Deployments & Cloud Pods */}
-        <div
-          onClick={() => onSelectTab('deployments')}
-          className="p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 hover:border-primary/50 transition-all cursor-pointer group space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-              <Server className="w-4 h-4" />
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-primary transition-colors" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-white group-hover:text-primary transition-colors">
-              Deployment Telemetry
-            </h4>
-            <p className="text-xs text-slate-400 mt-1">
-              Multi-tenant pods, edge caching, latency gauges, and rollback tools.
-            </p>
-          </div>
-          <div className="text-[11px] font-mono text-indigo-400 font-bold">
-            {liveDeployments} Pods Operating Nominally
           </div>
         </div>
       </section>
 
-      {/* 5. Live Agency Event Feed Snapshot */}
-      <section className="p-6 rounded-3xl bg-[#0a0f1d] border border-outline-variant/50 space-y-4 shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Live Agency Activity Stream
-            </h3>
-            <p className="text-xs text-slate-400">
-              Audit log of client onboarding, domain changes, subscriptions, and deployment updates.
-            </p>
+      {/* 3. Main Analytics (2 Columns: Revenue Performance Left, Client Health Right) */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Revenue Performance */}
+        <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Revenue Performance</h2>
+              <p className="text-xs text-slate-500">Reseller subscription MRR growth trajectory</p>
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              {(['7D', '30D', '6M', '1Y'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setTimeFilter(filter)}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                    timeFilter === filter
+                      ? 'bg-white text-violet-700 shadow-2xs font-extrabold'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bar Chart Area */}
+          <div className="grid grid-cols-6 gap-3 items-end h-48 pt-4">
+            {mrrChartData.map((item, idx) => {
+              const heightPercent = Math.round((item.value / 2500) * 100);
+              return (
+                <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end group">
+                  <span className="text-[11px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                    ${item.value}
+                  </span>
+                  <div className="w-full bg-slate-100 rounded-xl h-full flex items-end p-1">
+                    <div
+                      className="w-full bg-gradient-to-t from-violet-600 to-indigo-600 rounded-lg transition-all group-hover:from-violet-700 group-hover:to-indigo-700 shadow-2xs"
+                      style={{ height: `${heightPercent}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-slate-600">{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: Client Portfolio Health */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
+          <div className="space-y-1 pb-2 border-b border-slate-100">
+            <h2 className="text-base font-bold text-slate-900">Client Portfolio Health</h2>
+            <p className="text-xs text-slate-500">Service reliability and adoption status</p>
+          </div>
+
+          <div className="space-y-3 my-auto">
+            {/* Healthy */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold text-slate-700">
+                <span className="flex items-center gap-1.5 text-emerald-700">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" /> Healthy
+                </span>
+                <span className="font-mono font-bold text-slate-900">{healthyCount} clients</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full"
+                  style={{ width: `${Math.round((healthyCount / totalClients) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Needs Attention */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold text-slate-700">
+                <span className="flex items-center gap-1.5 text-amber-700">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" /> Needs Attention
+                </span>
+                <span className="font-mono font-bold text-slate-900">{attentionCount} clients</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 rounded-full"
+                  style={{ width: `${Math.round((attentionCount / totalClients) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* At Risk */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold text-slate-700">
+                <span className="flex items-center gap-1.5 text-red-700">
+                  <span className="w-2 h-2 rounded-full bg-red-500" /> At Risk
+                </span>
+                <span className="font-mono font-bold text-slate-900">{atRiskCount} client</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red-500 rounded-full"
+                  style={{ width: `${Math.round((atRiskCount / totalClients) * 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onSelectTab('health')}
+            className="w-full py-2 text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-xl border border-violet-200 transition-colors flex items-center justify-center gap-1"
+          >
+            <span>View Detailed Health Telemetry</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </section>
+
+      {/* 4. Client Portfolio Table */}
+      <section className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden space-y-3 p-6">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Client Portfolio</h2>
+            <p className="text-xs text-slate-500">Active small business accounts under your agency</p>
           </div>
           <button
-            onClick={() => onSelectTab('activity')}
-            className="text-xs font-bold text-primary hover:underline"
+            onClick={() => onSelectTab('clients')}
+            className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1"
           >
-            View Full Audit Log &rarr;
+            <span>View All Clients</span>
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="divide-y divide-outline-variant/40">
-          {activities.slice(0, 4).map((act) => (
-            <div key={act.id} className="py-3 flex items-start justify-between gap-4 text-xs">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      act.severity === 'success'
-                        ? 'bg-emerald-400'
-                        : act.severity === 'warning'
-                        ? 'bg-amber-400'
-                        : act.severity === 'error'
-                        ? 'bg-red-400'
-                        : 'bg-primary'
-                    }`}
-                  />
-                  <span className="font-bold text-white">{act.title}</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-container text-slate-400">
-                    {act.category}
-                  </span>
-                </div>
-                <p className="text-slate-300 text-[11px] pl-4">{act.description}</p>
-              </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+              <tr>
+                <th className="py-3 px-4">Client Business</th>
+                <th className="py-3 px-4">Industry</th>
+                <th className="py-3 px-4">Plan Tier</th>
+                <th className="py-3 px-4">Health</th>
+                <th className="py-3 px-4">Subscription</th>
+                <th className="py-3 px-4">Last Activity</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-800">
+              {clients.slice(0, 6).map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2.5">
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white"
+                      style={{ backgroundColor: c.accentColor || '#6366f1' }}
+                    >
+                      {c.initials}
+                    </div>
+                    <div>
+                      <span className="block leading-tight">{c.name}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">{c.domain}</span>
+                    </div>
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-600">{c.industry}</td>
+                  <td className="py-3.5 px-4 font-bold text-violet-700">{c.plan}</td>
+                  <td className="py-3.5 px-4">{getHealthBadge(c.health)}</td>
+                  <td className="py-3.5 px-4">{getSubscriptionBadge(c.status)}</td>
+                  <td className="py-3.5 px-4 text-slate-500 font-mono">{c.lastActivityTime}</td>
+                  <td className="py-3.5 px-4 text-right space-x-1.5">
+                    <button
+                      onClick={() => onManageClient(c)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
+                    >
+                      Manage
+                    </button>
+                    <button
+                      onClick={() => onSwitchContext(c)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 transition-colors"
+                      title="Open client workspace in Customer View"
+                    >
+                      Enter &rarr;
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-              <span className="text-[10px] text-slate-500 font-mono shrink-0">{act.timeAgo}</span>
+      {/* 5. Onboarding Pipeline & Deployment Overview (2 Cols) */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Onboarding Stages */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Client Onboarding Stages</h2>
+              <p className="text-xs text-slate-500">Pipeline progression across your portfolio</p>
             </div>
-          ))}
+            <button
+              onClick={() => onSelectTab('onboarding')}
+              className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1"
+            >
+              <span>View Onboarding</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {onboardingStages.map((st, idx) => (
+              <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{st.name}</span>
+                <p className="text-xl font-extrabold text-slate-900 font-mono">{st.count}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Deployment Health Overview */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Deployment Overview</h2>
+              <p className="text-xs text-slate-500">Edge CDN nodes and instance uptime</p>
+            </div>
+            <button
+              onClick={() => onSelectTab('deployments')}
+              className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1"
+            >
+              <span>Manage Clusters</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[10px] font-bold text-emerald-800 uppercase">LIVE</span>
+              <p className="text-xl font-black text-emerald-700 font-mono">{liveDeployments}</p>
+            </div>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">DEPLOYING</span>
+              <p className="text-xl font-black text-slate-800 font-mono">0</p>
+            </div>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">ATTENTION</span>
+              <p className="text-xl font-black text-slate-800 font-mono">0</p>
+            </div>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">AVG LATENCY</span>
+              <p className="text-xl font-black text-indigo-600 font-mono">22ms</p>
+            </div>
+          </div>
         </div>
       </section>
     </div>

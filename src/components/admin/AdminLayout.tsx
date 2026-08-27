@@ -26,32 +26,32 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   userEmail,
 }) => {
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F5F7FB] text-slate-900 flex flex-col font-sans antialiased">
       <AdminHeader userEmail={userEmail} />
 
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-w-0">
         <AdminSidebar />
 
-        <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full overflow-y-auto space-y-6">
+        <main className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto space-y-6">
           {(title || showBack || actions) && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-outline-variant/40">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80">
               <div className="flex items-center gap-3">
                 {showBack && (
                   <Link
                     href={backUrl}
-                    className="p-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-slate-300 hover:text-white transition-colors border border-outline-variant/40"
+                    className="p-2 rounded-xl bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors border border-slate-200 shadow-2xs"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </Link>
                 )}
                 <div>
                   {title && (
-                    <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-white">
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                       {title}
                     </h1>
                   )}
                   {subtitle && (
-                    <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
                   )}
                 </div>
               </div>

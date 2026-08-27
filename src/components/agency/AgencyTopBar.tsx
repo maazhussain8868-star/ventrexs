@@ -32,7 +32,6 @@ export const AgencyTopBar: React.FC<AgencyTopBarProps> = ({
   onToggleMobileMenu,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const notifications = [
     {
@@ -62,61 +61,61 @@ export const AgencyTopBar: React.FC<AgencyTopBarProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-[#070b14]/90 backdrop-blur-md border-b border-outline-variant/40 text-on-surface select-none">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 text-slate-900 shadow-2xs select-none">
       <div className="max-w-7xl mx-auto px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
         {/* Left: Brand & Reseller Tier Indicator */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {onToggleMobileMenu && (
             <button
               onClick={onToggleMobileMenu}
-              className="lg:hidden p-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low"
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
           )}
 
-          <Link href="/agency" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-white font-bold shadow-md shadow-primary/20">
+          <Link href="/agency" className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex items-center justify-center text-white font-bold shadow-sm shadow-indigo-600/20">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-sm tracking-tight text-white">
-                  VENTREX
+                <span className="font-extrabold text-base tracking-tight text-slate-900 leading-none">
+                  VENTREXS
                 </span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-primary/20 text-primary border border-primary/30 tracking-wider uppercase">
-                  AGENCY OS
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-violet-50 text-violet-700 border border-violet-200 tracking-wider uppercase">
+                  AGENCY PLATFORM
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono hidden sm:block">
-                Apex Growth Marketing • Reseller Center
+              <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5 hidden sm:block">
+                Reseller & Partner Operations • Apex Growth Marketing
               </p>
             </div>
           </Link>
         </div>
 
-        {/* Center: Global Search Bar / Command Palette Trigger */}
+        {/* Center: Global Search Bar */}
         <div className="flex-1 max-w-md hidden md:block">
           <button
             type="button"
             onClick={onOpenSearch}
-            className="w-full bg-surface-container-low/80 hover:bg-surface-container-high border border-outline-variant/60 rounded-xl px-3.5 py-2 text-xs text-on-surface-variant flex items-center justify-between transition-colors shadow-xs"
+            className="w-full bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-500 hover:text-slate-800 flex items-center justify-between transition-colors shadow-2xs"
           >
             <div className="flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-primary" />
-              <span>Search clients, domains, telemetry, commands...</span>
+              <Search className="w-4 h-4 text-violet-600" />
+              <span>Search clients, domains, deployments...</span>
             </div>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface-container text-[10px] font-mono text-on-surface-variant border border-outline-variant/40">
+            <kbd className="px-1.5 py-0.5 rounded bg-white text-[10px] font-mono text-slate-400 border border-slate-200 shadow-2xs">
               ⌘K
             </kbd>
           </button>
         </div>
 
-        {/* Right Actions: Mobile search, Notifications, Switch view, Profile, + Add Client */}
+        {/* Right Actions: Notifications, Help, Profile, + Add Client */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={onOpenSearch}
-            className="md:hidden p-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low"
+            className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             title="Search"
           >
             <Search className="w-4 h-4" />
@@ -126,31 +125,31 @@ export const AgencyTopBar: React.FC<AgencyTopBarProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low hover:text-white relative transition-colors"
+              className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 relative transition-colors"
               title="Agency Notifications"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-violet-600" />
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-3 space-y-2 z-50 animate-in fade-in">
-                <div className="flex items-center justify-between pb-2 border-b border-outline-variant/60 px-1">
-                  <span className="text-xs font-bold text-on-surface uppercase tracking-wider">
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 z-50 animate-in fade-in">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 px-1">
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                     Agency Alerts
                   </span>
-                  <span className="text-[10px] font-bold text-primary cursor-pointer hover:underline">
+                  <span className="text-[10px] font-bold text-violet-600 cursor-pointer hover:underline">
                     Mark all read
                   </span>
                 </div>
-                <div className="divide-y divide-outline-variant/40 max-h-64 overflow-y-auto">
+                <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
                   {notifications.map((n) => (
-                    <div key={n.id} className="py-2.5 px-1 space-y-0.5 text-xs hover:bg-surface-container-low rounded-lg transition-colors">
+                    <div key={n.id} className="py-2.5 px-1.5 space-y-0.5 text-xs hover:bg-slate-50 rounded-lg transition-colors">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-on-surface">{n.title}</span>
-                        <span className="text-[10px] text-on-surface-variant font-mono">{n.time}</span>
+                        <span className="font-bold text-slate-900">{n.title}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{n.time}</span>
                       </div>
-                      <p className="text-[11px] text-on-surface-variant">{n.desc}</p>
+                      <p className="text-[11px] text-slate-500">{n.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -161,11 +160,11 @@ export const AgencyTopBar: React.FC<AgencyTopBarProps> = ({
           {/* Switch to Customer Portal Link */}
           <Link
             href="/dashboard"
-            className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/60 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+            className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
             title="Open customer business workspace"
           >
             <span>Customer View</span>
-            <ArrowRight className="w-3.5 h-3.5 text-primary" />
+            <ArrowRight className="w-3.5 h-3.5 text-violet-600" />
           </Link>
 
           {/* Primary CTA: + Add Client */}
@@ -174,7 +173,7 @@ export const AgencyTopBar: React.FC<AgencyTopBarProps> = ({
             size="sm"
             onClick={onOpenAddClient}
             leftIcon={<Plus className="w-3.5 h-3.5" />}
-            className="text-xs font-bold shadow-md shadow-primary/20 bg-primary text-on-primary hover:bg-primary/90"
+            className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
           >
             <span className="hidden sm:inline">+ Add Client</span>
             <span className="sm:hidden">+ Client</span>

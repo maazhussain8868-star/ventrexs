@@ -52,46 +52,46 @@ export default function AdminBusinessesPage() {
 
   return (
     <AdminLayout
-      title="Platform Tenant Businesses Directory"
+      title="Tenant Businesses Directory"
       subtitle="Comprehensive directory of registered small business tenants, assigned reseller agencies, and subscription tiers."
       showBack
       backUrl="/admin"
     >
       <div className="space-y-6">
         {/* Search Bar */}
-        <section className="bg-[#0a0f1d] border border-outline-variant/40 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3">
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
           <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search all businesses..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-primary placeholder-slate-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-slate-400"
             />
           </div>
-          <span className="text-xs text-slate-400 font-mono">{filtered.length} Businesses Registered</span>
+          <span className="text-xs text-slate-500 font-mono font-semibold">{filtered.length} Businesses Registered</span>
         </section>
 
         {/* Directory List */}
-        <section className="bg-[#0a0f1d] border border-outline-variant/40 rounded-2xl shadow-xl overflow-hidden divide-y divide-outline-variant/30">
+        <section className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden divide-y divide-slate-100">
           {filtered.map((biz) => {
             const isActive = biz.status === 'active';
             return (
-              <div key={biz.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-container-low/40 transition-colors">
+              <div key={biz.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-purple-400" />
-                    <h3 className="text-sm font-bold text-white">{biz.name}</h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-slate-300 border border-outline-variant/40">
+                    <Building2 className="w-4 h-4 text-indigo-600" />
+                    <h3 className="text-sm font-bold text-slate-900">{biz.name}</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                       {biz.industry}
                     </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                       {biz.plan}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">{biz.email}</p>
-                  <p className="text-[11px] text-slate-500 font-mono">
+                  <p className="text-xs text-slate-500">{biz.email}</p>
+                  <p className="text-[11px] text-slate-400 font-mono">
                     MRR: ${biz.mrr}/mo • Joined: {biz.created}
                   </p>
                 </div>
@@ -101,7 +101,7 @@ export default function AdminBusinessesPage() {
                     variant={isActive ? 'outline' : 'primary'}
                     size="sm"
                     onClick={() => handleToggle(biz)}
-                    className="text-xs border-outline-variant/60 text-slate-200"
+                    className="text-xs"
                     leftIcon={isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                   >
                     {isActive ? 'Suspend Business' : 'Reactivate Business'}

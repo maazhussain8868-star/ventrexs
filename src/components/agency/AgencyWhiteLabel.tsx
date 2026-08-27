@@ -1,385 +1,306 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AgencyClient } from '@/data/agencyData';
 import { Button } from '@/components/ui/Button';
-import { useApp } from '@/context/AppContext';
 import {
   Palette,
-  Eye,
+  Laptop,
+  Smartphone,
+  Upload,
+  CheckCircle2,
+  Sparkles,
   Save,
   Globe,
-  Sparkles,
+  Sliders,
   Building2,
-  Mail,
-  Phone,
-  ShieldCheck,
-  Check,
-  RotateCcw,
-  Smartphone,
-  Monitor,
+  Eye,
 } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
-export const AgencyWhiteLabel: React.FC = () => {
+interface AgencyWhiteLabelProps {
+  clients: AgencyClient[];
+  onSaveBranding?: (branding: any) => void;
+}
+
+export const AgencyWhiteLabel: React.FC<AgencyWhiteLabelProps> = ({
+  clients,
+  onSaveBranding,
+}) => {
   const { showToast } = useApp();
-
-  const [branding, setBranding] = useState({
-    agencyName: 'Apex Growth Marketing',
-    brandName: 'Apex Trade OS',
-    logoText: 'Apex Trade OS',
-    logoUrl: '/favicon.ico',
-    primaryColor: '#0284c7',
-    secondaryColor: '#0a0f1d',
-    accentColor: '#10b981',
-    loginHeadline: 'Client Operations Portal',
-    loginTagline: 'Professional AI-powered service business operations and field management.',
-    senderName: 'Apex Trade OS Cloud Notifications',
-    supportEmail: 'help@apextradeos.com',
-    supportPhone: '+1 (555) 901-2800',
-    footerText: 'Powered by Apex Growth Cloud Infrastructure • All Rights Reserved',
-    customPrivacyUrl: 'https://apextradeos.com/privacy',
-    customTermsUrl: 'https://apextradeos.com/terms',
-    showVentrexAttribution: false,
-  });
-
+  const [selectedClientId, setSelectedClientId] = useState<string>(clients[0]?.id || 'client_01');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
-  const [saving, setSaving] = useState(false);
 
-  const presetThemes = [
-    { name: 'Apex Cobalt (Default)', primary: '#0284c7', secondary: '#0a0f1d', accent: '#10b981' },
-    { name: 'Emerald Pro', primary: '#059669', secondary: '#061a14', accent: '#3b82f6' },
-    { name: 'Royal Violet', primary: '#7c3aed', secondary: '#0f0a1c', accent: '#ec4899' },
-    { name: 'Industrial Amber', primary: '#d97706', secondary: '#161005', accent: '#0284c7' },
-    { name: 'Midnight Obsidian', primary: '#2563eb', secondary: '#05070d', accent: '#06b6d4' },
-  ];
+  const selectedClient = clients.find((c) => c.id === selectedClientId) || clients[0];
+
+  const [brandName, setBrandName] = useState(selectedClient?.name || 'Apex Comfort HVAC');
+  const [primaryColor, setPrimaryColor] = useState(selectedClient?.accentColor || '#4f46e5');
+  const [secondaryColor, setSecondaryColor] = useState('#0f172a');
+  const [headline, setHeadline] = useState('Client Portal & Dispatch Management');
+  const [description, setDescription] = useState('Secure contractor operations and real-time scheduling.');
+  const [emailSignature, setEmailSignature] = useState('Powered by Ventrexs AI');
+  const [saving, setSaving] = useState(false);
 
   const handleSave = () => {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
       showToast({
-        title: 'White-Label Branding Published',
-        description: 'New theme tokens, login portal styling, and email headers propagated to edge CDN.',
-        type: 'info',
+        title: 'Branding Saved',
+        description: `White-label brand assets published for ${brandName}.`,
+        type: 'success',
       });
     }, 600);
-  };
-
-  const handleApplyPreset = (p: typeof presetThemes[0]) => {
-    setBranding({
-      ...branding,
-      primaryColor: p.primary,
-      secondaryColor: p.secondary,
-      accentColor: p.accent,
-    });
-    showToast({ title: 'Theme Preset Applied', description: p.name, type: 'info' });
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              White-Label Branding Suite
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30 font-mono">
-              Reseller Edition
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Deliver a 100% custom-branded client experience under your agency's domain, colors, logos, and email signatures.
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">White-Label Brand Studio</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Customize logo, color palettes, customer login headlines, and email signatures for each client tenant.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedClientId}
+            onChange={(e) => {
+              setSelectedClientId(e.target.value);
+              const c = clients.find((x) => x.id === e.target.value);
+              if (c) {
+                setBrandName(c.name);
+                setPrimaryColor(c.accentColor || '#4f46e5');
+              }
+            }}
+            className="text-xs bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-2xs"
+          >
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.domain})
+              </option>
+            ))}
+          </select>
+
           <Button
             variant="primary"
             size="sm"
             onClick={handleSave}
             isLoading={saving}
             leftIcon={<Save className="w-3.5 h-3.5" />}
-            className="text-xs font-bold bg-primary text-white shadow-sm"
+            className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
           >
             Publish Branding
           </Button>
         </div>
       </div>
 
-      {/* Preset Color Palettes */}
-      <div className="p-4 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            Curated Reseller Theme Palettes
-          </span>
-          <span className="text-slate-400 text-[11px]">Click a palette to apply instantly</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {presetThemes.map((preset) => (
-            <button
-              key={preset.name}
-              onClick={() => handleApplyPreset(preset)}
-              className="p-2.5 rounded-xl bg-[#070b14] border border-outline-variant/40 hover:border-primary/50 transition-all text-left flex items-center gap-2.5 group"
-            >
-              <div className="flex items-center -space-x-1 shrink-0">
-                <div className="w-4 h-4 rounded-full border border-black/50" style={{ backgroundColor: preset.primary }} />
-                <div className="w-4 h-4 rounded-full border border-black/50" style={{ backgroundColor: preset.accent }} />
-              </div>
-              <span className="text-xs font-semibold text-slate-300 group-hover:text-white truncate">
-                {preset.name}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 2-Column Config & Live Preview */}
+      {/* Main 2-Column Brand Studio Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Form: Theme & Text Tokens */}
-        <div className="lg:col-span-6 space-y-5">
-          {/* Brand Identity & Theme Colors */}
-          <div className="p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-4 shadow-xs">
-            <div className="flex items-center gap-2">
-              <Palette className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Visual Identity & Theme Tokens
-              </h2>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Product Brand Name</label>
-                <input
-                  type="text"
-                  value={branding.brandName}
-                  onChange={(e) => setBranding({ ...branding, brandName: e.target.value })}
-                  className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              {/* Color Pickers */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Primary Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={branding.primaryColor}
-                      onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
-                      className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={branding.primaryColor}
-                      onChange={(e) => setBranding({ ...branding, primaryColor: e.target.value })}
-                      className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-2 py-1.5 text-xs text-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Canvas / Dark BG</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={branding.secondaryColor}
-                      onChange={(e) => setBranding({ ...branding, secondaryColor: e.target.value })}
-                      className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={branding.secondaryColor}
-                      onChange={(e) => setBranding({ ...branding, secondaryColor: e.target.value })}
-                      className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-2 py-1.5 text-xs text-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Accent / Success</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={branding.accentColor}
-                      onChange={(e) => setBranding({ ...branding, accentColor: e.target.value })}
-                      className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={branding.accentColor}
-                      onChange={(e) => setBranding({ ...branding, accentColor: e.target.value })}
-                      className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-2 py-1.5 text-xs text-white font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Left Column: Brand Settings Form (5 Cols) */}
+        <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <Palette className="w-4 h-4 text-violet-600" />
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Brand Configuration</h2>
           </div>
 
-          {/* Login Screen Copy */}
-          <div className="p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-4 shadow-xs">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-sky-400" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Client Login Experience
-              </h2>
+          <div className="space-y-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-800 mb-1">Company Display Name</label>
+              <input
+                type="text"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+              />
             </div>
 
-            <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-slate-300 mb-1">Login Screen Headline</label>
-                <input
-                  type="text"
-                  value={branding.loginHeadline}
-                  onChange={(e) => setBranding({ ...branding, loginHeadline: e.target.value })}
-                  className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Login Screen Subtitle / Tagline</label>
-                <input
-                  type="text"
-                  value={branding.loginTagline}
-                  onChange={(e) => setBranding({ ...branding, loginTagline: e.target.value })}
-                  className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Email & Support Footer */}
-          <div className="p-5 rounded-2xl bg-[#0a0f1d] border border-outline-variant/50 space-y-4 shadow-xs">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Email Branding & Legal Signatures
-              </h2>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Email Sender Name</label>
+                <label className="block font-bold text-slate-800 mb-1">Primary Color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent"
+                  />
                   <input
                     type="text"
-                    value={branding.senderName}
-                    onChange={(e) => setBranding({ ...branding, senderName: e.target.value })}
-                    className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">Support Email</label>
-                  <input
-                    type="email"
-                    value={branding.supportEmail}
-                    onChange={(e) => setBranding({ ...branding, supportEmail: e.target.value })}
-                    className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-900"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 mb-1">Portal Legal Footer Note</label>
-                <input
-                  type="text"
-                  value={branding.footerText}
-                  onChange={(e) => setBranding({ ...branding, footerText: e.target.value })}
-                  className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-                />
+                <label className="block font-bold text-slate-800 mb-1">Secondary Accent</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent"
+                  />
+                  <input
+                    type="text"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-900"
+                  />
+                </div>
               </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-800 mb-1">Portal Login Headline</label>
+              <input
+                type="text"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-800 mb-1">Portal Subtitle / Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-800 mb-1">Email Notification Signature</label>
+              <input
+                type="text"
+                value={emailSignature}
+                onChange={(e) => setEmailSignature(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+              />
             </div>
           </div>
         </div>
 
-        {/* Right Live Interactive Preview Mockup */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="flex items-center justify-between">
+        {/* Right Column: Live Interactive Device Mockup (7 Cols) */}
+        <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 flex flex-col">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                Live Client Login Preview
-              </h3>
+              <Eye className="w-4 h-4 text-violet-600" />
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Live Customer Portal Preview</h2>
             </div>
 
-            <div className="flex items-center gap-1 bg-[#0a0f1d] border border-outline-variant/60 rounded-xl p-1">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl">
               <button
                 onClick={() => setPreviewDevice('desktop')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  previewDevice === 'desktop' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'
+                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  previewDevice === 'desktop'
+                    ? 'bg-white text-violet-700 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
-                title="Desktop View"
               >
-                <Monitor className="w-3.5 h-3.5" />
+                <Laptop className="w-3.5 h-3.5" /> Desktop
               </button>
               <button
                 onClick={() => setPreviewDevice('mobile')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  previewDevice === 'mobile' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'
+                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  previewDevice === 'mobile'
+                    ? 'bg-white text-violet-700 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
-                title="Mobile View"
               >
-                <Smartphone className="w-3.5 h-3.5" />
+                <Smartphone className="w-3.5 h-3.5" /> Mobile
               </button>
             </div>
           </div>
 
-          {/* Interactive Simulated Device Mockup */}
-          <div
-            className={`border border-outline-variant/60 rounded-3xl overflow-hidden shadow-2xl transition-all ${
-              previewDevice === 'mobile' ? 'max-w-xs mx-auto' : 'w-full'
-            }`}
-            style={{ backgroundColor: branding.secondaryColor }}
-          >
-            {/* Browser top pill */}
-            <div className="px-4 py-2.5 bg-[#070b14] border-b border-white/10 flex items-center justify-between text-[11px] font-mono text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
-              </div>
-              <span className="truncate px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300">
-                https://portal.youragency.com/login
-              </span>
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            </div>
-
-            {/* Login Card inside simulated page */}
-            <div className="p-8 sm:p-12 space-y-6 flex flex-col items-center justify-center min-h-[420px]">
-              <div className="text-center space-y-2 max-w-sm">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl mx-auto shadow-lg"
-                  style={{ backgroundColor: branding.primaryColor }}
-                >
-                  {branding.brandName.charAt(0)}
+          {/* Interactive Preview Canvas */}
+          <div className="flex-1 flex items-center justify-center p-4 bg-slate-100/70 rounded-2xl border border-slate-200">
+            {previewDevice === 'desktop' ? (
+              <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-300 shadow-lg overflow-hidden transition-all">
+                {/* Mock Browser Header */}
+                <div className="bg-slate-200/70 px-4 py-2 flex items-center gap-2 border-b border-slate-300">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  </div>
+                  <div className="flex-1 text-center font-mono text-[10px] text-slate-600 bg-white py-0.5 rounded border border-slate-300">
+                    https://{selectedClient?.domain || 'portal.apexcomfort.com'}
+                  </div>
                 </div>
-                <h4 className="text-lg font-black text-white">{branding.brandName}</h4>
-                <p className="text-xs text-slate-300 font-semibold">{branding.loginHeadline}</p>
-                <p className="text-[11px] text-slate-400">{branding.loginTagline}</p>
-              </div>
 
-              <div className="w-full max-w-xs space-y-3">
-                <div className="h-9 bg-white/5 border border-white/10 rounded-xl px-3 flex items-center text-xs text-slate-400 font-mono">
-                  owner@apexcomfort.com
+                {/* Mock Client Portal UI */}
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-2xs"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        {brandName.substring(0, 2).toUpperCase()}
+                      </div>
+                      <span className="font-extrabold text-sm text-slate-900">{brandName}</span>
+                    </div>
+                    <button
+                      className="px-3 py-1 rounded-lg text-white font-bold text-xs shadow-2xs"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      Book Service
+                    </button>
+                  </div>
+
+                  <div className="py-6 text-center space-y-2">
+                    <h3 className="text-xl font-extrabold text-slate-900">{headline}</h3>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">{description}</p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-2">
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Status</span>
+                      <span className="text-xs font-bold text-emerald-600">Active</span>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">SLA</span>
+                      <span className="text-xs font-bold text-slate-900 font-mono">99.99%</span>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">AI Triage</span>
+                      <span className="text-xs font-bold" style={{ color: primaryColor }}>Online</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="h-9 bg-white/5 border border-white/10 rounded-xl px-3 flex items-center justify-between text-xs text-slate-400 font-mono">
-                  <span>••••••••••••</span>
+              </div>
+            ) : (
+              /* Mobile Preview */
+              <div className="w-64 bg-white rounded-3xl border-4 border-slate-800 shadow-xl overflow-hidden p-4 space-y-3">
+                <div className="w-16 h-1 bg-slate-300 rounded-full mx-auto mb-2" />
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-[10px]"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {brandName.substring(0, 2).toUpperCase()}
+                  </div>
+                  <span className="font-bold text-xs text-slate-900 truncate">{brandName}</span>
+                </div>
+                <div className="py-3 text-center space-y-1">
+                  <h4 className="text-xs font-bold text-slate-900">{headline}</h4>
+                  <p className="text-[10px] text-slate-500 line-clamp-2">{description}</p>
                 </div>
                 <button
-                  className="w-full py-2.5 rounded-xl font-bold text-xs text-white shadow-md transition-all hover:opacity-90 cursor-pointer"
-                  style={{ backgroundColor: branding.primaryColor }}
+                  className="w-full py-1.5 rounded-lg text-white font-bold text-[11px]"
+                  style={{ backgroundColor: primaryColor }}
                 >
-                  Sign In to Workspace
+                  Request Dispatch
                 </button>
               </div>
-
-              <div className="text-center text-[10px] text-slate-400 pt-4 border-t border-white/10 max-w-xs">
-                {branding.footerText}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -4,189 +4,332 @@ import React, { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
 import { useApp } from '@/context/AppContext';
-import { 
-  ShieldCheck, 
-  TrendingUp, 
-  Users, 
-  Sparkles, 
-  Activity, 
-  ChevronRight, 
-  Sliders, 
-  UserCheck, 
+import {
+  ShieldCheck,
+  TrendingUp,
+  Users,
+  Sparkles,
+  Activity,
+  ChevronRight,
+  Sliders,
+  UserCheck,
   AlertCircle,
   Database,
-  Building2
+  Building2,
+  CheckCircle2,
+  ArrowUpRight,
+  CreditCard,
+  Layers,
+  Bot,
+  Bell,
+  Clock,
+  Globe,
+  Radio,
 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AdminDashboardPage() {
   const { adminStats, showToast } = useApp();
 
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
-  const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(false);
   const [isAiConfigOpen, setIsAiConfigOpen] = useState(false);
-
   const [modelTemperature, setModelTemperature] = useState(0.7);
   const [confidenceThreshold, setConfidenceThreshold] = useState(85);
 
-  const mockUsers = [
-    { name: 'Jane Doe', email: 'jane@mainstreetbakery.com', business: 'Main Street Bakery & Cafe', plan: 'Professional', status: 'Active', mrr: '$49' },
-    { name: 'Robert Vance', email: 'robert@apexsolutions.io', business: 'Apex Solutions', plan: 'Enterprise', status: 'Active', mrr: '$199' },
-    { name: 'Carlos Mendoza', email: 'carlos@mendozaplumbers.com', business: 'Mendoza Plumbing', plan: 'Starter', status: 'Active', mrr: '$19' },
-    { name: 'Sarah Connor', email: 'sarah@globaltech.io', business: 'Global Tech LLC', plan: 'Professional', status: 'Active', mrr: '$49' },
+  const revenueTimeline = [
+    { month: 'Mar', mrr: 32000, arr: 384000 },
+    { month: 'Apr', mrr: 35400, arr: 424800 },
+    { month: 'May', mrr: 38900, arr: 466800 },
+    { month: 'Jun', mrr: 41200, arr: 494400 },
+    { month: 'Jul', mrr: 43800, arr: 525600 },
+    { month: 'Aug', mrr: 45200, arr: 542400 },
+  ];
+
+  const subsystemHealth = [
+    { name: 'API Cluster', status: 'Operational', latency: '22ms', uptime: '99.99%' },
+    { name: 'Primary Database', status: 'Operational', latency: '14ms', uptime: '100%' },
+    { name: 'Payment Gateways', status: 'Operational', latency: '35ms', uptime: '99.98%' },
+    { name: 'Gemini AI Services', status: 'Operational', latency: '48ms', uptime: '99.95%' },
+    { name: 'Notification Engine', status: 'Operational', latency: '19ms', uptime: '100%' },
+  ];
+
+  const recentActivity = [
+    { time: '12:42 PM', event: 'New subscription activated', entity: 'Apex Comfort HVAC', category: 'Billing', status: 'SUCCESS' },
+    { time: '11:15 AM', event: 'Custom domain SSL provisioned', entity: 'portal.apexagency.com', category: 'Agency', status: 'SUCCESS' },
+    { time: '10:30 AM', event: 'Google Play subscription renewal', entity: 'Metro Pro Plumbing', category: 'Google Play', status: 'SUCCESS' },
+    { time: '09:05 AM', event: '2-person demo approval granted', entity: 'Prospect: Highland HVAC', category: 'Security', status: 'SUCCESS' },
+    { time: '08:20 AM', event: 'Contractor invoice payment settled', entity: 'Precision Roofing & Siding', category: 'Invoicing', status: 'SUCCESS' },
   ];
 
   return (
-    <AdminLayout>
-      <div className="max-w-5xl mx-auto flex flex-col gap-6">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
-              Platform Administration & Telemetry
-            </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-tertiary-container/15 text-tertiary">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Multi-Tenant Cloud
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-on-surface-variant">
-            Live multi-tenant SaaS commercial performance and ethical AI orchestration health.
-          </p>
-        </div>
-
-        {/* Bento Grid for Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* MRR Card (Full Width) */}
-          <div className="col-span-2 bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden group">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                Monthly Recurring Revenue (MRR)
-              </p>
-              <span className="material-symbols-outlined text-tertiary bg-tertiary-container/15 p-1.5 rounded-full text-sm">
-                trending_up
-              </span>
-            </div>
-            <div className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight font-mono">
-              ${adminStats.mrr.toLocaleString()}
-            </div>
-            <div className="mt-2 text-tertiary font-bold text-xs sm:text-sm flex items-center gap-1">
-              <TrendingUp className="w-4 h-4" />
-              <span>+{adminStats.mrrGrowth}% commercial growth this month</span>
-            </div>
-          </div>
-
-          {/* Active Users Card */}
-          <div className="bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between min-h-[130px]">
-            <div className="flex items-center gap-2 text-on-surface-variant">
-              <Building2 className="w-4 h-4 text-primary" />
-              <p className="text-xs font-bold uppercase tracking-wider">Active Small Business Tenants</p>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-on-surface font-mono">
-              {adminStats.activeUsers.toLocaleString()}
-            </div>
-            <p className="text-[11px] text-tertiary font-semibold">+{adminStats.userGrowth}% net tenant expansion</p>
-          </div>
-
-          {/* AI Usage Card */}
-          <div className="bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between min-h-[130px]">
-            <div className="flex items-center gap-2 text-primary">
-              <span className="material-symbols-outlined text-[20px] fill-icon">smart_toy</span>
-              <p className="text-xs font-bold uppercase tracking-wider">Ethical AI Drafts Today</p>
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-on-surface font-mono">
-              {adminStats.aiDraftsToday.toLocaleString()}
-            </div>
-            <p className="text-[11px] text-primary font-semibold">99.4% user approval rate</p>
-          </div>
-        </div>
-
-        {/* System Health Banner */}
-        <div className="bg-tertiary-fixed/15 border border-tertiary-fixed-dim/40 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-3.5">
-            <div className="relative flex h-3.5 w-3.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-tertiary-container"></span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs sm:text-sm font-bold text-on-tertiary-fixed-variant">
-                Platform Infrastructure Status: All Systems Operational
-              </span>
-              <span className="text-xs text-on-surface-variant">
-                AI Reasoning latency: 22ms • Global Uptime: {adminStats.serverUptime}
-              </span>
-            </div>
-          </div>
-          <button
+    <AdminLayout
+      title="Platform Overview"
+      subtitle="Monitor Ventrexs platform performance, revenue, infrastructure and security."
+      actions={
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setIsHealthModalOpen(true)}
-            className="text-xs font-bold text-tertiary-container bg-surface border border-outline-variant px-3.5 py-1.5 rounded-xl hover:bg-surface-container-low transition-colors shadow-xs"
+            className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
           >
-            Details
-          </button>
-        </div>
-
-        {/* Quick Administration Cards */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider px-1">
-            Platform Management & Settings
-          </h2>
-
-          <div
-            onClick={() => setIsUserMgmtOpen(true)}
-            className="w-full bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-4 sm:p-5 flex items-center justify-between hover:bg-surface-container-low transition-colors shadow-xs cursor-pointer"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="bg-secondary-container text-on-secondary-container p-2.5 rounded-xl">
-                <span className="material-symbols-outlined text-[22px]">manage_accounts</span>
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-bold text-on-surface">Tenant Account & Subscription Directory</span>
-                <span className="block text-xs text-on-surface-variant">Review registered businesses, subscription tiers, and active usage</span>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-outline-variant" />
-          </div>
-
-          <div
+            Diagnostics
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => setIsAiConfigOpen(true)}
-            className="w-full bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-4 sm:p-5 flex items-center justify-between hover:bg-surface-container-low transition-colors shadow-xs cursor-pointer"
+            className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="bg-primary-fixed text-on-primary-fixed p-2.5 rounded-xl">
-                <span className="material-symbols-outlined text-[22px]">settings_suggest</span>
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-bold text-on-surface">AI Copilot Hyperparameter Configuration</span>
-                <span className="block text-xs text-on-surface-variant">Configure temperature sampling and ethical confidence threshold gates</span>
+            AI Parameters
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* 1. TOP 4 EQUAL KPI CARDS */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* KPI 1: MRR */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Monthly Recurring Revenue
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4" />
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-outline-variant" />
+            <div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+                $45,200
+              </div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>+12.4% vs last month</span>
+              </div>
+            </div>
           </div>
 
-          {/* Demo Access & Dual-Approval Center */}
-          <a
-            href="/admin/demo-access"
-            className="w-full bg-surface-container-lowest border border-primary/30 rounded-2xl p-4 sm:p-5 flex items-center justify-between hover:bg-primary/5 transition-colors shadow-xs"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="bg-primary/10 text-primary p-2.5 rounded-xl">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-bold text-on-surface flex items-center gap-2">
-                  Demo Access & Two-Person Approval Gate
-                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">New</span>
-                </span>
-                <span className="block text-xs text-on-surface-variant">Generate 24h cryptographic demo links and review 2-person owner approval requests</span>
+          {/* KPI 2: Active Businesses */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Active Businesses
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Building2 className="w-4 h-4" />
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-primary" />
-          </a>
-        </div>
+            <div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+                1,240
+              </div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>+18.2% expansion</span>
+              </div>
+            </div>
+          </div>
+
+          {/* KPI 3: Active Subscriptions */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Active Subscriptions
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <CreditCard className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+                1,184
+              </div>
+              <div className="mt-1 text-xs text-slate-500 font-medium">
+                95.5% active retention rate
+              </div>
+            </div>
+          </div>
+
+          {/* KPI 4: Platform Health */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Platform Health SLA
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Activity className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-extrabold text-emerald-600 tracking-tight font-mono">
+                99.99%
+              </div>
+              <div className="mt-1 text-xs text-slate-500 font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>All subsystems operational</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 2. REVENUE PERFORMANCE (LEFT) & PLATFORM HEALTH (RIGHT) */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Revenue Performance (2 Cols) */}
+          <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Revenue Performance & Timeline</h2>
+                <p className="text-xs text-slate-500">6-month MRR and ARR growth trajectory</p>
+              </div>
+              <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+                ARR: $542,400
+              </span>
+            </div>
+
+            {/* Timeline Visual Chart */}
+            <div className="grid grid-cols-6 gap-3 items-end h-48 pt-4">
+              {revenueTimeline.map((item, idx) => {
+                const heightPercent = Math.round((item.mrr / 50000) * 100);
+                return (
+                  <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end group">
+                    <span className="text-[11px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                      ${(item.mrr / 1000).toFixed(1)}k
+                    </span>
+                    <div className="w-full bg-slate-100 rounded-xl h-full flex items-end p-1">
+                      <div
+                        className="w-full bg-gradient-to-t from-indigo-600 to-indigo-500 rounded-lg transition-all group-hover:from-indigo-700 group-hover:to-indigo-600 shadow-2xs"
+                        style={{ height: `${heightPercent}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-slate-600">{item.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Subsystem Health (1 Col) */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Subsystem Telemetry</h2>
+                <p className="text-xs text-slate-500">Real-time latency & uptime</p>
+              </div>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+
+            <div className="divide-y divide-slate-100 space-y-0.5">
+              {subsystemHealth.map((sys, idx) => (
+                <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-slate-800 block">{sys.name}</span>
+                    <span className="text-[11px] text-slate-400 font-mono">Uptime: {sys.uptime}</span>
+                  </div>
+                  <div className="text-right space-y-0.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <CheckCircle2 className="w-3 h-3" /> {sys.status}
+                    </span>
+                    <span className="block font-mono text-[11px] text-slate-500 font-semibold">{sys.latency}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 3. BUSINESS & AGENCY OVERVIEW CARDS */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link
+            href="/admin/businesses"
+            className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-indigo-300 transition-all group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  Customer Businesses Directory
+                </h3>
+                <p className="text-xs text-slate-500">1,240 registered small business tenants</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+
+          <Link
+            href="/admin/agencies"
+            className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs hover:border-indigo-300 transition-all group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Globe className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  Agency & Reseller Accounts
+                </h3>
+                <p className="text-xs text-slate-500">28 active agency partner organizations</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+        </section>
+
+        {/* 4. RECENT PLATFORM ACTIVITY */}
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Recent Platform Activity</h2>
+              <p className="text-xs text-slate-500">Immutable ledger events captured across all tenants</p>
+            </div>
+            <Link
+              href="/admin/audit"
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+            >
+              <span>View Full Audit Trail</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+                <tr>
+                  <th className="py-3 px-4">Time</th>
+                  <th className="py-3 px-4">Event</th>
+                  <th className="py-3 px-4">Entity</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {recentActivity.map((act, i) => (
+                  <tr key={i} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-4 font-mono text-slate-500">{act.time}</td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">{act.event}</td>
+                    <td className="py-3.5 px-4 font-medium text-slate-700">{act.entity}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        {act.category}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" /> {act.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
-      {/* System Health Modal */}
+      {/* Diagnostics Modal */}
       <Modal
         isOpen={isHealthModalOpen}
         onClose={() => setIsHealthModalOpen(false)}
@@ -197,71 +340,29 @@ export default function AdminDashboardPage() {
           </Button>
         }
       >
-        <div className="space-y-3 text-xs sm:text-sm">
-          <div className="p-3 bg-surface rounded-xl border border-outline-variant flex justify-between items-center">
-            <span className="font-semibold text-on-surface">AI Inference API (Google DeepMind Gemini)</span>
-            <span className="text-xs font-bold text-tertiary flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-tertiary" /> 99.99% Operational
+        <div className="space-y-3 text-xs sm:text-sm text-slate-800">
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+            <span className="font-semibold text-slate-900">AI Inference API (Google Gemini)</span>
+            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" /> 99.99% Operational
             </span>
           </div>
-          <div className="p-3 bg-surface rounded-xl border border-outline-variant flex justify-between items-center">
-            <span className="font-semibold text-on-surface">Payment Webhooks (Stripe / Plaid ACH)</span>
-            <span className="text-xs font-bold text-tertiary flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-tertiary" /> Active (0 backlog)
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+            <span className="font-semibold text-slate-900">Payment Webhooks (Stripe / Razorpay)</span>
+            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" /> Active (0 backlog)
             </span>
           </div>
-          <div className="p-3 bg-surface rounded-xl border border-outline-variant flex justify-between items-center">
-            <span className="font-semibold text-on-surface">Database Primary Cluster (US-East)</span>
-            <span className="text-xs font-bold text-tertiary flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-tertiary" /> 18ms latency
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+            <span className="font-semibold text-slate-900">Database Primary Cluster (US-East)</span>
+            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" /> 14ms latency
             </span>
           </div>
         </div>
       </Modal>
 
-      {/* Tenant User Management Modal */}
-      <Modal
-        isOpen={isUserMgmtOpen}
-        onClose={() => setIsUserMgmtOpen(false)}
-        maxWidth="xl"
-        title="Tenant Accounts & Subscriptions"
-        footer={
-          <Button variant="primary" size="md" onClick={() => setIsUserMgmtOpen(false)}>
-            Done
-          </Button>
-        }
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-surface-container-low border-b border-outline-variant font-bold text-on-surface-variant uppercase">
-                <th className="py-2.5 px-3">Business</th>
-                <th className="py-2.5 px-3">Owner Email</th>
-                <th className="py-2.5 px-3">Plan</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3 text-right">MRR</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant">
-              {mockUsers.map((u, i) => (
-                <tr key={i} className="hover:bg-surface-container-low">
-                  <td className="py-3 px-3 font-bold text-on-surface">{u.business}</td>
-                  <td className="py-3 px-3 text-on-surface-variant">{u.email}</td>
-                  <td className="py-3 px-3 font-semibold text-primary">{u.plan}</td>
-                  <td className="py-3 px-3">
-                    <span className="px-2 py-0.5 rounded-full bg-tertiary-container/15 text-tertiary font-bold text-[10px]">
-                      {u.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-right font-bold text-on-surface font-mono">{u.mrr}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Modal>
-
-      {/* AI Configuration Modal */}
+      {/* AI Hyperparameters Modal */}
       <Modal
         isOpen={isAiConfigOpen}
         onClose={() => setIsAiConfigOpen(false)}
@@ -279,11 +380,11 @@ export default function AdminDashboardPage() {
           </Button>
         }
       >
-        <div className="space-y-4 text-xs sm:text-sm">
+        <div className="space-y-4 text-xs sm:text-sm text-slate-800">
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="font-semibold text-on-surface">Sampling Temperature</label>
-              <span className="font-bold text-primary font-mono">{modelTemperature}</span>
+              <label className="font-semibold text-slate-900">Sampling Temperature</label>
+              <span className="font-bold text-indigo-600 font-mono">{modelTemperature}</span>
             </div>
             <input
               type="range"
@@ -292,15 +393,15 @@ export default function AdminDashboardPage() {
               step="0.05"
               value={modelTemperature}
               onChange={(e) => setModelTemperature(Number(e.target.value))}
-              className="w-full accent-primary cursor-pointer"
+              className="w-full accent-indigo-600 cursor-pointer"
             />
-            <p className="text-[11px] text-on-surface-variant mt-1">Lower = more deterministic & formal; Higher = more creative.</p>
+            <p className="text-[11px] text-slate-500 mt-1">Lower = more deterministic & formal; Higher = more creative.</p>
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="font-semibold text-on-surface">Ethical Auto-Recommendation Threshold</label>
-              <span className="font-bold text-primary font-mono">{confidenceThreshold}%</span>
+              <label className="font-semibold text-slate-900">Ethical Recommendation Threshold</label>
+              <span className="font-bold text-indigo-600 font-mono">{confidenceThreshold}%</span>
             </div>
             <input
               type="range"
@@ -309,9 +410,9 @@ export default function AdminDashboardPage() {
               step="1"
               value={confidenceThreshold}
               onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
-              className="w-full accent-primary cursor-pointer"
+              className="w-full accent-indigo-600 cursor-pointer"
             />
-            <p className="text-[11px] text-on-surface-variant mt-1">Only recommend follow-ups when confidence is above this threshold.</p>
+            <p className="text-[11px] text-slate-500 mt-1">Only recommend automated actions when confidence is above threshold.</p>
           </div>
         </div>
       </Modal>

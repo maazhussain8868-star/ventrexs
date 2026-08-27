@@ -23,17 +23,17 @@ export default function AdminUsagePage() {
       <div className="space-y-6">
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {meters.map((m, idx) => (
-            <div key={idx} className="bg-[#0a0f1d] border border-outline-variant/40 rounded-2xl p-6 shadow-sm space-y-3">
+            <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
-                <m.icon className="w-5 h-5 text-purple-400" />
-                <span className="text-xs font-mono font-bold text-slate-300">{m.percent}%</span>
+                <m.icon className="w-5 h-5 text-indigo-600" />
+                <span className="text-xs font-mono font-bold text-slate-700">{m.percent}%</span>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-white">{m.title}</h3>
-                <p className="text-xs font-mono text-slate-400">{m.used} / {m.cap}</p>
+              <div className="space-y-0.5">
+                <h3 className="text-sm font-bold text-slate-900">{m.title}</h3>
+                <p className="text-xs font-mono text-slate-500">{m.used} / {m.cap}</p>
               </div>
-              <div className="w-full h-2 bg-[#070b14] rounded-full overflow-hidden border border-outline-variant/30">
-                <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${m.percent}%` }} />
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${m.percent}%` }} />
               </div>
             </div>
           ))}

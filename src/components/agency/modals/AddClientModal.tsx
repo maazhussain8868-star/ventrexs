@@ -44,9 +44,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   ];
 
   const planPrices = {
-    Starter: 79,
-    Professional: 149,
-    Enterprise: 299,
+    Starter: 19,
+    Professional: 49,
+    Enterprise: 199,
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,7 +69,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         name: businessName,
         slug,
         initials,
-        accentColor: plan === 'Enterprise' ? '#8b5cf6' : plan === 'Professional' ? '#0284c7' : '#10b981',
+        accentColor: plan === 'Enterprise' ? '#8b5cf6' : plan === 'Professional' ? '#4f46e5' : '#0284c7',
         industry,
         plan,
         status: 'Provisioning',
@@ -114,11 +114,11 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       maxWidth="lg"
       footer={
         <div className="flex items-center justify-between w-full">
-          <div className="text-xs text-on-surface-variant font-mono">
-            Plan MRR: <span className="font-bold text-emerald-600 dark:text-emerald-400">${planPrices[plan]}/mo</span>
+          <div className="text-xs text-slate-500 font-mono">
+            Plan MRR: <span className="font-bold text-emerald-600">${planPrices[plan]}/mo</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
+            <Button variant="ghost" size="sm" onClick={onClose} disabled={loading} className="text-slate-600">
               Cancel
             </Button>
             <Button
@@ -127,7 +127,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
               onClick={handleSubmit}
               isLoading={loading}
               leftIcon={<Building2 className="w-3.5 h-3.5" />}
-              className="text-xs bg-primary text-on-primary font-bold shadow-sm"
+              className="text-xs bg-violet-600 hover:bg-violet-700 text-white font-bold shadow-xs"
             >
               Provision Client
             </Button>
@@ -135,14 +135,14 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-        <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/60 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+      <form onSubmit={handleSubmit} className="space-y-4 text-xs text-slate-800">
+        <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
             <Building2 className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-bold text-on-surface text-xs">Multi-Tenant Business Workspace</p>
-            <p className="text-[11px] text-on-surface-variant">
+            <p className="font-bold text-slate-900 text-xs">Multi-Tenant Business Workspace</p>
+            <p className="text-[11px] text-slate-500">
               Provisions an isolated customer environment, database schema, AI receptionist instance, and billing ledger.
             </p>
           </div>
@@ -151,23 +151,23 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         {/* Business Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block font-bold text-on-surface mb-1">Business Name *</label>
+            <label className="block font-bold text-slate-800 mb-1">Business Name *</label>
             <input
               type="text"
               required
               placeholder="e.g. Apex Comfort HVAC"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-xs font-medium"
             />
           </div>
 
           <div>
-            <label className="block font-bold text-on-surface mb-1">Industry / Trade</label>
+            <label className="block font-bold text-slate-800 mb-1">Industry / Trade</label>
             <select
               value={industry}
               onChange={(e) => setIndustry(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-xs font-medium"
             >
               {industries.map((ind) => (
                 <option key={ind} value={ind}>
@@ -181,43 +181,43 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         {/* Owner Details */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block font-bold text-on-surface mb-1">Owner Full Name</label>
+            <label className="block font-bold text-slate-800 mb-1">Owner Full Name</label>
             <input
               type="text"
               placeholder="e.g. Marcus Sterling"
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-xs font-medium"
             />
           </div>
 
           <div>
-            <label className="block font-bold text-on-surface mb-1">Owner Email *</label>
+            <label className="block font-bold text-slate-800 mb-1">Owner Email *</label>
             <input
               type="email"
               required
               placeholder="marcus@apexcomfort.com"
               value={ownerEmail}
               onChange={(e) => setOwnerEmail(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-xs font-medium"
             />
           </div>
 
           <div>
-            <label className="block font-bold text-on-surface mb-1">Phone Number</label>
+            <label className="block font-bold text-slate-800 mb-1">Phone Number</label>
             <input
               type="text"
               placeholder="+1 (555) 234-5678"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-xs font-medium"
             />
           </div>
         </div>
 
         {/* Subscription Plan Tier Selector */}
         <div>
-          <label className="block font-bold text-on-surface mb-1.5">Reseller Plan Tier</label>
+          <label className="block font-bold text-slate-800 mb-1.5">Reseller Plan Tier</label>
           <div className="grid grid-cols-3 gap-2">
             {(['Starter', 'Professional', 'Enterprise'] as const).map((tier) => {
               const isSelected = plan === tier;
@@ -228,19 +228,19 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
                   onClick={() => setPlan(tier)}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     isSelected
-                      ? 'border-primary bg-primary/10 shadow-xs'
-                      : 'border-outline-variant bg-surface-container-low hover:bg-surface-container-high'
+                      ? 'border-violet-500 bg-violet-50 shadow-xs'
+                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-on-surface">{tier}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                    <span className="font-bold text-slate-900">{tier}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-violet-600" />}
                   </div>
-                  <div className="mt-1 text-base font-extrabold font-mono text-on-surface">
+                  <div className="mt-1 text-base font-extrabold font-mono text-slate-900">
                     ${planPrices[tier]}
-                    <span className="text-[10px] text-on-surface-variant font-normal">/mo</span>
+                    <span className="text-[10px] text-slate-500 font-normal">/mo</span>
                   </div>
-                  <p className="text-[10px] text-on-surface-variant mt-0.5">
+                  <p className="text-[10px] text-slate-500 mt-0.5">
                     {tier === 'Enterprise'
                       ? '15 seats • Unlimited AI'
                       : tier === 'Professional'
@@ -256,22 +256,22 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         {/* Custom Domain & Deployment Cluster */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block font-bold text-on-surface mb-1">Custom Domain FQDN (Optional)</label>
+            <label className="block font-bold text-slate-800 mb-1">Custom Domain FQDN (Optional)</label>
             <input
               type="text"
               placeholder="e.g. portal.clientdomain.com"
               value={customDomain}
               onChange={(e) => setCustomDomain(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-xs font-mono"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-xs font-mono"
             />
           </div>
 
           <div>
-            <label className="block font-bold text-on-surface mb-1">Deployment Cluster</label>
+            <label className="block font-bold text-slate-800 mb-1">Deployment Cluster</label>
             <select
               value={environment}
               onChange={(e) => setEnvironment(e.target.value as any)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 text-xs font-medium"
             >
               <option value="Production US-East">Production Multi-Tenant Pod (US-East)</option>
               <option value="Production US-West">Production Multi-Tenant Pod (US-West)</option>
@@ -282,12 +282,12 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
         {/* Auto Send Invite Checkbox */}
         <div className="pt-2">
-          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-on-surface">
+          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700">
             <input
               type="checkbox"
               checked={sendInvite}
               onChange={(e) => setSendInvite(e.target.checked)}
-              className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary"
+              className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
             />
             <span>Send automated onboarding welcome email & magic login token to owner</span>
           </label>

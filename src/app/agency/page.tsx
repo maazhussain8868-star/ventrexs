@@ -293,7 +293,7 @@ export default function AgencyDashboardPage() {
       )}
 
       {/* 5. White-Label */}
-      {activeTab === 'whitelabel' && <AgencyWhiteLabel />}
+      {activeTab === 'whitelabel' && <AgencyWhiteLabel clients={clients} />}
 
       {/* 6. Domains */}
       {activeTab === 'domains' && (

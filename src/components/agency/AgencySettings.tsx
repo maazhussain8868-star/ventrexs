@@ -1,354 +1,231 @@
 'use client';
 
 import React, { useState } from 'react';
-import { initialAgencyTeam, AgencyTeamMember } from '@/data/agencyData';
 import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { useApp } from '@/context/AppContext';
 import {
   Settings,
   Users,
   ShieldCheck,
+  CreditCard,
   Key,
-  Webhook,
-  Plus,
-  Save,
-  Check,
+  Bell,
   Building2,
+  Save,
+  CheckCircle2,
+  Plus,
   Mail,
   Copy,
-  ExternalLink,
 } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 export const AgencySettings: React.FC = () => {
   const { showToast } = useApp();
+  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'billing' | 'apikeys' | 'notifications'>('profile');
 
-  const [team, setTeam] = useState<AgencyTeamMember[]>(initialAgencyTeam);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'Admin' | 'Account Manager' | 'Support Specialist'>('Account Manager');
-  const [saving, setSaving] = useState(false);
+  const [agencyName, setAgencyName] = useState('Apex Growth Marketing');
+  const [agencyEmail, setAgencyEmail] = useState('admin@apexgrowth.io');
+  const [subdomain, setSubdomain] = useState('apex');
 
-  const [agencyProfile, setAgencyProfile] = useState({
-    name: 'Apex Growth Marketing',
-    ownerName: 'Sarah Jenkins',
-    email: 'owner@apexgrowth.agency',
-    phone: '+1 (555) 019-2834',
-    website: 'https://apexgrowth.agency',
-    timezone: 'America/New_York (EST)',
-    currency: 'USD ($)',
-  });
+  const [teamMembers] = useState([
+    { name: 'David Miller', email: 'david@apexgrowth.io', role: 'Owner', status: 'Active' },
+    { name: 'Sarah Connor', email: 'sarah@apexgrowth.io', role: 'Agency Admin', status: 'Active' },
+    { name: 'Alex Rivera', email: 'alex@apexgrowth.io', role: 'Account Manager', status: 'Active' },
+  ]);
 
-  const [apiKey, setApiKey] = useState('vntrx_live_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d');
-  const [copiedKey, setCopiedKey] = useState(false);
-
-  const handleSaveProfile = () => {
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      showToast({ title: 'Agency Settings Saved', description: 'Organization metadata updated.', type: 'info' });
-    }, 400);
-  };
-
-  const handleInviteTeam = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim()) return;
-
-    const newMember: AgencyTeamMember = {
-      id: `team_${Date.now()}`,
-      name: inviteEmail.split('@')[0],
-      email: inviteEmail.trim(),
-      role: inviteRole,
-      status: 'Invited',
-      lastActive: 'Invitation sent',
-      assignedClientsCount: 0,
-    };
-
-    setTeam([...team, newMember]);
-    setIsInviteModalOpen(false);
-    setInviteEmail('');
-    showToast({ title: 'Team Member Invited', description: `Invitation sent to ${inviteEmail}`, type: 'info' });
-  };
-
-  const copyApiKey = () => {
-    navigator.clipboard.writeText(apiKey);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
-    showToast({ title: 'Copied API Key', type: 'info' });
+  const handleSave = () => {
+    showToast({
+      title: 'Settings Saved',
+      description: 'Agency organization profile updated.',
+      type: 'success',
+    });
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              Agency Settings & Reseller Administration
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/20 text-primary border border-primary/30 font-mono">
-              Partner Hub
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Configure your reseller organization, manage team access privileges, review tenant quotas, and manage API keys.
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Agency Settings & Organization</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Manage agency branding, team member access, reseller tier limits, and API keys.
           </p>
         </div>
 
         <Button
           variant="primary"
           size="sm"
-          onClick={handleSaveProfile}
-          isLoading={saving}
+          onClick={handleSave}
           leftIcon={<Save className="w-3.5 h-3.5" />}
-          className="text-xs font-bold bg-primary text-white"
+          className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
         >
-          Save Settings
+          Save Changes
         </Button>
       </div>
 
-      {/* 2-Column: Agency Profile & Reseller Tier */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Organization Profile */}
-        <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0a0f1d] border border-outline-variant/50 space-y-4 shadow-xs">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Agency Organization Profile
-            </h3>
-          </div>
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200 pb-2 overflow-x-auto">
+        {[
+          { id: 'profile', label: 'Agency Profile', icon: Building2 },
+          { id: 'team', label: 'Team Members', icon: Users },
+          { id: 'billing', label: 'Reseller Plan & Quota', icon: CreditCard },
+          { id: 'apikeys', label: 'API Keys', icon: Key },
+          { id: 'notifications', label: 'Notifications', icon: Bell },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+              activeTab === tab.id
+                ? 'bg-violet-50 text-violet-700 border border-violet-200/60 shadow-2xs font-extrabold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+      {/* Tab Contents */}
+      {activeTab === 'profile' && (
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 max-w-3xl">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Organization Profile</h3>
+          <div className="space-y-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-300 mb-1">Agency Name</label>
+              <label className="block font-bold text-slate-800 mb-1">Agency Name</label>
               <input
                 type="text"
-                value={agencyProfile.name}
-                onChange={(e) => setAgencyProfile({ ...agencyProfile, name: e.target.value })}
-                className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
+                value={agencyName}
+                onChange={(e) => setAgencyName(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
               />
             </div>
-
             <div>
-              <label className="block font-bold text-slate-300 mb-1">Owner Contact Name</label>
-              <input
-                type="text"
-                value={agencyProfile.ownerName}
-                onChange={(e) => setAgencyProfile({ ...agencyProfile, ownerName: e.target.value })}
-                className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1">Agency Contact Email</label>
+              <label className="block font-bold text-slate-800 mb-1">Support Email</label>
               <input
                 type="email"
-                value={agencyProfile.email}
-                onChange={(e) => setAgencyProfile({ ...agencyProfile, email: e.target.value })}
-                className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
+                value={agencyEmail}
+                onChange={(e) => setAgencyEmail(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
               />
             </div>
-
             <div>
-              <label className="block font-bold text-slate-300 mb-1">Contact Phone</label>
-              <input
-                type="text"
-                value={agencyProfile.phone}
-                onChange={(e) => setAgencyProfile({ ...agencyProfile, phone: e.target.value })}
-                className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1">Agency Website</label>
-              <input
-                type="text"
-                value={agencyProfile.website}
-                onChange={(e) => setAgencyProfile({ ...agencyProfile, website: e.target.value })}
-                className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-300 mb-1">Timezone</label>
-              <input
-                type="text"
-                value={agencyProfile.timezone}
-                onChange={(e) => setAgencyProfile({ ...agencyProfile, timezone: e.target.value })}
-                className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary font-mono"
-              />
+              <label className="block font-bold text-slate-800 mb-1">Agency Subdomain Slug</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={subdomain}
+                  onChange={(e) => setSubdomain(e.target.value)}
+                  className="w-48 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+                />
+                <span className="text-slate-400 font-mono text-xs">.agency.ventrexs.com</span>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
+      )}
 
-        {/* Right: Reseller Plan & Quota Tier */}
-        <div className="lg:col-span-5 p-6 rounded-3xl bg-[#0a0f1d] border border-outline-variant/50 space-y-4 shadow-xs flex flex-col justify-between">
-          <div className="space-y-2">
+      {activeTab === 'team' && (
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Agency Staff</h3>
+              <p className="text-xs text-slate-500">Authorized operators who can manage your clients</p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus className="w-3.5 h-3.5" />}
+              className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              + Invite Member
+            </Button>
+          </div>
+
+          <div className="divide-y divide-slate-100 text-xs">
+            {teamMembers.map((m, idx) => (
+              <div key={idx} className="py-3 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="font-bold text-slate-900">{m.name}</span>
+                  <p className="text-slate-500 font-mono text-[11px]">{m.email}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200">
+                    {m.role}
+                  </span>
+                  <span className="text-[11px] font-bold text-emerald-600">Active</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'billing' && (
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 max-w-3xl">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Reseller Tier & Quota</h3>
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Current Reseller Tier
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/20 text-primary border border-primary/30">
-                Agency Growth
+              <span className="font-bold text-slate-900 text-sm">Growth Partner Plan ($490/mo)</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ACTIVE
               </span>
             </div>
-
-            <div className="p-4 bg-[#070b14] rounded-2xl border border-outline-variant/40 space-y-3">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">Total Client Tenant Limit</span>
-                <span className="font-bold text-white">25 Tenants</span>
-              </div>
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">Active Used Seats</span>
-                <span className="font-bold text-emerald-400">14 / 25</span>
-              </div>
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">White-Label Branding</span>
-                <span className="font-bold text-primary">Full White-Label</span>
-              </div>
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-400">Custom Domains</span>
-                <span className="font-bold text-primary">Unlimited FQDNs</span>
-              </div>
-            </div>
+            <p className="text-slate-600">Includes 25 client tenant workspaces, custom domain SSL provisioning, and white-label branding.</p>
+            <div className="pt-2 font-mono font-bold text-slate-900">14 / 25 clients provisioned (11 remaining)</div>
           </div>
+        </section>
+      )}
 
-          <div className="p-4 bg-gradient-to-br from-primary/20 to-purple-500/10 rounded-2xl border border-primary/30 flex items-center justify-between">
-            <div>
-              <span className="font-bold text-xs text-white block">Upgrade to Enterprise Reseller</span>
-              <span className="text-[11px] text-slate-300">100 client tenants • Dedicated VPS pod</span>
-            </div>
-            <Button variant="primary" size="sm" className="text-xs shrink-0 font-bold">
-              Upgrade
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Agency Team Members */}
-      <div className="rounded-3xl bg-[#0a0f1d] border border-outline-variant/50 overflow-hidden shadow-xs">
-        <div className="p-5 bg-[#070b14] border-b border-outline-variant/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Agency Team & Role-Based Access ({team.length})
-            </h3>
-            <p className="text-xs text-slate-400">
-              Manage account managers, administrators, and support specialists.
-            </p>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsInviteModalOpen(true)}
-            leftIcon={<Plus className="w-3.5 h-3.5" />}
-            className="text-xs border-outline-variant/60 text-slate-300 hover:text-white"
-          >
-            Invite Team Member
-          </Button>
-        </div>
-
-        <div className="divide-y divide-outline-variant/40">
-          {team.map((member) => (
-            <div
-              key={member.id}
-              className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:bg-surface-container-low/30 transition-colors"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm">
-                  {member.name.charAt(0)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-white text-sm">{member.name}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 font-mono">
-                      {member.role}
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-400 font-mono">{member.email}</span>
-                </div>
+      {activeTab === 'apikeys' && (
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 max-w-3xl">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Agency API Credentials</h3>
+          <div className="space-y-3 text-xs">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900">Live Reseller Provisioning Key</span>
+                <span className="text-[10px] font-bold text-emerald-600">Production</span>
               </div>
-
-              <div className="flex items-center gap-6 text-slate-400 font-mono text-xs">
-                <span>{member.assignedClientsCount} Clients Assigned</span>
-                <span className="text-slate-300">{member.lastActive}</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="password"
+                  value="vtx_live_ag_88491028472910"
+                  readOnly
+                  className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-mono text-xs text-slate-700"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => showToast({ title: 'Key Copied', type: 'info' })}
+                  className="text-xs bg-white text-slate-700 border-slate-200"
+                >
+                  Copy
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* API Keys & Webhooks */}
-      <div className="p-6 rounded-3xl bg-[#0a0f1d] border border-outline-variant/50 space-y-4 shadow-xs">
-        <div className="flex items-center gap-2">
-          <Key className="w-4 h-4 text-amber-400" />
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-            Agency API Key & CRM Webhook Secrets
-          </h3>
-        </div>
-
-        <div className="space-y-3 text-xs">
-          <p className="text-slate-400">
-            Use your agency bearer token to automate client provisioning via Zapier, Make, or custom REST webhooks.
-          </p>
-
-          <div className="p-3 bg-[#070b14] rounded-xl border border-outline-variant/60 flex items-center justify-between font-mono text-xs">
-            <span className="text-slate-300 truncate pr-2">{apiKey}</span>
-            <button
-              onClick={copyApiKey}
-              className="p-1.5 rounded-lg bg-surface-container text-primary font-bold hover:bg-surface-container-high flex items-center gap-1 shrink-0 text-[11px]"
-            >
-              {copiedKey ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedKey ? 'Copied' : 'Copy Key'}</span>
-            </button>
           </div>
-        </div>
-      </div>
+        </section>
+      )}
 
-      {/* Invite Member Modal */}
-      <Modal
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
-        title="Invite Agency Team Member"
-        maxWidth="md"
-        footer={
-          <div className="flex justify-end gap-2 w-full">
-            <Button variant="ghost" size="sm" onClick={() => setIsInviteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleInviteTeam} className="text-xs">
-              Send Invitation
-            </Button>
+      {activeTab === 'notifications' && (
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 max-w-3xl">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Alert Preferences</h3>
+          <div className="space-y-3 text-xs">
+            <label className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
+              <input type="checkbox" defaultChecked className="rounded text-violet-600" />
+              <span className="font-bold text-slate-800">Email digest when client payments succeed or fail</span>
+            </label>
+            <label className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
+              <input type="checkbox" defaultChecked className="rounded text-violet-600" />
+              <span className="font-bold text-slate-800">Alerts when client quota reaches 85% utilization</span>
+            </label>
+            <label className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
+              <input type="checkbox" defaultChecked className="rounded text-violet-600" />
+              <span className="font-bold text-slate-800">SSL certificate and DNS verification updates</span>
+            </label>
           </div>
-        }
-      >
-        <form onSubmit={handleInviteTeam} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-bold text-slate-300 mb-1">Team Member Email *</label>
-            <input
-              type="email"
-              required
-              placeholder="colleague@apexgrowth.agency"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block font-bold text-slate-300 mb-1">Agency Role</label>
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as any)}
-              className="w-full bg-[#070b14] border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-primary"
-            >
-              <option value="Admin">Agency Admin (Full access to all clients & settings)</option>
-              <option value="Account Manager">Account Manager (Manage assigned client businesses)</option>
-              <option value="Support Specialist">Support Specialist (Read-only / Tier-1 support)</option>
-            </select>
-          </div>
-        </form>
-      </Modal>
+        </section>
+      )}
     </div>
   );
 };

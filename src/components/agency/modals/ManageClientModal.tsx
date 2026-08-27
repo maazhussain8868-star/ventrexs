@@ -56,7 +56,7 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
   const handleSave = () => {
     setSaving(true);
     setTimeout(() => {
-      const planPrices = { Starter: 79, Professional: 149, Enterprise: 299 };
+      const planPrices = { Starter: 19, Professional: 49, Enterprise: 199 };
       onUpdateClient({
         ...client,
         name,
@@ -76,7 +76,7 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Manage Tenant: ${client.name}`}
+      title={`Manage Client: ${client.name}`}
       maxWidth="xl"
       footer={
         <div className="flex items-center justify-between w-full">
@@ -85,47 +85,47 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
             size="sm"
             onClick={() => onSwitchContext(client)}
             rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-            className="text-xs text-primary border-primary/40 hover:bg-primary/10"
+            className="text-xs bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 font-bold"
           >
-            Switch Account Context
+            Enter Customer Workspace
           </Button>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={onClose} className="text-slate-600">
               Cancel
             </Button>
-            <Button variant="primary" size="sm" onClick={handleSave} isLoading={saving} className="text-xs">
+            <Button variant="primary" size="sm" onClick={handleSave} isLoading={saving} className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white">
               Save Changes
             </Button>
           </div>
         </div>
       }
     >
-      <div className="space-y-5 text-xs">
+      <div className="space-y-5 text-xs text-slate-800">
         {/* Tenant Header Pill */}
-        <div className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-xs"
-              style={{ backgroundColor: client.accentColor }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm text-white shadow-2xs"
+              style={{ backgroundColor: client.accentColor || '#6366f1' }}
             >
               {client.initials}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-on-surface">{client.name}</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+                <span className="text-sm font-bold text-slate-900">{client.name}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200/70 text-slate-700 font-bold">
                   {client.businessId}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant font-mono">
-                {client.industry} • Created {client.createdAt}
+              <p className="text-[11px] text-slate-500 font-mono">
+                {client.industry} &bull; Created {client.createdAt}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <div className="px-2.5 py-1 rounded-lg bg-surface-container-high text-on-surface font-mono">
-              MRR: <span className="font-bold text-emerald-600 dark:text-emerald-400">${client.mrr}/mo</span>
+            <div className="px-3 py-1 rounded-xl bg-white border border-slate-200 text-slate-800 font-mono">
+              MRR: <span className="font-bold text-emerald-600">${client.mrr}/mo</span>
             </div>
           </div>
         </div>
@@ -133,22 +133,22 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
         {/* Core Configuration */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block font-bold text-on-surface mb-1">Business Name</label>
+            <label className="block font-bold text-slate-800 mb-1">Business Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface text-xs focus:outline-none focus:border-primary"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 font-medium"
             />
           </div>
 
           <div>
-            <label className="block font-bold text-on-surface mb-1">Primary Owner Email</label>
+            <label className="block font-bold text-slate-800 mb-1">Primary Owner Email</label>
             <input
               type="email"
               value={ownerEmail}
               onChange={(e) => setOwnerEmail(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface text-xs focus:outline-none focus:border-primary"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 font-medium"
             />
           </div>
         </div>
@@ -156,24 +156,24 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
         {/* Tier & Status Adjustments */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block font-bold text-on-surface mb-1">Plan Tier</label>
+            <label className="block font-bold text-slate-800 mb-1">Plan Tier</label>
             <select
               value={plan}
               onChange={(e) => setPlan(e.target.value as any)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface text-xs focus:outline-none focus:border-primary"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-violet-500 font-medium"
             >
-              <option value="Starter">Starter ($79/mo)</option>
-              <option value="Professional">Professional ($149/mo)</option>
-              <option value="Enterprise">Enterprise ($299/mo)</option>
+              <option value="Starter">Starter ($19/mo)</option>
+              <option value="Professional">Professional ($49/mo)</option>
+              <option value="Enterprise">Enterprise ($199/mo)</option>
             </select>
           </div>
 
           <div>
-            <label className="block font-bold text-on-surface mb-1">Tenant Status</label>
+            <label className="block font-bold text-slate-800 mb-1">Client Status</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface text-xs focus:outline-none focus:border-primary"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-violet-500 font-medium"
             >
               <option value="Active">Active</option>
               <option value="Trial">Trial</option>
@@ -183,11 +183,11 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-bold text-on-surface mb-1">Health Category</label>
+            <label className="block font-bold text-slate-800 mb-1">Health Category</label>
             <select
               value={health}
               onChange={(e) => setHealth(e.target.value as any)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface text-xs focus:outline-none focus:border-primary"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-violet-500 font-medium"
             >
               <option value="Healthy">Healthy (Green)</option>
               <option value="Needs Attention">Needs Attention (Amber)</option>
@@ -198,84 +198,82 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
 
         {/* Custom Domain */}
         <div>
-          <label className="block font-bold text-on-surface mb-1">Custom Domain FQDN</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              className="w-full bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 text-on-surface text-xs font-mono focus:outline-none focus:border-primary"
-            />
-          </div>
+          <label className="block font-bold text-slate-800 mb-1">Custom Domain FQDN</label>
+          <input
+            type="text"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs font-mono focus:outline-none focus:border-violet-500 font-medium"
+          />
         </div>
 
         {/* Feature Flags Suite */}
-        <div className="space-y-2 pt-2 border-t border-outline-variant/60">
-          <label className="block font-bold text-on-surface uppercase tracking-wider text-[11px]">
-            Tenant Feature Flags & Entitlements
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <label className="block font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+            Feature Flags & Entitlements
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <label className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/60 flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors">
+            <label className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-100/70 transition-colors">
               <div className="flex items-center gap-2.5">
-                <Bot className="w-4 h-4 text-purple-600" />
+                <Bot className="w-4 h-4 text-violet-600" />
                 <div>
-                  <span className="font-bold text-on-surface block">AI Receptionist</span>
-                  <span className="text-[10px] text-on-surface-variant">24/7 call triage & auto-booking</span>
+                  <span className="font-bold text-slate-900 block">AI Receptionist</span>
+                  <span className="text-[10px] text-slate-500">24/7 voice triage & booking</span>
                 </div>
               </div>
               <input
                 type="checkbox"
                 checked={flags.aiReceptionist}
                 onChange={(e) => setFlags({ ...flags, aiReceptionist: e.target.checked })}
-                className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary"
+                className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
               />
             </label>
 
-            <label className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/60 flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors">
+            <label className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-100/70 transition-colors">
               <div className="flex items-center gap-2.5">
-                <MessageSquare className="w-4 h-4 text-primary" />
+                <MessageSquare className="w-4 h-4 text-indigo-600" />
                 <div>
-                  <span className="font-bold text-on-surface block">SMS & WhatsApp Dispatch</span>
-                  <span className="text-[10px] text-on-surface-variant">Automated customer SMS reminders</span>
+                  <span className="font-bold text-slate-900 block">SMS & WhatsApp Dispatch</span>
+                  <span className="text-[10px] text-slate-500">Automated job notifications</span>
                 </div>
               </div>
               <input
                 type="checkbox"
                 checked={flags.smsDispatch}
                 onChange={(e) => setFlags({ ...flags, smsDispatch: e.target.checked })}
-                className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary"
+                className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
               />
             </label>
 
-            <label className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/60 flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors">
+            <label className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-100/70 transition-colors">
               <div className="flex items-center gap-2.5">
                 <Star className="w-4 h-4 text-amber-500" />
                 <div>
-                  <span className="font-bold text-on-surface block">Reputation & Reviews</span>
-                  <span className="text-[10px] text-on-surface-variant">Google Reviews auto-requesting</span>
+                  <span className="font-bold text-slate-900 block">Reputation & Reviews</span>
+                  <span className="text-[10px] text-slate-500">Google Reviews automation</span>
                 </div>
               </div>
               <input
                 type="checkbox"
                 checked={flags.reputationReviews}
                 onChange={(e) => setFlags({ ...flags, reputationReviews: e.target.checked })}
-                className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary"
+                className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
               />
             </label>
 
-            <label className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/60 flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors">
+            <label className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-100/70 transition-colors">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-4 h-4 text-emerald-600" />
                 <div>
-                  <span className="font-bold text-on-surface block">Owner AI Opportunity Radar</span>
-                  <span className="text-[10px] text-on-surface-variant">Automated revenue intelligence</span>
+                  <span className="font-bold text-slate-900 block">Owner AI Opportunity Radar</span>
+                  <span className="text-[10px] text-slate-500">Revenue expansion insights</span>
                 </div>
               </div>
               <input
                 type="checkbox"
                 checked={flags.ownerAiRadar}
                 onChange={(e) => setFlags({ ...flags, ownerAiRadar: e.target.checked })}
-                className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary"
+                className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
               />
             </label>
           </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { CreditCard, DollarSign, ShieldCheck, CheckCircle2, XCircle, RefreshCw, Filter, Search, Smartphone } from 'lucide-react';
+import { CreditCard, DollarSign, ShieldCheck, CheckCircle2, XCircle, RefreshCw, Filter, Search, Smartphone, Globe } from 'lucide-react';
 
 export default function AdminPaymentsPage() {
   const [filterPurpose, setFilterPurpose] = useState<string>('ALL');
@@ -88,32 +88,80 @@ export default function AdminPaymentsPage() {
     return matchesPurpose && matchesProvider && matchesSearch;
   });
 
+  const getPurposeBadge = (purpose: string) => {
+    switch (purpose) {
+      case 'SAAS_SUBSCRIPTION':
+        return (
+          <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            SAAS SUBSCRIPTION
+          </span>
+        );
+      case 'CUSTOMER_INVOICE':
+        return (
+          <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            CUSTOMER INVOICE
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+            {purpose}
+          </span>
+        );
+    }
+  };
+
+  const getProviderBadge = (provider: string) => {
+    switch (provider) {
+      case 'google_play':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+            <Smartphone className="w-3.5 h-3.5" /> Google Play
+          </span>
+        );
+      case 'stripe':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700">
+            <CreditCard className="w-3.5 h-3.5" /> Stripe
+          </span>
+        );
+      case 'razorpay':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700">
+            <Globe className="w-3.5 h-3.5" /> Razorpay
+          </span>
+        );
+      default:
+        return <span className="text-[11px] font-bold text-slate-700 uppercase">{provider}</span>;
+    }
+  };
+
   return (
     <AdminLayout
-      title="Platform Payment Operations"
-      subtitle="Auditable transaction ledger strictly separating SaaS subscription revenue from customer invoice settlements."
+      title="Payment Operations Ledger"
+      subtitle="Auditable platform ledger separating Ventrexs SaaS subscription revenues from contractor invoice settlements."
       showBack
       backUrl="/admin"
     >
       <div className="space-y-6">
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search tenant, agency, or transaction..."
+                placeholder="Search tenant, agency, transaction ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-[#0b101f] border border-outline-variant/60 rounded-xl text-white focus:outline-none focus:border-primary placeholder-slate-500"
+                className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               />
             </div>
 
             <select
               value={filterPurpose}
               onChange={(e) => setFilterPurpose(e.target.value)}
-              className="text-xs bg-[#0b101f] border border-outline-variant/60 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-primary"
+              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
             >
               <option value="ALL">All Purposes</option>
               <option value="SAAS_SUBSCRIPTION">SaaS Subscription</option>
@@ -124,7 +172,7 @@ export default function AdminPaymentsPage() {
             <select
               value={filterProvider}
               onChange={(e) => setFilterProvider(e.target.value)}
-              className="text-xs bg-[#0b101f] border border-outline-variant/60 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-primary"
+              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
             >
               <option value="ALL">All Providers</option>
               <option value="razorpay">Razorpay</option>
@@ -134,56 +182,45 @@ export default function AdminPaymentsPage() {
             </select>
           </div>
 
-          <span className="text-xs text-slate-400 font-mono">Showing {filtered.length} transactions</span>
+          <span className="text-xs text-slate-500 font-mono font-semibold">
+            Showing {filtered.length} transactions
+          </span>
         </div>
 
         {/* Transactions Table */}
-        <div className="bg-[#0a0f1d] border border-outline-variant/40 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#070b14] border-b border-outline-variant/40 text-slate-400 uppercase font-bold text-[10px] tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
                 <tr>
                   <th className="p-4">Transaction ID</th>
+                  <th className="p-4">Customer Business</th>
+                  <th className="p-4">Agency Reseller</th>
                   <th className="p-4">Purpose</th>
                   <th className="p-4">Provider</th>
-                  <th className="p-4">Tenant / Business</th>
-                  <th className="p-4">Agency Reseller</th>
                   <th className="p-4">Amount</th>
                   <th className="p-4">Status</th>
-                  <th className="p-4">Date</th>
+                  <th className="p-4 text-right">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/30 text-slate-200">
+              <tbody className="divide-y divide-slate-100 text-slate-800">
                 {filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-surface-container-low/40 transition-colors">
-                    <td className="p-4 font-mono font-bold text-white">{t.providerTxnId}</td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          t.purpose === 'SAAS_SUBSCRIPTION'
-                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        }`}
-                      >
-                        {t.purpose}
-                      </span>
-                    </td>
-                    <td className="p-4 uppercase font-semibold text-slate-300 flex items-center gap-1.5 pt-4">
-                      {t.provider === 'google_play' && <Smartphone className="w-3.5 h-3.5 text-emerald-400" />}
-                      <span>{t.provider}</span>
-                    </td>
-                    <td className="p-4 text-white font-medium">{t.tenant}</td>
-                    <td className="p-4 text-slate-400 text-[11px]">{t.agency}</td>
-                    <td className="p-4 font-mono font-bold text-white">
+                  <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="p-4 font-mono font-bold text-slate-900">{t.providerTxnId}</td>
+                    <td className="p-4 text-slate-900 font-semibold">{t.tenant}</td>
+                    <td className="p-4 text-slate-500 text-[11px]">{t.agency}</td>
+                    <td className="p-4">{getPurposeBadge(t.purpose)}</td>
+                    <td className="p-4">{getProviderBadge(t.provider)}</td>
+                    <td className="p-4 font-mono font-bold text-slate-900">
                       ${t.amount.toFixed(2)} {t.currency}
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        {t.status}
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" />
+                        SUCCESS
                       </span>
                     </td>
-                    <td className="p-4 text-slate-400 font-mono">{t.date}</td>
+                    <td className="p-4 text-slate-500 font-mono text-right">{t.date}</td>
                   </tr>
                 ))}
               </tbody>
