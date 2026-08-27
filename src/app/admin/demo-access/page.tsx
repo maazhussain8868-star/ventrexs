@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import {
@@ -147,7 +147,7 @@ export default function AdminDemoAccessPage() {
   };
 
   return (
-    <AppShell title="Demo Access & Dual-Approval Center">
+    <AdminLayout>
       <div className="max-w-6xl mx-auto space-y-8 p-4 sm:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/30 pb-6">
@@ -458,6 +458,6 @@ export default function AdminDemoAccessPage() {
           </div>
         </section>
       </div>
-    </AppShell>
+    </AdminLayout>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -38,8 +38,8 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <AppShell title="Platform Administration">
-      <div className="max-w-4xl mx-auto flex flex-col gap-6">
+    <AdminLayout>
+      <div className="max-w-5xl mx-auto flex flex-col gap-6">
         {/* Header */}
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -315,6 +315,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </Modal>
-    </AppShell>
+    </AdminLayout>
   );
 }

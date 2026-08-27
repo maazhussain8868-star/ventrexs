@@ -9,6 +9,7 @@ import { DemoPaymentAdapter } from './adapters/demo-adapter';
 import { RazorpayPaymentAdapter } from './adapters/razorpay-adapter';
 import { StripeCustomerPaymentAdapter } from './adapters/stripe-adapter';
 import { SkydoPaymentAdapter } from './adapters/skydo-adapter';
+import { GooglePlayPaymentAdapter } from './adapters/google-play-adapter';
 
 export class PaymentProviderFactory {
   /**
@@ -39,6 +40,9 @@ export class PaymentProviderFactory {
     // 2. SaaS Subscription Purpose
     if (purpose === 'SAAS_SUBSCRIPTION') {
       const saasProvider = (providerName || process.env.SAAS_PAYMENT_PROVIDER || 'razorpay').toLowerCase();
+      if (saasProvider === 'google_play' || saasProvider === 'googleplay') {
+        return new GooglePlayPaymentAdapter();
+      }
       if (saasProvider === 'stripe') {
         return new StripeCustomerPaymentAdapter(credentials?.secret || credentials?.apiKey, credentials?.webhookSecret);
       }

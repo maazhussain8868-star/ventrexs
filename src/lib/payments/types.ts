@@ -5,7 +5,9 @@
 
 export type PaymentPurpose = 'SAAS_SUBSCRIPTION' | 'CUSTOMER_INVOICE' | 'DEMO';
 
-export type PaymentProviderName = 'razorpay' | 'stripe' | 'skydo' | 'india_upi' | 'manual' | 'demo' | 'ach';
+export type PaymentProviderName = 'razorpay' | 'stripe' | 'skydo' | 'india_upi' | 'google_play' | 'manual' | 'demo' | 'ach';
+
+export type BillingSource = 'GOOGLE_PLAY' | 'RAZORPAY' | 'STRIPE' | 'ALTERNATIVE_BILLING' | 'MANUAL' | 'DEMO';
 
 export type { PaymentProvider } from './provider';
 
