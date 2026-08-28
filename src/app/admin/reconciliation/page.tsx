@@ -67,21 +67,21 @@ export default function AdminReconciliationPage() {
         <Button
           onClick={handleRunReconciliation}
           disabled={isReconciling}
-          className="gap-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+          className="gap-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold min-h-[36px]"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isReconciling ? 'animate-spin' : ''}`} />
           {isReconciling ? 'Reconciling...' : 'Run Audit'}
         </Button>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-full overflow-hidden">
         {/* Provider Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
           {['razorpay', 'stripe', 'google_play', 'skydo'].map((p) => (
             <button
               key={p}
               onClick={() => setSelectedProvider(p)}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              className={`px-3.5 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all whitespace-nowrap min-h-[36px] ${
                 selectedProvider === p
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
@@ -93,37 +93,37 @@ export default function AdminReconciliationPage() {
         </div>
 
         {/* Report Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Settled</span>
-            <p className="text-2xl font-black text-slate-900 font-mono">${currentReport.totalCollected.toLocaleString()}</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">${currentReport.totalCollected.toLocaleString()}</p>
             <p className="text-[11px] text-emerald-600 font-semibold">100% matched with provider</p>
           </div>
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Refunds Processed</span>
-            <p className="text-2xl font-black text-slate-900 font-mono">${currentReport.totalRefunded.toLocaleString()}</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">${currentReport.totalRefunded.toLocaleString()}</p>
             <p className="text-[11px] text-slate-500">Zero unauthorized refunds</p>
           </div>
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Matched Records</span>
-            <p className="text-2xl font-black text-slate-900 font-mono">{currentReport.matched}</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">{currentReport.matched}</p>
             <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" /> Full parity
             </p>
           </div>
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Discrepancies</span>
-            <p className="text-2xl font-black text-slate-900 font-mono">{currentReport.discrepancies}</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">{currentReport.discrepancies}</p>
             <p className="text-[11px] text-emerald-600 font-semibold">Zero variance detected</p>
           </div>
         </div>
 
         {/* Audit Status Card */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs space-y-3 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-600" />
-              <h3 className="text-sm font-bold text-slate-900">Reconciliation Ledger Integrity Status</h3>
+              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900">Reconciliation Ledger Integrity Status</h3>
             </div>
             <span className="text-xs font-mono text-slate-500 font-medium">Last verified: {currentReport.lastChecked}</span>
           </div>

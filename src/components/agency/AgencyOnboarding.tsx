@@ -40,12 +40,14 @@ export const AgencyOnboarding: React.FC<AgencyOnboardingProps> = ({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Client Onboarding Pipeline</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-1">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
+            Client Onboarding Pipeline
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 line-clamp-2">
             Stage-by-stage progression tracking for new contractor SaaS accounts.
           </p>
         </div>
@@ -55,57 +57,68 @@ export const AgencyOnboarding: React.FC<AgencyOnboardingProps> = ({
           size="sm"
           onClick={onOpenAddClient}
           leftIcon={<Plus className="w-3.5 h-3.5" />}
-          className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
+          className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs shrink-0 min-h-[36px]"
         >
           + Add Client
         </Button>
       </div>
 
-      {/* Modern Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 overflow-x-auto pb-4">
-        {stages.map((st) => {
-          const stageClients = clients.filter((c) => c.onboardingStage === st.stage);
-          return (
-            <div key={st.stage} className="bg-slate-100/70 border border-slate-200/80 rounded-2xl p-3 flex flex-col min-h-[480px]">
-              <div className="flex items-center justify-between pb-3 px-1">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                  {st.title}
-                </span>
-                <span className="w-5 h-5 rounded-full bg-white text-slate-700 font-mono font-bold text-[11px] flex items-center justify-center border border-slate-200 shadow-2xs">
-                  {stageClients.length}
-                </span>
-              </div>
+      {/* Modern Kanban Board with Internal Scroll Container */}
+      <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 pb-4">
+        <div className="flex gap-3 sm:gap-4 min-w-[1280px] xl:min-w-0 xl:grid xl:grid-cols-6">
+          {stages.map((st) => {
+            const stageClients = clients.filter((c) => c.onboardingStage === st.stage);
+            return (
+              <div
+                key={st.stage}
+                className="bg-slate-100/70 border border-slate-200/80 rounded-2xl p-3 flex flex-col min-h-[440px] sm:min-h-[480px] w-64 xl:w-auto shrink-0"
+              >
+                <div className="flex items-center justify-between pb-3 px-1">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 truncate">
+                    {st.title}
+                  </span>
+                  <span className="w-5 h-5 rounded-full bg-white text-slate-700 font-mono font-bold text-[11px] flex items-center justify-center border border-slate-200 shadow-2xs shrink-0">
+                    {stageClients.length}
+                  </span>
+                </div>
 
-              <div className="space-y-3 flex-1 overflow-y-auto">
-                {stageClients.map((c) => (
-                  <div
-                    key={c.id}
-                    className={`bg-white border border-slate-200/90 border-t-4 ${st.color} rounded-xl p-3.5 shadow-2xs hover:shadow-xs transition-all space-y-2 cursor-pointer`}
-                    onClick={() => onManageClient(c)}
-                  >
-                    <div className="flex items-center gap-2">
+                <div className="space-y-3 flex-1 overflow-y-auto pr-0.5">
+                  {stageClients.length === 0 ? (
+                    <div className="h-32 flex items-center justify-center border border-dashed border-slate-200 rounded-xl text-[11px] text-slate-400 font-medium">
+                      No accounts
+                    </div>
+                  ) : (
+                    stageClients.map((c) => (
                       <div
-                        className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[10px] text-white"
-                        style={{ backgroundColor: c.accentColor || '#6366f1' }}
+                        key={c.id}
+                        className={`bg-white border border-slate-200/90 border-t-4 ${st.color} rounded-xl p-3.5 shadow-2xs hover:shadow-xs transition-all space-y-2 cursor-pointer active:scale-[0.99]`}
+                        onClick={() => onManageClient(c)}
                       >
-                        {c.initials}
-                      </div>
-                      <span className="font-bold text-slate-900 text-xs truncate leading-tight">{c.name}</span>
-                    </div>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-[10px] text-white shrink-0"
+                            style={{ backgroundColor: c.accentColor || '#6366f1' }}
+                          >
+                            {c.initials}
+                          </div>
+                          <span className="font-bold text-slate-900 text-xs truncate leading-tight">{c.name}</span>
+                        </div>
 
-                    <div className="space-y-1 text-[11px] text-slate-500">
-                      <p className="truncate">Owner: {c.ownerEmail}</p>
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="font-bold text-violet-700">{c.plan}</span>
-                        <span className="font-mono text-slate-400">{c.lastActivityTime}</span>
+                        <div className="space-y-1 text-[11px] text-slate-500">
+                          <p className="truncate font-mono text-[10px] text-slate-400">{c.domain}</p>
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="font-bold text-violet-700">{c.plan}</span>
+                            <span className="font-mono text-slate-400">{c.lastActivityTime}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

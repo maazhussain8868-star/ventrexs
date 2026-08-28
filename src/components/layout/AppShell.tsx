@@ -161,13 +161,13 @@ export const AppShell: React.FC<AppShellProps> = ({
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Live Demo Status Banner */}
         {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
-          <div className="bg-gradient-to-r from-amber-500/15 via-primary/10 to-amber-500/15 border-b border-amber-500/30 px-4 py-1.5 text-xs text-on-surface flex items-center justify-between z-30">
+          <div className="bg-gradient-to-r from-blue-900/30 via-indigo-900/20 to-blue-900/30 border-b border-blue-500/30 px-4 py-1.5 text-xs text-on-surface flex items-center justify-between z-30">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 font-extrabold text-[10px] tracking-wider uppercase border border-amber-500/40">
-                VENTREXS AI — LIVE DEMO
+              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-700 dark:text-blue-300 font-extrabold text-[10px] tracking-wider uppercase border border-blue-500/40">
+                DEMO MODE
               </span>
-              <span className="font-semibold hidden sm:inline text-on-surface-variant text-[11px]">
-                Demo Environment • Apex Services (biz_01) • Zero External Provider Charges
+              <span className="font-medium text-on-surface-variant text-[11px]">
+                You&apos;re viewing the Ventrexs demo. Data shown here is fictional.
               </span>
             </div>
             <div className="flex items-center gap-3">

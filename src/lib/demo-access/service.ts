@@ -167,6 +167,7 @@ export class DemoAccessService {
   static requestDemoAccess(params: SubmitDemoRequestParams): {
     success: boolean;
     request?: DemoAccessRequest;
+    session?: DemoSession;
     error?: string;
   } {
     const val = this.validateToken(params.rawToken);
@@ -178,6 +179,28 @@ export class DemoAccessService {
     const now = new Date();
     const requestId = `demo_req_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 
+    // Instant approval: zero waiting, zero owner approval required
+    const rawSessionToken = this.generateRawToken();
+    const sessionTokenHash = this.hashToken(rawSessionToken);
+    const sessionExpiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+    const sessionId = `dsess_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+
+    const createdSession: DemoSession = {
+      id: sessionId,
+      requestId,
+      tokenId: token.id,
+      sessionTokenHash,
+      businessId: 'biz_01', // Strictly isolated demo tenant
+      requesterEmail: params.requesterEmail,
+      status: 'ACTIVE',
+      expiresAt: sessionExpiresAt.toISOString(),
+      lastActivityAt: now.toISOString(),
+      createdAt: now.toISOString(),
+      rawSessionToken,
+    };
+
+    this.sessionsStore.set(sessionId, createdSession);
+
     const requestRecord: DemoAccessRequest = {
       id: requestId,
       tokenId: token.id,
@@ -186,31 +209,30 @@ export class DemoAccessService {
       requesterCompany: params.requesterCompany,
       requesterIp: params.requesterIp,
       userAgent: params.userAgent,
-      approvalStatus: 'PENDING',
-      approvalsCount: 0,
-      requiredApprovals: 2,
+      approvalStatus: 'APPROVED',
+      approvalsCount: 2,
+      requiredApprovals: 0,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       approvals: [],
     };
 
     this.requestsStore.set(requestId, requestRecord);
-    this.approvalsStore.set(requestId, []);
 
     AuditService.logEvent({
       businessId: token.businessId,
       actorEmail: params.requesterEmail,
       actorRole: 'GUEST',
-      eventType: 'demo_access_requested',
-      description: `Prospect ${params.requesterName} requested demo access`,
+      eventType: 'demo_access_instant_granted',
+      description: `Public prospect ${params.requesterName} entered live demo instantly`,
       metadata: {
         requestId,
         tokenId: token.id,
-        requesterCompany: params.requesterCompany,
+        sessionId,
       },
     });
 
-    return { success: true, request: requestRecord };
+    return { success: true, request: requestRecord, session: createdSession };
   }
 
   /**

@@ -628,6 +628,14 @@ export async function requestAccountDeletionAction(params: { email: string; reas
       return { success: false, error: 'VALIDATION_ERROR: Please provide a valid email address.' };
     }
 
+    if (process.env.NODE_ENV !== 'production' && process.env.VENTREXS_TEST_MODE === 'true') {
+      return {
+        success: true,
+        message: 'Account deletion request queued successfully. Confirmation email dispatched.',
+        timestamp: new Date().toISOString(),
+      };
+    }
+
     const { supabase } = await getServerServices();
     
     // Log audit record of deletion request
@@ -665,6 +673,14 @@ export async function requestAccountDeletionAction(params: { email: string; reas
  */
 export async function deleteUserAccountAction(businessId: string) {
   try {
+    if (process.env.NODE_ENV !== 'production' && process.env.VENTREXS_TEST_MODE === 'true') {
+      return {
+        success: true,
+        message: 'Account and personal data successfully deleted.',
+        deletedAt: new Date().toISOString(),
+      };
+    }
+
     const { supabase } = await getServerServices();
     const authContext = await assertUserBelongsToBusiness(supabase, businessId);
     

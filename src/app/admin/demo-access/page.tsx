@@ -144,34 +144,9 @@ export default function AdminDemoAccessPage() {
     }
   };
 
-  const handleApprovalDecision = async (requestId: string, decision: 'APPROVED' | 'REJECTED') => {
-    setActionLoadingId(requestId);
-    const res = await submitOwnerApprovalAction({
-      requestId,
-      approverEmail: activeApprover,
-      decision,
-    });
-    setActionLoadingId(null);
-
-    if (res.success) {
-      showToast({
-        title: decision === 'APPROVED' ? 'Approval Signed' : 'Request Rejected',
-        description: res.data?.request?.approvalStatus === 'APPROVED' ? 'Quorum achieved! Dual approval granted.' : 'Decision registered.',
-        type: 'success',
-      });
-      loadData();
-    } else {
-      showToast({
-        title: 'Decision Error',
-        description: res.error || 'Failed to submit approval.',
-        type: 'error',
-      });
-    }
-  };
-
   return (
     <AdminLayout
-      title="Demo Access & Dual-Approval Center"
+      title="Demo Access & Dual-Approval"
       subtitle="Manage 24-hour cryptographic demo links, enforce two distinct owner approvals, and monitor isolated demo sessions."
       showBack
       backUrl="/admin"
@@ -182,54 +157,54 @@ export default function AdminDemoAccessPage() {
           onClick={loadData}
           isLoading={loading}
           leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-          className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+          className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50 min-h-[36px]"
         >
           Refresh
         </Button>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-full overflow-hidden">
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
             <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
               <Key className="w-4 h-4 text-indigo-600" /> Active 24h Tokens
             </span>
-            <p className="text-3xl font-extrabold text-slate-900 font-mono">{activeTokensCount}</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">{activeTokensCount}</p>
             <p className="text-[11px] text-slate-400">Cryptographically signed links</p>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
             <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-500" /> Pending Dual Approvals
             </span>
-            <p className="text-3xl font-extrabold text-amber-600 font-mono">{pendingRequestsCount}</p>
-            <p className="text-[11px] text-slate-400">Requires 2 separate owner sign-offs</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-amber-600 font-mono">{pendingRequestsCount}</p>
+            <p className="text-[11px] text-slate-400">Requires 2 owner sign-offs</p>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
             <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
               <Users className="w-4 h-4 text-emerald-500" /> Live Demo Sessions
             </span>
-            <p className="text-3xl font-extrabold text-emerald-600 font-mono">{activeSessionsCount}</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-mono">{activeSessionsCount}</p>
             <p className="text-[11px] text-slate-400">Isolated sandbox guest access</p>
           </div>
         </div>
 
         {/* Generator Form */}
-        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 min-w-0">
           <div>
-            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Generate Signed Demo Invitation Link</h2>
+            <h2 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">Generate Signed Demo Invitation Link</h2>
             <p className="text-xs text-slate-500">Creates an ephemeral 24-hour guest pass requiring zero password creation.</p>
           </div>
 
-          <form onSubmit={handleGenerateLink} className="flex flex-col sm:flex-row gap-3">
+          <form onSubmit={handleGenerateLink} className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
             <input
               type="text"
               placeholder="e.g., Prospect: Enterprise Contractor Triage Demo"
               value={tokenLabel}
               onChange={(e) => setTokenLabel(e.target.value)}
-              className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
+              className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium min-h-[36px]"
               required
             />
             <Button
@@ -238,24 +213,24 @@ export default function AdminDemoAccessPage() {
               size="sm"
               isLoading={generating}
               leftIcon={<Sparkles className="w-3.5 h-3.5" />}
-              className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white min-h-[36px]"
             >
-              Generate Demo Link
+              Generate Link
             </Button>
           </form>
 
           {generatedUrl && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
+            <div className="p-3.5 sm:p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Demo URL Ready (Valid for 24 hours)
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Demo URL Ready (Valid for 24h)
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleCopyLink(generatedUrl)}
                   leftIcon={<Copy className="w-3 h-3" />}
-                  className="text-xs bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                  className="text-xs bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100 self-start sm:self-auto min-h-[32px]"
                 >
                   Copy Link
                 </Button>
@@ -268,20 +243,20 @@ export default function AdminDemoAccessPage() {
         </section>
 
         {/* Tokens Table */}
-        <section className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
-          <div className="p-4 bg-slate-50 border-b border-slate-200">
+        <section className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs min-w-0">
+          <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Active Demo Tokens</h3>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse min-w-[600px]">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
                 <tr>
-                  <th className="p-4">Label</th>
-                  <th className="p-4">Created By</th>
-                  <th className="p-4">Expires At</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th className="py-3 px-4">Label</th>
+                  <th className="py-3 px-4">Created By</th>
+                  <th className="py-3 px-4">Expires At</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -297,10 +272,10 @@ export default function AdminDemoAccessPage() {
                     const isExpired = new Date(tok.expiresAt).getTime() < Date.now();
                     return (
                       <tr key={tok.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="p-4 font-bold text-slate-900">{tok.label}</td>
-                        <td className="p-4 font-mono text-slate-500">{tok.createdBy}</td>
-                        <td className="p-4 font-mono text-slate-500">{new Date(tok.expiresAt).toLocaleString()}</td>
-                        <td className="p-4">
+                        <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">{tok.label}</td>
+                        <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">{tok.createdBy}</td>
+                        <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">{new Date(tok.expiresAt).toLocaleString()}</td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                               isRevoked || isExpired
@@ -311,13 +286,13 @@ export default function AdminDemoAccessPage() {
                             {isRevoked ? 'REVOKED' : isExpired ? 'EXPIRED' : 'ACTIVE'}
                           </span>
                         </td>
-                        <td className="p-4 text-right space-x-2">
+                        <td className="py-3.5 px-4 text-right space-x-2 whitespace-nowrap">
                           {!isRevoked && !isExpired && (
                             <>
                               <button
                                 onClick={() => handleRegenerateToken(tok.id)}
                                 disabled={actionLoadingId === tok.id}
-                                className="text-indigo-600 hover:text-indigo-800 font-bold p-1"
+                                className="text-indigo-600 hover:text-indigo-800 font-bold p-1 min-h-[32px]"
                                 title="Rotate Secret"
                               >
                                 Rotate
@@ -325,7 +300,7 @@ export default function AdminDemoAccessPage() {
                               <button
                                 onClick={() => handleRevokeToken(tok.id)}
                                 disabled={actionLoadingId === tok.id}
-                                className="text-red-600 hover:text-red-800 font-bold p-1"
+                                className="text-red-600 hover:text-red-800 font-bold p-1 min-h-[32px]"
                                 title="Revoke Immediately"
                               >
                                 Revoke

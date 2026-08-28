@@ -66,12 +66,14 @@ export const AgencyDeployments: React.FC<AgencyDeploymentsProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Deployments & Infrastructure</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-1">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
+            Deployments & Infrastructure
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 line-clamp-2">
             Monitor client edge infrastructure, build versions, container uptime, and global CDN propagation.
           </p>
         </div>
@@ -80,53 +82,53 @@ export const AgencyDeployments: React.FC<AgencyDeploymentsProps> = ({
           variant="outline"
           size="sm"
           onClick={() => handleRedeploy('all')}
-          className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+          className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shrink-0 min-h-[36px]"
         >
           Check All Clusters
         </Button>
       </div>
 
       {/* 4 Top KPI Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live Deployments</span>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 font-mono">{liveCount}</span>
+            <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">{liveCount}</span>
             <span className="text-xs text-emerald-600 font-semibold">100% active</span>
           </div>
           <p className="text-[11px] text-slate-400">Zero service downtime</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">In Progress</span>
-          <span className="text-3xl font-extrabold text-slate-900 font-mono">{deployingCount}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">{deployingCount}</span>
           <p className="text-[11px] text-slate-400">Queued build jobs</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Average Latency</span>
-          <span className="text-3xl font-extrabold text-indigo-600 font-mono">22ms</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-indigo-600 font-mono">22ms</span>
           <p className="text-[11px] text-emerald-600 font-semibold">Global CDN edge routing</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Attention Required</span>
-          <span className="text-3xl font-extrabold text-emerald-600 font-mono">{failedCount}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-mono">{failedCount}</span>
           <p className="text-[11px] text-slate-400">All edge clusters healthy</p>
         </div>
       </section>
 
       {/* Managed Deployments Table */}
       <section className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 truncate">
             Managed Deployments ({deployments.length})
           </h3>
-          <span className="text-[11px] text-slate-500 font-mono">Edge Multi-Region</span>
+          <span className="text-[11px] text-slate-500 font-mono shrink-0">Edge Multi-Region</span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[680px]">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
               <tr>
                 <th className="py-3 px-4">Client Tenant</th>
@@ -156,7 +158,7 @@ export const AgencyDeployments: React.FC<AgencyDeploymentsProps> = ({
                       onClick={() => handleRedeploy(d.id)}
                       disabled={redeployingId === d.id}
                       leftIcon={<RefreshCw className={`w-3 h-3 ${redeployingId === d.id ? 'animate-spin' : ''}`} />}
-                      className="text-xs bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100"
+                      className="text-xs bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100 min-h-[32px]"
                     >
                       {redeployingId === d.id ? 'Deploying...' : 'Redeploy'}
                     </Button>

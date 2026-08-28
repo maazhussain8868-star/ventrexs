@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventrexs AI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    .splash-card {
+      width: 440px;
+      height: 300px;
+      background: linear-gradient(135deg, #0A1020 0%, #050812 100%);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(37, 99, 235, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glow-sphere {
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(6, 182, 212, 0) 70%);
+      top: -40px;
+      right: -40px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .logo-container {
+      width: 68px;
+      height: 68px;
+      background: linear-gradient(135deg, #2563eb, #4f46e5, #06b6d4);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      fill: #ffffff;
+    }
+
+    .brand-title {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .brand-title span {
+      background: linear-gradient(90deg, #60a5fa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tagline {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #94a3b8;
+      margin-bottom: 28px;
+    }
+
+    .loading-bar-container {
+      width: 240px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .loading-bar {
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #06b6d4);
+      border-radius: 4px;
+      position: absolute;
+      animation: indeterminate 1.5s infinite ease-in-out;
+    }
+
+    @keyframes indeterminate {
+      0% {
+        left: -40%;
+        width: 30%;
+      }
+      50% {
+        left: 30%;
+        width: 60%;
+      }
+      100% {
+        left: 100%;
+        width: 30%;
+      }
+    }
+
+    .status-text {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #64748b;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="splash-card">
+    <div class="glow-sphere"></div>
+
+    <div class="logo-container">
+      <svg class="logo-icon" viewBox="0 0 24 24">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    </div>
+
+    <div class="brand-title">Ventrexs <span>AI</span></div>
+    <div class="tagline">Desktop Operations Platform</div>
+
+    <div class="loading-bar-container">
+      <div class="loading-bar"></div>
+    </div>
+
+    <div class="status-text">Connecting to production workspace...</div>
+  </div>
+</body>
+</html>

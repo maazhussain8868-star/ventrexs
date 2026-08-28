@@ -8,6 +8,8 @@ import { POST as stripeWebhookPOST } from '../src/app/api/webhooks/stripe/route'
 import { StripePaymentProviderAdapter } from '../src/lib/billing/providers/stripe-adapter';
 import crypto from 'crypto';
 
+process.env.VENTREXS_TEST_MODE = 'true';
+
 interface MockInvoice {
   id: string;
   business_id: string;

@@ -6,15 +6,18 @@ let hasWarnedAdminKey = false;
 // Admin client with service_role key.
 // STRICT SECURITY: Never import or execute this on client-side / browser components.
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ventrexs-demo.supabase.co';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!serviceRoleKey && !hasWarnedAdminKey && process.env.NODE_ENV !== 'test') {
-    hasWarnedAdminKey = true;
-    console.warn('SUPABASE_SERVICE_ROLE_KEY is not defined. Admin operations will be disabled or simulated.');
+  if (!supabaseUrl || !serviceRoleKey) {
+    if (!hasWarnedAdminKey && process.env.NODE_ENV !== 'test') {
+      hasWarnedAdminKey = true;
+      console.warn('Supabase admin operations are disabled because production credentials are missing.');
+    }
+    throw new Error('Supabase admin client is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
   }
 
-  return createClient<Database>(supabaseUrl, serviceRoleKey || 'ventrexs-demo-service-key', {
+  return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

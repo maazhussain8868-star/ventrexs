@@ -80,7 +80,7 @@ export default function Navbar() {
             href="/demo"
             className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl shadow-md shadow-blue-600/30 transition-all active:scale-95 border border-blue-400/30 cursor-pointer"
           >
-            <span>View Live Demo</span>
+            <span>Explore Demo</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -125,7 +125,7 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold shadow-md shadow-blue-600/30"
             >
-              <span>View Live Demo</span>
+              <span>Explore Demo</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

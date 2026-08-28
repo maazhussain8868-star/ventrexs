@@ -62,15 +62,6 @@ export class AuthService {
         is_primary: true,
       });
 
-      // Initialize SaaS trial subscription ($19 Starter)
-      await this.client.from('subscriptions').insert({
-        business_id: business.id,
-        plan: 'Starter',
-        billing_cycle: 'monthly',
-        status: 'trialing',
-        price_amount: 19.00,
-        currency: 'USD',
-      });
     }
 
     return { user: authData.user, session: authData.session, business };

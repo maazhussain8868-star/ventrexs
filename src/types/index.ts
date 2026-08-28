@@ -388,6 +388,7 @@ export interface UserProfile {
   name: string;
   email: string;
   role: string;
+  accountType?: 'BUSINESS_OWNER' | 'AGENCY_OWNER' | 'PLATFORM_ADMIN' | 'DEMO_GUEST';
   businessName: string;
   businessType: string;
   phone: string;

@@ -41,7 +41,6 @@ interface AgencyOverviewProps {
   onSelectTab: (tab: AgencyNavTab) => void;
   onOpenAddClient: () => void;
   onManageClient: (client: AgencyClient) => void;
-  onSwitchContext: (client: AgencyClient) => void;
 }
 
 export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
@@ -52,13 +51,11 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
   onSelectTab,
   onOpenAddClient,
   onManageClient,
-  onSwitchContext,
 }) => {
   const [timeFilter, setTimeFilter] = useState<'7D' | '30D' | '6M' | '1Y'>('6M');
 
   const totalClients = clients.length;
   const activeClients = clients.filter((c) => c.status === 'Active').length;
-  const trialClients = clients.filter((c) => c.status === 'Trial').length;
   const pendingOnboarding = clients.filter((c) => c.onboardingStage !== 'Live').length;
   const liveDeployments = deployments.filter((d) => d.status === 'Live').length;
   const totalMrr = clients.reduce((acc, c) => (c.status !== 'Suspended' ? acc + c.mrr : acc), 0);
@@ -134,24 +131,24 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* 1. Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-1">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight truncate">
             Agency Dashboard
           </h1>
-          <p className="text-xs lg:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 line-clamp-2">
             Manage your client portfolio, deployments, subscriptions and reseller operations.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onSelectTab('revenue')}
-            className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            className="text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50 min-h-[36px]"
           >
             Revenue Report
           </Button>
@@ -160,17 +157,18 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
             size="sm"
             onClick={onOpenAddClient}
             leftIcon={<Plus className="w-3.5 h-3.5" />}
-            className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
+            className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs min-h-[36px]"
           >
-            + Add Client
+            <span className="hidden sm:inline">+ Add Client</span>
+            <span className="sm:hidden">+ Client</span>
           </Button>
         </div>
       </div>
 
-      {/* 2. Top 4 Clean KPI Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. Top 4 Clean KPI Cards (1-col mobile, 2x2 tablet, 4-col desktop) */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1 */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Total Clients
@@ -180,7 +178,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
             </div>
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
               {totalClients}
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
@@ -191,7 +189,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
         </div>
 
         {/* Card 2 */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Active Clients
@@ -201,7 +199,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
             </div>
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
               {activeClients}
             </div>
             <div className="mt-1 text-xs text-slate-500 font-medium">
@@ -211,7 +209,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
         </div>
 
         {/* Card 3 */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Monthly Revenue
@@ -221,7 +219,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
             </div>
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
               ${totalMrr.toLocaleString()}
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
@@ -232,7 +230,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
         </div>
 
         {/* Card 4 */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-2">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Pending Onboarding
@@ -242,7 +240,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
             </div>
           </div>
           <div>
-            <div className="text-3xl font-extrabold text-amber-600 tracking-tight font-mono">
+            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 tracking-tight font-mono">
               {pendingOnboarding}
             </div>
             <div className="mt-1 text-xs text-amber-700 font-medium flex items-center gap-1">
@@ -254,21 +252,21 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
       </section>
 
       {/* 3. Main Analytics (2 Columns: Revenue Performance Left, Client Health Right) */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-w-0">
         {/* Left: Revenue Performance */}
-        <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 min-w-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Revenue Performance</h2>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">Revenue Performance</h2>
               <p className="text-xs text-slate-500">Reseller subscription MRR growth trajectory</p>
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0 self-start sm:self-auto">
               {(['7D', '30D', '6M', '1Y'] as const).map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setTimeFilter(filter)}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                  className={`px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all ${
                     timeFilter === filter
                       ? 'bg-white text-violet-700 shadow-2xs font-extrabold'
                       : 'text-slate-500 hover:text-slate-900'
@@ -281,12 +279,12 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
           </div>
 
           {/* Bar Chart Area */}
-          <div className="grid grid-cols-6 gap-3 items-end h-48 pt-4">
+          <div className="grid grid-cols-6 gap-2 sm:gap-3 items-end h-40 sm:h-48 pt-2">
             {mrrChartData.map((item, idx) => {
               const heightPercent = Math.round((item.value / 2500) * 100);
               return (
-                <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end group">
-                  <span className="text-[11px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div key={idx} className="flex flex-col items-center gap-1.5 sm:gap-2 h-full justify-end group">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
                     ${item.value}
                   </span>
                   <div className="w-full bg-slate-100 rounded-xl h-full flex items-end p-1">
@@ -295,7 +293,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
                       style={{ height: `${heightPercent}%` }}
                     />
                   </div>
-                  <span className="text-xs font-bold text-slate-600">{item.label}</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-600">{item.label}</span>
                 </div>
               );
             })}
@@ -303,9 +301,9 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
         </div>
 
         {/* Right: Client Portfolio Health */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 flex flex-col justify-between min-w-0">
           <div className="space-y-1 pb-2 border-b border-slate-100">
-            <h2 className="text-base font-bold text-slate-900">Client Portfolio Health</h2>
+            <h2 className="text-sm sm:text-base font-bold text-slate-900">Client Portfolio Health</h2>
             <p className="text-xs text-slate-500">Service reliability and adoption status</p>
           </div>
 
@@ -361,7 +359,7 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
 
           <button
             onClick={() => onSelectTab('health')}
-            className="w-full py-2 text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-xl border border-violet-200 transition-colors flex items-center justify-center gap-1"
+            className="w-full py-2 text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-xl border border-violet-200 transition-colors flex items-center justify-center gap-1 min-h-[36px]"
           >
             <span>View Detailed Health Telemetry</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -370,23 +368,23 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
       </section>
 
       {/* 4. Client Portfolio Table */}
-      <section className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden space-y-3 p-6">
+      <section className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden space-y-3 p-4 sm:p-6 min-w-0">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Client Portfolio</h2>
+            <h2 className="text-sm sm:text-base font-bold text-slate-900">Client Portfolio</h2>
             <p className="text-xs text-slate-500">Active small business accounts under your agency</p>
           </div>
           <button
             onClick={() => onSelectTab('clients')}
-            className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1"
+            className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1 p-1 min-h-[36px]"
           >
-            <span>View All Clients</span>
+            <span>View All</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <table className="w-full text-left text-xs border-collapse min-w-[600px]">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
               <tr>
                 <th className="py-3 px-4">Client Business</th>
@@ -401,36 +399,29 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
             <tbody className="divide-y divide-slate-100 text-slate-800">
               {clients.slice(0, 6).map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2.5">
+                  <td className="py-3 px-4 font-bold text-slate-900 flex items-center gap-2.5">
                     <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0"
                       style={{ backgroundColor: c.accentColor || '#6366f1' }}
                     >
                       {c.initials}
                     </div>
-                    <div>
-                      <span className="block leading-tight">{c.name}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{c.domain}</span>
+                    <div className="min-w-0">
+                      <span className="block leading-tight truncate">{c.name}</span>
+                      <span className="text-[10px] text-slate-400 font-mono truncate block">{c.domain}</span>
                     </div>
                   </td>
-                  <td className="py-3.5 px-4 text-slate-600">{c.industry}</td>
-                  <td className="py-3.5 px-4 font-bold text-violet-700">{c.plan}</td>
-                  <td className="py-3.5 px-4">{getHealthBadge(c.health)}</td>
-                  <td className="py-3.5 px-4">{getSubscriptionBadge(c.status)}</td>
-                  <td className="py-3.5 px-4 text-slate-500 font-mono">{c.lastActivityTime}</td>
-                  <td className="py-3.5 px-4 text-right space-x-1.5">
+                  <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{c.industry}</td>
+                  <td className="py-3 px-4 font-bold text-violet-700 whitespace-nowrap">{c.plan}</td>
+                  <td className="py-3 px-4 whitespace-nowrap">{getHealthBadge(c.health)}</td>
+                  <td className="py-3 px-4 whitespace-nowrap">{getSubscriptionBadge(c.status)}</td>
+                  <td className="py-3 px-4 text-slate-500 font-mono whitespace-nowrap">{c.lastActivityTime}</td>
+                  <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                     <button
                       onClick={() => onManageClient(c)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors min-h-[32px]"
                     >
                       Manage
-                    </button>
-                    <button
-                      onClick={() => onSwitchContext(c)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 transition-colors"
-                      title="Open client workspace in Customer View"
-                    >
-                      Enter &rarr;
                     </button>
                   </td>
                 </tr>
@@ -441,17 +432,17 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
       </section>
 
       {/* 5. Onboarding Pipeline & Deployment Overview (2 Cols) */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 min-w-0">
         {/* Onboarding Stages */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 min-w-0">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Client Onboarding Stages</h2>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">Client Onboarding Stages</h2>
               <p className="text-xs text-slate-500">Pipeline progression across your portfolio</p>
             </div>
             <button
               onClick={() => onSelectTab('onboarding')}
-              className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1"
+              className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1 p-1 min-h-[36px]"
             >
               <span>View Onboarding</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -460,46 +451,46 @@ export const AgencyOverview: React.FC<AgencyOverviewProps> = ({
 
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {onboardingStages.map((st, idx) => (
-              <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">{st.name}</span>
-                <p className="text-xl font-extrabold text-slate-900 font-mono">{st.count}</p>
+              <div key={idx} className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block truncate">{st.name}</span>
+                <p className="text-lg sm:text-xl font-extrabold text-slate-900 font-mono">{st.count}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Deployment Health Overview */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 min-w-0">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Deployment Overview</h2>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">Deployment Overview</h2>
               <p className="text-xs text-slate-500">Edge CDN nodes and instance uptime</p>
             </div>
             <button
               onClick={() => onSelectTab('deployments')}
-              className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1"
+              className="text-xs font-bold text-violet-600 hover:text-violet-700 flex items-center gap-1 p-1 min-h-[36px]"
             >
               <span>Manage Clusters</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-center space-y-0.5">
-              <span className="text-[10px] font-bold text-emerald-800 uppercase">LIVE</span>
-              <p className="text-xl font-black text-emerald-700 font-mono">{liveDeployments}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="p-2.5 sm:p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[9px] sm:text-[10px] font-bold text-emerald-800 uppercase">LIVE</span>
+              <p className="text-lg sm:text-xl font-black text-emerald-700 font-mono">{liveDeployments}</p>
             </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">DEPLOYING</span>
-              <p className="text-xl font-black text-slate-800 font-mono">0</p>
+            <div className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">DEPLOYING</span>
+              <p className="text-lg sm:text-xl font-black text-slate-800 font-mono">0</p>
             </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">ATTENTION</span>
-              <p className="text-xl font-black text-slate-800 font-mono">0</p>
+            <div className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">ATTENTION</span>
+              <p className="text-lg sm:text-xl font-black text-slate-800 font-mono">0</p>
             </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">AVG LATENCY</span>
-              <p className="text-xl font-black text-indigo-600 font-mono">22ms</p>
+            <div className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-0.5">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">LATENCY</span>
+              <p className="text-lg sm:text-xl font-black text-indigo-600 font-mono">22ms</p>
             </div>
           </div>
         </div>

@@ -132,9 +132,9 @@ async function runTests() {
   assert(Boolean(PLANS_CONFIG.Starter), 'Starter plan is defined in central matrix');
   assert(Boolean(PLANS_CONFIG.Professional), 'Professional plan is defined in central matrix');
   assert(Boolean(PLANS_CONFIG.Enterprise), 'Enterprise plan is defined in central matrix');
-  assert(PLANS_CONFIG.Starter.priceMonthly === 19 && PLANS_CONFIG.Starter.priceAnnual === 190, 'Starter monthly ($19) & annual ($190) pricing accurate');
-  assert(PLANS_CONFIG.Professional.priceMonthly === 49 && PLANS_CONFIG.Professional.priceAnnual === 490, 'Professional monthly ($49) & annual ($490) pricing accurate');
-  assert(PLANS_CONFIG.Enterprise.priceMonthly === 199 && PLANS_CONFIG.Enterprise.priceAnnual === 1990, 'Enterprise monthly ($199) & annual ($1990) pricing accurate');
+  assert(PLANS_CONFIG.Starter.priceMonthly === 29 && PLANS_CONFIG.Starter.priceAnnual === 290, 'Starter monthly ($29) & annual ($290) pricing accurate');
+  assert(PLANS_CONFIG.Professional.priceMonthly === 79 && PLANS_CONFIG.Professional.priceAnnual === 790, 'Professional monthly ($79) & annual ($790) pricing accurate');
+  assert(PLANS_CONFIG.Enterprise.priceMonthly === 249 && PLANS_CONFIG.Enterprise.priceAnnual === 2490, 'Enterprise monthly ($249) & annual ($2490) pricing accurate');
 
   // Test 2: Entitlement Calculation
   console.log('\n--- 2. Entitlement Status & Feature Gates ---');

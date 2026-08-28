@@ -4,6 +4,8 @@ import { BillingService } from '../src/lib/billing/billing-service';
 import { POST, GET } from '../src/app/api/webhooks/stripe/route';
 import { NextRequest } from 'next/server';
 
+process.env.VENTREXS_TEST_MODE = 'true';
+
 // ==============================================================================
 // PAYPILOT AI — PHASE 1 CRITICAL SECURITY VERIFICATION SUITE
 // Tests Stripe HMAC-SHA256 Signatures, Webhook Route, and Table RLS Lockdowns

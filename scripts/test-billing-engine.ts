@@ -77,7 +77,7 @@ async function runBillingEngineTests() {
       event.type === 'payment_succeeded'
     ) {
       if (event.businessId) {
-        const planKey: PlanKey = event.plan || 'Starter';
+        const planKey: PlanKey = (event.plan as PlanKey) || 'Starter';
         const planConfig = PLANS_CONFIG[planKey] || PLANS_CONFIG.Starter;
         const isAnnual = event.interval === 'annual';
         const price = isAnnual ? planConfig.priceAnnual : planConfig.priceMonthly;
@@ -147,12 +147,12 @@ async function runBillingEngineTests() {
     cancelUrl: 'https://paypilot.ai/pricing',
   });
 
-  assertTest(1, 'Starter checkout session created ($19/month fixed subscription fee)',
+  assertTest(1, 'Starter checkout session created ($29/month fixed subscription fee)',
     Boolean(starterSession.sessionId && starterSession.checkoutUrl.includes('Starter') && starterSession.checkoutUrl.includes('monthly'))
   );
 
   // ----------------------------------------------------------------------------
-  // CASE 2: Professional Checkout ($49/mo)
+  // CASE 2: Professional Checkout ($79/mo)
   // ----------------------------------------------------------------------------
   const proSession = await provider.createCheckoutSession({
     businessId: businessA.id,
@@ -163,17 +163,17 @@ async function runBillingEngineTests() {
     cancelUrl: 'https://paypilot.ai/pricing',
   });
 
-  assertTest(2, 'Professional checkout session created ($49/month tier)',
+  assertTest(2, 'Professional checkout session created ($79/month tier)',
     Boolean(proSession.sessionId && proSession.checkoutUrl.includes('Professional'))
   );
 
   // ----------------------------------------------------------------------------
-  // CASE 3: Annual Billing ($490/year for Professional)
+  // CASE 3: Annual Billing ($790/year for Professional)
   // ----------------------------------------------------------------------------
   const proAnnual = PLANS_CONFIG.Professional.priceAnnual;
-  const isAnnualDiscounted = proAnnual === 490 && proAnnual < 49 * 12;
+  const isAnnualDiscounted = proAnnual === 790 && proAnnual < 79 * 12;
 
-  assertTest(3, 'Annual billing discount calculated accurately ($490/yr vs $588/yr monthly)',
+  assertTest(3, 'Annual billing discount calculated accurately ($790/yr vs $948/yr monthly)',
     isAnnualDiscounted
   );
 

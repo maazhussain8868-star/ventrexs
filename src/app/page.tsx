@@ -83,20 +83,20 @@ export default function LandingPage() {
 
               {/* Premium CTA Buttons */}
               <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto mb-6">
-                <a
-                  href="#showcase"
-                  className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-semibold text-xs sm:text-sm shadow-lg shadow-blue-600/30 hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 border border-blue-400/30 cursor-pointer"
-                >
-                  <span>Explore Ventrexs AI</span>
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-
                 <Link
                   href="/demo"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-semibold text-xs sm:text-sm shadow-lg shadow-blue-600/30 hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 border border-blue-400/30 cursor-pointer"
+                >
+                  <span>Explore Demo</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+
+                <Link
+                  href="/pricing"
                   className="w-full sm:w-auto px-6 py-3.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-white rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>View Live Demo</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  <span>View Pricing</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                 </Link>
               </div>
 
@@ -591,7 +591,7 @@ export default function LandingPage() {
             <div className="p-7 rounded-2xl bg-[#090F1C]/90 border border-slate-800 flex flex-col justify-between shadow-lg">
               <div>
                 <span className="text-xs font-mono text-slate-400 uppercase">Starter Tier</span>
-                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white my-4">$49 <span className="text-xs text-slate-500 font-normal">/ month</span></div>
+                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white my-4">$29 <span className="text-xs text-slate-500 font-normal">/ month</span></div>
                 <p className="text-xs text-slate-400 leading-relaxed mb-6">
                   For growing SMBs needing automated email invoice reminders and basic receivables tracking.
                 </p>
@@ -612,7 +612,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <span className="text-xs font-mono text-blue-400 uppercase">Professional Tier</span>
-                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white my-4">$149 <span className="text-xs text-slate-500 font-normal">/ month</span></div>
+                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white my-4">$79 <span className="text-xs text-slate-500 font-normal">/ month</span></div>
                 <p className="text-xs text-slate-300 leading-relaxed mb-6">
                   For established agencies and businesses requiring multi-channel SMS/WhatsApp and AI Copilot.
                 </p>
@@ -630,8 +630,8 @@ export default function LandingPage() {
 
             <div className="p-7 rounded-2xl bg-[#090F1C]/90 border border-slate-800 flex flex-col justify-between shadow-lg">
               <div>
-                <span className="text-xs font-mono text-slate-400 uppercase">Enterprise / Custom</span>
-                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white my-4">Custom <span className="text-xs text-slate-500 font-normal">SLA</span></div>
+                <span className="text-xs font-mono text-slate-400 uppercase">Enterprise / Commercial</span>
+                <div className="text-3xl sm:text-4xl font-extrabold font-mono text-white my-4">$249 <span className="text-xs text-slate-500 font-normal">/ month</span></div>
                 <p className="text-xs text-slate-400 leading-relaxed mb-6">
                   For high-volume financial operations requiring dedicated database isolation and custom API webhooks.
                 </p>

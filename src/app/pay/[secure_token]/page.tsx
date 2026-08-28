@@ -110,10 +110,12 @@ export default function PublicInvoicePaymentPage() {
       if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || secureToken.startsWith('pay_demo')) {
         setTimeout(() => {
           setPaymentSuccess({
-            transactionId: `txn_demo_${Date.now()}`,
+            transactionId: `TXN_DEMO_${Date.now().toString().slice(-8)}`,
             amount: numAmount,
             remainingBalance: Math.max(0, (invoiceView?.remainingBalance || 0) - numAmount),
-            date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            method: paymentMethod,
+            status: numAmount >= (invoiceView?.remainingBalance || 0) ? 'PAID IN FULL' : 'PARTIALLY PAID',
           });
           setIsProcessing(false);
         }, 1200);
@@ -133,11 +135,14 @@ export default function PublicInvoicePaymentPage() {
         return;
       }
 
+      const newBal = Number(res.data?.invoice?.remaining_balance ?? Math.max(0, (invoiceView?.remainingBalance || 0) - numAmount));
       setPaymentSuccess({
-        transactionId: res.data?.payment?.reference || res.data?.payment?.id,
+        transactionId: res.data?.payment?.reference || res.data?.payment?.id || `TXN_${Date.now().toString().slice(-8)}`,
         amount: numAmount,
-        remainingBalance: Number(res.data?.invoice?.remaining_balance || 0),
-        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        remainingBalance: newBal,
+        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        method: paymentMethod,
+        status: newBal <= 0 ? 'PAID IN FULL' : 'PARTIALLY PAID',
       });
     } catch (err: any) {
       alert(err.message || 'An error occurred while submitting payment.');
@@ -196,51 +201,70 @@ export default function PublicInvoicePaymentPage() {
           </div>
         </header>
 
-        {/* Success Confirmation Screen */}
+        {/* Success Confirmation & Official Receipt Screen */}
         {paymentSuccess ? (
-          <div className="bg-surface-container-lowest border border-emerald-500/30 rounded-2xl p-8 shadow-xl text-center space-y-6 animate-fade-in">
+          <div className="bg-surface-container-lowest border border-emerald-500/30 rounded-3xl p-6 sm:p-10 shadow-xl text-center space-y-6 animate-fade-in print:border-none print:shadow-none">
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 className="w-8 h-8" />
             </div>
 
-            <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
-                Payment Completed Successfully
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                Official Payment Receipt
               </span>
-              <h2 className="text-3xl font-black font-mono text-on-surface">
-                ${paymentSuccess.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              <h2 className="text-3xl sm:text-4xl font-black font-mono text-on-surface tracking-tight mt-2">
+                ${paymentSuccess.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
               <p className="text-xs text-on-surface-variant">
-                Applied to Invoice #{invoiceView.invoiceNumber} on {paymentSuccess.date}
+                Applied to Invoice <strong>#{invoiceView.invoiceNumber}</strong> on {paymentSuccess.date}
               </p>
             </div>
 
-            <div className="max-w-md mx-auto p-4 bg-surface-container-low rounded-xl border border-outline-variant/60 text-xs space-y-2 text-left">
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Transaction Ref:</span>
+            {/* Receipt Summary Grid */}
+            <div className="max-w-lg mx-auto p-5 bg-surface-container-low rounded-2xl border border-outline-variant/60 text-xs space-y-2.5 text-left shadow-2xs">
+              <div className="flex justify-between items-center pb-2 border-b border-outline-variant/40">
+                <span className="text-on-surface-variant font-medium">Billed To (Customer):</span>
+                <span className="font-bold text-on-surface">{invoiceView.customerName} {invoiceView.customerCompany && `(${invoiceView.customerCompany})`}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">Payment Date & Time:</span>
+                <span className="font-mono text-on-surface">{paymentSuccess.date}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">Payment Method:</span>
+                <span className="font-semibold text-on-surface">{paymentSuccess.method}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">Transaction Reference:</span>
                 <span className="font-mono font-bold text-on-surface">{paymentSuccess.transactionId}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Original Invoice Total:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">Original Invoice Total:</span>
                 <span className="font-mono font-bold text-on-surface">${invoiceView.totalAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between border-t border-outline-variant/40 pt-1.5 font-bold">
-                <span>Remaining Balance Due:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant font-medium">Payment Status:</span>
+                <span className="font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded text-[10px] border border-emerald-200">
+                  {paymentSuccess.status}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t border-outline-variant/40 pt-2 font-bold text-sm">
+                <span className="text-on-surface">Remaining Balance Due:</span>
                 <span className={`font-mono ${paymentSuccess.remainingBalance <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                   ${paymentSuccess.remainingBalance.toFixed(2)}
                 </span>
               </div>
             </div>
 
-            <div className="pt-2 flex justify-center gap-3">
+            <div className="pt-2 flex justify-center gap-3 print:hidden">
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => window.print()}
                 leftIcon={<Download className="w-4 h-4" />}
-                className="text-xs"
+                className="text-xs min-h-[38px] px-5 font-bold"
               >
-                Print Official Receipt
+                Print / Save Receipt
               </Button>
             </div>
           </div>

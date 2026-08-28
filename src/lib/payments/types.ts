@@ -146,6 +146,8 @@ export interface WebhookVerificationResult {
 export interface PaymentTransactionRecord {
   id: string;
   tenantId: string;
+  businessId?: string;
+  agencyId?: string;
   purpose: PaymentPurpose;
   provider: PaymentProviderName | string;
   providerPaymentId?: string;
@@ -156,9 +158,9 @@ export interface PaymentTransactionRecord {
   invoiceId?: string;
   subscriptionId?: string;
   idempotencyKey?: string;
-  refundedAmount: number;
+  refundedAmount?: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   metadata?: Record<string, any>;
 }
 

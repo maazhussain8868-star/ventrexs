@@ -47,6 +47,7 @@ import {
   PlanKey,
   BillingInterval,
   UsageMetric,
+  IndustryType,
 } from '@/types';
 import { 
   initialInvoices, 
@@ -354,30 +355,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [isOnline, setIsOnline] = useState(true);
 
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
-  const [recommendations, setRecommendations] = useState<CopilotRecommendation[]>(initialRecommendations);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
-  const [profile, setProfile] = useState<UserProfile>(initialProfile);
-  const [settings, setSettings] = useState<BusinessSettings>(initialSettings);
-  const [businessProfile, setBusinessProfile] = useState<ServiceBusinessProfile>(initialBusinessProfile);
-  const [receptionistSettings, setReceptionistSettings] = useState<ReceptionistSettings>(initialReceptionistSettings);
-  const [receptionistServices, setReceptionistServices] = useState<ReceptionistService[]>(initialReceptionistServices);
-  const [receptionistConversations, setReceptionistConversations] = useState<ReceptionistConversation[]>(initialReceptionistConversations);
-  const [communications, setCommunications] = useState<CommunicationItem[]>(initialCommunications);
-  const [communicationTemplates, setCommunicationTemplates] = useState<CommunicationTemplate[]>(initialCommunicationTemplates);
-  const [communicationConsents, setCommunicationConsents] = useState<CommunicationConsent[]>(initialCommunicationConsents);
-  const [communicationStats, setCommunicationStats] = useState<CommunicationStats>(initialCommunicationStats);
-  const [estimates, setEstimates] = useState<Estimate[]>(initialEstimates);
-  const [reviewSettings, setReviewSettings] = useState<ReviewSettings>(initialReviewSettings);
-  const [reviewRequests, setReviewRequests] = useState<ReviewRequest[]>(initialReviewRequests);
-  const [customerFeedback, setCustomerFeedback] = useState<CustomerFeedback[]>(initialCustomerFeedback);
-  const [subscription, setSubscription] = useState<BusinessSubscription>(initialSubscription);
-  const [usageRecords, setUsageRecords] = useState(initialUsageRecords);
-  const [subscriptionEvents, setSubscriptionEvents] = useState<SubscriptionEvent[]>(initialSubscriptionEvents);
+  const isDemoEnvironment = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  const [invoices, setInvoices] = useState<Invoice[]>(isDemoEnvironment ? initialInvoices : []);
+  const [customers, setCustomers] = useState<Customer[]>(isDemoEnvironment ? initialCustomers : []);
+  const [leads, setLeads] = useState<Lead[]>(isDemoEnvironment ? initialLeads : []);
+  const [appointments, setAppointments] = useState<Appointment[]>(isDemoEnvironment ? initialAppointments : []);
+  const [jobs, setJobs] = useState<Job[]>(isDemoEnvironment ? initialJobs : []);
+  const [recommendations, setRecommendations] = useState<CopilotRecommendation[]>(isDemoEnvironment ? initialRecommendations : []);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(isDemoEnvironment ? initialNotifications : []);
+  const [profile, setProfile] = useState<UserProfile>(isDemoEnvironment ? initialProfile : { ...initialProfile, email: '', businessName: '' });
+  const [settings, setSettings] = useState<BusinessSettings>(isDemoEnvironment ? initialSettings : { ...initialSettings, businessName: '', businessEmail: '' });
+  const [businessProfile, setBusinessProfile] = useState<ServiceBusinessProfile>(isDemoEnvironment ? initialBusinessProfile : { ...initialBusinessProfile, name: '', email: '' });
+  const [receptionistSettings, setReceptionistSettings] = useState<ReceptionistSettings>(isDemoEnvironment ? initialReceptionistSettings : {} as ReceptionistSettings);
+  const [receptionistServices, setReceptionistServices] = useState<ReceptionistService[]>(isDemoEnvironment ? initialReceptionistServices : []);
+  const [receptionistConversations, setReceptionistConversations] = useState<ReceptionistConversation[]>(isDemoEnvironment ? initialReceptionistConversations : []);
+  const [communications, setCommunications] = useState<CommunicationItem[]>(isDemoEnvironment ? initialCommunications : []);
+  const [communicationTemplates, setCommunicationTemplates] = useState<CommunicationTemplate[]>(isDemoEnvironment ? initialCommunicationTemplates : []);
+  const [communicationConsents, setCommunicationConsents] = useState<CommunicationConsent[]>(isDemoEnvironment ? initialCommunicationConsents : []);
+  const [communicationStats, setCommunicationStats] = useState<CommunicationStats>(isDemoEnvironment ? initialCommunicationStats : {} as CommunicationStats);
+  const [estimates, setEstimates] = useState<Estimate[]>(isDemoEnvironment ? initialEstimates : []);
+  const [reviewSettings, setReviewSettings] = useState<ReviewSettings>(isDemoEnvironment ? initialReviewSettings : {} as ReviewSettings);
+  const [reviewRequests, setReviewRequests] = useState<ReviewRequest[]>(isDemoEnvironment ? initialReviewRequests : []);
+  const [customerFeedback, setCustomerFeedback] = useState<CustomerFeedback[]>(isDemoEnvironment ? initialCustomerFeedback : []);
+  const [subscription, setSubscription] = useState<BusinessSubscription>(isDemoEnvironment ? initialSubscription : { ...initialSubscription, status: 'incomplete' });
+  const [usageRecords, setUsageRecords] = useState(isDemoEnvironment ? initialUsageRecords : {});
+  const [subscriptionEvents, setSubscriptionEvents] = useState<SubscriptionEvent[]>(isDemoEnvironment ? initialSubscriptionEvents : []);
   const [adminStats] = useState<AdminStats>(initialAdminStats);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -401,67 +403,161 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // Load Initial State from Local Storage and Supabase
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.invoices) setInvoices(parsed.invoices);
-        if (parsed.customers) setCustomers(parsed.customers);
-        if (parsed.leads) setLeads(parsed.leads);
-        if (parsed.appointments) setAppointments(parsed.appointments);
-        if (parsed.jobs) setJobs(parsed.jobs);
-        if (parsed.recommendations) setRecommendations(parsed.recommendations);
-        if (parsed.notifications) setNotifications(parsed.notifications);
-        if (parsed.profile) setProfile(parsed.profile);
-        if (parsed.settings) setSettings(parsed.settings);
-        if (parsed.businessProfile) setBusinessProfile(parsed.businessProfile);
-      }
-    } catch (e) {
-      console.warn('LocalStorage load notice:', e);
+  const clearTenantState = useCallback(() => {
+    setInvoices([]);
+    setCustomers([]);
+    setLeads([]);
+    setAppointments([]);
+    setJobs([]);
+    setRecommendations([]);
+    setNotifications([]);
+    setEstimates([]);
+    setCommunications([]);
+    setReceptionistServices([]);
+    setReceptionistConversations([]);
+    setCommunications([]);
+    setCommunicationTemplates([]);
+    setCommunicationConsents([]);
+    setReviewRequests([]);
+    setCustomerFeedback([]);
+    setReceptionistSettings({} as ReceptionistSettings);
+    setReviewSettings({} as ReviewSettings);
+    setCommunicationStats({} as CommunicationStats);
+    setBusinessId(null);
+    setProfile({ ...initialProfile, email: '', businessName: '' });
+    setSettings({ ...initialSettings, businessName: '', businessEmail: '' });
+    setBusinessProfile({ ...initialBusinessProfile, name: '', email: '' });
+    setSubscription({ ...initialSubscription, status: 'incomplete' });
+    setUsageRecords({});
+    setSubscriptionEvents([]);
+  }, []);
+
+  const hydrateTenantState = useCallback(async (authenticatedUser: User) => {
+    const currentBusiness = await services.business.getCurrentUserBusiness(authenticatedUser.id);
+    if (!currentBusiness) {
+      throw new Error('No authorized business workspace is associated with this account.');
     }
 
-    // Initialize Supabase Auth Session listener
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        try {
-          const { data: members } = await supabase
-            .from('business_members')
-            .select('business_id')
-            .eq('user_id', session.user.id)
-            .limit(1);
-          if (members && members.length > 0) {
-            setBusinessId(members[0].business_id);
+    const tenantId = currentBusiness.id;
+    const [customerRows, invoiceRows, leadRows, appointmentRows, jobRows, estimateRows] = await Promise.all([
+      services.customers.getCustomers(tenantId),
+      services.invoices.getInvoices(tenantId),
+      services.leads.getLeads(tenantId),
+      services.operations.getAppointments(tenantId),
+      services.operations.getJobs(tenantId),
+      services.estimates.getEstimates(tenantId),
+    ]);
+
+    setBusinessId(tenantId);
+    setProfile(prev => ({
+      ...prev,
+      name: (authenticatedUser.user_metadata?.name as string) || prev.name,
+      email: authenticatedUser.email || prev.email,
+      businessName: currentBusiness.name,
+    }));
+    setSettings(prev => ({ ...prev, businessName: currentBusiness.name, businessEmail: currentBusiness.email || '' }));
+    setBusinessProfile(prev => ({
+      ...prev,
+      name: currentBusiness.name,
+      email: currentBusiness.email || '',
+      phone: currentBusiness.phone || '',
+      address: currentBusiness.address || '',
+      industry: (currentBusiness.industry as IndustryType) || prev.industry,
+      website: currentBusiness.website || '',
+    }));
+    setCustomers(customerRows as unknown as Customer[]);
+    setInvoices(invoiceRows.map((row: any) => ({
+      ...row,
+      businessId: row.business_id,
+      customerId: row.customer_id,
+      originalAmountDue: Number(row.original_amount || 0),
+      paymentsReceived: Number(row.amount_paid || row.payments_received || 0),
+      remainingBalance: Number(row.remaining_balance || 0),
+      timeline: row.invoice_events || [],
+    })) as Invoice[]);
+    setLeads(leadRows.map((row: any) => ({
+      ...row,
+      businessId: row.business_id,
+      customerId: row.customer_id || undefined,
+      serviceRequested: row.service_requested || '',
+      estimatedValue: Number(row.estimated_value || 0),
+      assignedUserId: row.assigned_user_id || undefined,
+      assignedUserName: row.assigned_user_name || undefined,
+      lastActivityAt: row.last_activity_at,
+      createdAt: row.created_at,
+      notesList: [],
+      activities: [],
+    })) as Lead[]);
+    setAppointments(appointmentRows.map((row: any) => ({
+      ...row,
+      businessId: row.business_id,
+      customerId: row.customer_id || undefined,
+      leadId: row.lead_id || undefined,
+      serviceType: row.service_type,
+      startTime: row.start_time,
+      endTime: row.end_time,
+      technicianName: row.technician_name || '',
+      createdAt: row.created_at,
+    })) as Appointment[]);
+    setJobs(jobRows.map((row: any) => ({
+      ...row,
+      businessId: row.business_id,
+      customerId: row.customer_id || undefined,
+      leadId: row.lead_id || undefined,
+      appointmentId: row.appointment_id || undefined,
+      serviceType: row.service_type,
+      propertyAddress: row.property_address || undefined,
+      scheduledDate: row.scheduled_date || undefined,
+      estimatedTotal: Number(row.estimated_total || 0),
+      actualTotal: Number(row.actual_total || 0),
+      technicianName: row.technician_name || 'Unassigned',
+      createdAt: row.created_at,
+    })) as Job[]);
+    setEstimates(estimateRows.map((row: any) => ({
+      ...row,
+      businessId: row.business_id,
+      customerId: row.customer_id || undefined,
+      jobId: row.job_id || undefined,
+      leadId: row.lead_id || undefined,
+      estimateNumber: row.estimate_number,
+      totalAmount: Number(row.total_amount || 0),
+      validUntil: row.valid_until || undefined,
+      createdAt: row.created_at,
+    })) as Estimate[]);
+  }, [services]);
+
+  // Load only explicit demo state or the authenticated tenant from Supabase.
+  useEffect(() => {
+      const loadSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          try {
+            await hydrateTenantState(session.user);
+          } catch (error) {
+            clearTenantState();
+            console.error('Tenant hydration failed:', error);
           }
-        } catch {
-          // Fallback ignored
-        }
-      }
-    }).catch(err => {
-      console.warn('Supabase session load notice:', err);
-    });
+        } else if (!isDemoEnvironment) clearTenantState();
+      };
+      loadSession().catch(err => {
+        console.warn('Supabase session load notice:', err);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         try {
-          const { data: members } = await supabase
-            .from('business_members')
-            .select('business_id')
-            .eq('user_id', session.user.id)
-            .limit(1);
-          if (members && members.length > 0) {
-            setBusinessId(members[0].business_id);
-          }
-        } catch {
-          // Fallback ignored
+          clearTenantState();
+          await hydrateTenantState(session.user);
+        } catch (error) {
+          clearTenantState();
+          console.error('Tenant hydration failed:', error);
         }
       } else {
-        setBusinessId(process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? '11111111-1111-1111-1111-111111111111' : null);
+        clearTenantState();
       }
     });
 
@@ -470,28 +566,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [clearTenantState, hydrateTenantState, isDemoEnvironment, supabase]);
 
-  // Save to local storage for offline resilience
   useEffect(() => {
     if (!isInitialized) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        invoices,
-        customers,
-        leads,
-        appointments,
-        jobs,
-        recommendations,
-        notifications,
-        profile,
-        settings,
-        businessProfile,
-      }));
-    } catch (e) {
-      console.warn('LocalStorage save notice:', e);
-    }
-  }, [isInitialized, invoices, customers, leads, appointments, jobs, recommendations, notifications, profile, settings, businessProfile]);
+    localStorage.removeItem(STORAGE_KEY);
+  }, [isInitialized]);
 
   // Auth Operations
   const signIn = async (email: string, password: string) => {
@@ -512,45 +592,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: true };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Invalid email or password.';
-      if (!isDemoMode) {
-        setIsLoading(false);
-        showToast({
-          title: 'Authentication Failed',
-          description: errMsg,
-          type: 'error',
-        });
-        return { success: false, error: errMsg };
-      }
-
-      const demoUser: User = {
-        id: '11111111-1111-1111-1111-111111111111',
-        app_metadata: { provider: 'email' },
-        user_metadata: { name: profile.name || 'Jane Doe', business_name: profile.businessName || 'Apex Comfort HVAC' },
-        aud: 'authenticated',
-        created_at: new Date().toISOString(),
-        email: email,
-      } as unknown as User;
-
-      const demoSession: Session = {
-        access_token: 'paypilot-demo-access-token',
-        refresh_token: 'paypilot-demo-refresh-token',
-        expires_in: 3600,
-        expires_at: Math.floor(Date.now() / 1000) + 3600,
-        token_type: 'bearer',
-        user: demoUser,
-      };
-
-      setUser(demoUser);
-      setSession(demoSession);
-      setBusinessId('11111111-1111-1111-1111-111111111111');
-      setProfile(prev => ({ ...prev, email }));
-      showToast({
-        title: 'Signed In (Demo Workspace)',
-        description: `Active session for ${email}`,
-        type: 'success',
-      });
       setIsLoading(false);
-      return { success: true };
+      showToast({
+        title: 'Authentication Failed',
+        description: errMsg,
+        type: 'error',
+      });
+      return { success: false, error: errMsg };
     }
   };
 
@@ -590,40 +638,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: true };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Failed to create account.';
-      if (!isDemoMode) {
-        setIsLoading(false);
-        showToast({
-          title: 'Registration Failed',
-          description: errMsg,
-          type: 'error',
-        });
-        return { success: false, error: errMsg };
-      }
-
-      setProfile(prev => ({
-        ...prev,
-        name: params.name,
-        email: params.email,
-        businessName: params.businessName,
-      }));
-      setSettings(prev => ({
-        ...prev,
-        businessName: params.businessName,
-        businessEmail: params.email,
-      }));
-      setBusinessProfile(prev => ({
-        ...prev,
-        name: params.businessName,
-        email: params.email,
-      }));
-
-      showToast({
-        title: 'Workspace Initialized (Demo)',
-        description: `Welcome to Ventrexs Service OS, ${params.name}!`,
-        type: 'success',
-      });
       setIsLoading(false);
-      return { success: true };
+      showToast({
+        title: 'Registration Failed',
+        description: errMsg,
+        type: 'error',
+      });
+      return { success: false, error: errMsg };
     }
   };
 
@@ -635,7 +656,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setUser(null);
     setSession(null);
-    setBusinessId(null);
+    clearTenantState();
     showToast({ title: 'Logged out successfully', type: 'info' });
   };
 
@@ -646,7 +667,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res.success) {
         setUser(null);
         setSession(null);
-        setBusinessId(null);
+        clearTenantState();
         localStorage.removeItem(STORAGE_KEY);
         showToast({
           title: 'Account & Data Erased',
@@ -3537,10 +3558,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       businessId,
       isOnline,
       isLoading,
-      signIn: async () => ({ success: true }),
-      signUp: async () => ({ success: true }),
-      signOut: async () => {},
-      deleteAccount: async () => ({ success: true }),
+      signIn,
+      signUp,
+      signOut,
+      deleteAccount,
       invoices,
       customers,
       leads,

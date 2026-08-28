@@ -141,9 +141,7 @@ async function runTests() {
   // Test 20: Demo remains biz_01 only
   const demoToken = DemoAccessService.createDemoToken({ createdBy: 'admin@paypilot.io' });
   const demoReq = DemoAccessService.requestDemoAccess({ rawToken: demoToken.rawToken!, requesterName: 'Jane', requesterEmail: 'jane@hvac.com' });
-  DemoAccessService.submitApproval({ requestId: demoReq.request!.id, approverEmail: 'owner1@paypilot.io', decision: 'APPROVED' });
-  const demoApproval = DemoAccessService.submitApproval({ requestId: demoReq.request!.id, approverEmail: 'owner2@paypilot.io', decision: 'APPROVED' });
-  const demoValidation = DemoAccessService.validateDemoSession(demoApproval.session!.rawSessionToken!);
+  const demoValidation = DemoAccessService.validateDemoSession(demoReq.session!.rawSessionToken!);
   assert(demoValidation.isValid && demoValidation.session?.businessId === 'biz_01', 20, 'Demo guest session strictly scoped to biz_01 only');
 
   // --- 5. HOSTNAME ROUTING & CONTEXT ---

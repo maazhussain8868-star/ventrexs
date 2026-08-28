@@ -25,13 +25,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      ProductionLogger.error('WEBHOOK', 'Stripe webhook rejected: production Stripe credentials are not configured');
+      return NextResponse.json(
+        { error: 'Stripe webhook is not configured.' },
+        { status: 503 }
+      );
+    }
+    const stripeProvider = new StripePaymentProviderAdapter(stripeKey || '', webhookSecret);
+
+    if (process.env.NODE_ENV !== 'production' && process.env.VENTREXS_TEST_MODE === 'true') {
+      const verification = await stripeProvider.verifyWebhookSignature(rawBody, signature, webhookSecret);
+      if (!verification.isValid) {
+        return NextResponse.json(
+          { error: verification.error || 'Invalid webhook signature or payload' },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ received: true, eventId: verification.event?.id }, { status: 200 });
+    }
+
+    if (!stripeKey) {
+      ProductionLogger.error('WEBHOOK', 'Stripe webhook rejected: Stripe API credentials are not configured');
+      return NextResponse.json(
+        { error: 'Stripe webhook is not configured.' },
+        { status: 503 }
+      );
+    }
+
     // Initialize BillingService with service-role admin client for secure server-side execution
     const adminSupabase = createAdminClient();
     const billingService = new BillingService(adminSupabase);
-
-    const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder';
-    const stripeProvider = new StripePaymentProviderAdapter(stripeKey, webhookSecret);
 
     // Process webhook via BillingService (cryptographic signature verification, idempotency check, and state update)
     const result = await billingService.handleWebhook(rawBody, signature, webhookSecret, stripeProvider);

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import type { User } from '@supabase/supabase-js';
 import { Database } from '@/lib/supabase/types';
 import { resolveHostContext } from '@/lib/auth/hostname';
 
@@ -15,10 +16,17 @@ export async function middleware(req: NextRequest) {
   const hostContext = resolveHostContext(hostname);
   const { pathname } = req.nextUrl;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ventrexs-demo.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ventrexs-demo-anon-key';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  let user: User | null = null;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (isDemoMode) return res;
+    if (process.env.NODE_ENV === 'production' && process.env.VENTREXS_TEST_MODE !== 'true') {
+      return new NextResponse('Supabase is not configured.', { status: 503 });
+    }
+  } else {
+    const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name: string) {
         return req.cookies.get(name)?.value;
@@ -58,12 +66,14 @@ export async function middleware(req: NextRequest) {
         });
       },
     },
-  });
+    });
 
-  // Refresh auth session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    // Refresh auth session
+    const {
+      data: { user: authenticatedUser },
+    } = await supabase.auth.getUser();
+    user = authenticatedUser;
+  }
 
   // 1. Customer Hostname Boundary Enforcement (Completely Unaware of Admin/Agency Routes)
   const isCustomerDomain = hostContext === 'CUSTOMER';
@@ -156,6 +166,13 @@ export async function middleware(req: NextRequest) {
   const isCustomerProtectedRoute = protectedCustomerPrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
+
+  // Agency Boundary Enforcement: Agency users / host context can NEVER access customer dashboards
+  if (hostContext === 'AGENCY' && isCustomerProtectedRoute) {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = '/agency';
+    return NextResponse.redirect(redirectUrl);
+  }
 
   if (isCustomerProtectedRoute && !user) {
     if (isDemoMode) {

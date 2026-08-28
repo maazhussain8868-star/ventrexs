@@ -33,11 +33,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: `
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com https://js.stripe.com;
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com https://js.stripe.com https://www.googletagmanager.com https://*.googletagmanager.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      img-src 'self' data: blob: https:;
+      img-src 'self' data: blob: https: https://*.google-analytics.com https://*.googletagmanager.com;
       font-src 'self' https://fonts.gstatic.com data:;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://*.skydo.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://*.skydo.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com;
       frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://js.stripe.com;
       frame-ancestors 'none';
       base-uri 'self';

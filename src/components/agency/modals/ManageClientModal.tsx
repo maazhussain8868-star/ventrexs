@@ -24,7 +24,6 @@ interface ManageClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateClient: (updated: AgencyClient) => void;
-  onSwitchContext: (client: AgencyClient) => void;
 }
 
 export const ManageClientModal: React.FC<ManageClientModalProps> = ({
@@ -32,7 +31,6 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
   isOpen,
   onClose,
   onUpdateClient,
-  onSwitchContext,
 }) => {
   if (!client) return null;
 
@@ -79,24 +77,13 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
       title={`Manage Client: ${client.name}`}
       maxWidth="xl"
       footer={
-        <div className="flex items-center justify-between w-full">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onSwitchContext(client)}
-            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-            className="text-xs bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 font-bold"
-          >
-            Enter Customer Workspace
+        <div className="flex items-center justify-end w-full gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose} className="text-slate-600">
+            Cancel
           </Button>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onClose} className="text-slate-600">
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleSave} isLoading={saving} className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white">
-              Save Changes
-            </Button>
-          </div>
+          <Button variant="primary" size="sm" onClick={handleSave} isLoading={saving} className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white">
+            Save Changes
+          </Button>
         </div>
       }
     >
@@ -162,9 +149,9 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
               onChange={(e) => setPlan(e.target.value as any)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-violet-500 font-medium"
             >
-              <option value="Starter">Starter ($19/mo)</option>
-              <option value="Professional">Professional ($49/mo)</option>
-              <option value="Enterprise">Enterprise ($199/mo)</option>
+              <option value="Starter">Starter ($29/mo)</option>
+              <option value="Professional">Professional ($79/mo)</option>
+              <option value="Enterprise">Enterprise ($249/mo)</option>
             </select>
           </div>
 

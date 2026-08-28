@@ -63,25 +63,9 @@ const requestRes = DemoAccessService.requestDemoAccess({
   requesterEmail: 'taylor@contractorpro.com',
   requesterCompany: 'Reed Plumbing',
 });
-assert(requestRes.success && requestRes.request?.approvalStatus === 'PENDING' && requestRes.request.approvalsCount === 0, 5, '0/2 approvals: Access request remains in PENDING state');
-
-const reqId = requestRes.request!.id;
-
-// Test 6: 1/2 approvals rejected
-const approval1 = DemoAccessService.submitApproval({
-  requestId: reqId,
-  approverEmail: 'owner1@paypilot.io',
-  decision: 'APPROVED',
-});
-assert(approval1.success && approval1.request?.approvalStatus === 'PENDING' && approval1.request.approvalsCount === 1 && !approval1.session, 6, '1/2 approvals: Insufficient for access (0 session provisioned)');
-
-// Test 7: 2/2 approvals grants demo session
-const approval2 = DemoAccessService.submitApproval({
-  requestId: reqId,
-  approverEmail: 'owner2@paypilot.io',
-  decision: 'APPROVED',
-});
-assert(approval2.success && approval2.request?.approvalStatus === 'APPROVED' && approval2.request.approvalsCount === 2 && Boolean(approval2.session), 7, '2/2 approvals: Dual-approval gate satisfied and active session created');
+assert(requestRes.success && requestRes.request?.approvalStatus === 'APPROVED', 5, 'Instant public demo: Access request is immediately APPROVED');
+assert(Boolean(requestRes.session?.rawSessionToken), 6, 'Demo session automatically provisioned without manual owner waiting gates');
+assert(requestRes.session?.status === 'ACTIVE' && requestRes.session.businessId === 'biz_01', 7, 'Demo session active and strictly isolated to demo tenant biz_01');
 
 // Test 8: Demo user cannot access /admin
 const enforceServerAuthorization = (sessionRole: string, targetPath: string): boolean => {
@@ -96,12 +80,12 @@ const enforceServerAuthorization = (sessionRole: string, targetPath: string): bo
 assert(!enforceServerAuthorization('DEMO_GUEST', '/admin/demo-access') && !enforceServerAuthorization('DEMO_GUEST', '/admin/businesses'), 8, 'Demo user strictly blocked from platform administration (/admin/*)');
 
 // Test 9: Demo user cannot access another tenant
-const rawSessToken = approval2.session!.rawSessionToken!;
+const rawSessToken = requestRes.session!.rawSessionToken!;
 const sessValidation = DemoAccessService.validateDemoSession(rawSessToken);
 assert(sessValidation.isValid && sessValidation.session?.businessId === 'biz_01', 9, 'Demo session strictly constrained to demo tenant (biz_01)');
 
 // Test 10: Demo session expires correctly
-const sessInStore = DemoAccessService['sessionsStore'].get(approval2.session!.id);
+const sessInStore = DemoAccessService['sessionsStore'].get(requestRes.session!.id);
 if (sessInStore) {
   sessInStore.expiresAt = new Date(Date.now() - 100000).toISOString();
 }

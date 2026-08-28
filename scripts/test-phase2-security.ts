@@ -6,6 +6,8 @@ import { SMSService } from '../src/lib/sms/sms-service';
 import { DevSMSProvider } from '../src/lib/sms/providers/dev-provider';
 import { createCommunicationDraftAction } from '../src/app/actions';
 
+process.env.VENTREXS_TEST_MODE = 'true';
+
 // ==============================================================================
 // PAYPILOT AI — PHASE 2 AUTHENTICATION & TENANT ISOLATION TEST SUITE
 // Tests Demo Auth Gating, Route Guard Middleware, Admin Authorization, Follow-up

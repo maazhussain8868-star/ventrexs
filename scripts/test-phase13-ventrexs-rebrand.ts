@@ -144,27 +144,9 @@ async function runTests() {
     requesterCompany: 'Summit Ventures',
   });
   assert(requestRes.success === true && !!requestRes.request, 'Demo access request registered');
-
-  const reqId = requestRes.request!.id;
-
-  // First approval from Ventrexs owner 1
-  const app1 = DemoAccessService.submitApproval({
-    requestId: reqId,
-    approverEmail: 'owner1@ventrexs.com',
-    decision: 'APPROVED',
-    notes: 'Approved evaluation',
-  });
-  assert(app1.success === true, 'Approval from owner1@ventrexs.com succeeded');
-
-  // Second approval from Ventrexs owner 2 (triggers dual approval activation)
-  const app2 = DemoAccessService.submitApproval({
-    requestId: reqId,
-    approverEmail: 'owner2@ventrexs.com',
-    decision: 'APPROVED',
-    notes: 'Second owner approval confirmed',
-  });
-  assert(app2.success === true && !!app2.session, 'Dual approval completed and session generated');
-  assert(app2.session?.status === 'ACTIVE', 'Dual-approved demo session is active');
+  assert(requestRes.request?.approvalStatus === 'APPROVED', 'Demo access instantly approved');
+  assert(!!requestRes.session, 'Demo session generated automatically');
+  assert(requestRes.session?.status === 'ACTIVE', 'Demo session is active');
 
   // ----------------------------------------------------------------
   // 5. PLATFORM ADMIN SERVICE

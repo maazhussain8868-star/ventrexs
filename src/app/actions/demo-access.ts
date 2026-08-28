@@ -160,6 +160,8 @@ export async function initiateDemoAccessRequestAction(params: SubmitDemoRequestP
       success: true,
       data: {
         request: result.request,
+        session: result.session,
+        sessionToken: result.session?.rawSessionToken,
       },
     };
   } catch (error: any) {

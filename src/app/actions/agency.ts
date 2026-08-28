@@ -102,35 +102,14 @@ export async function getAgencyBusinessesAction(agencyId?: string) {
 }
 
 /**
- * 3. Switch Business Context (with audit logging)
+ * 3. Switch Business Context — Permanently Disabled for Agency Isolation
+ * Agency managers are isolated to the Agency Dashboard and cannot access customer workspaces.
  */
 export async function switchBusinessContextAction(targetBusinessId: string, agencyId?: string) {
-  try {
-    const supabase = await createServerSupabaseClient();
-    const user = await getAuthAgencyUser(supabase);
-
-    // Audit context switch
-    const auditPayload = AuditService.formatAuditEvent({
-      actorEmail: user.email || 'agency@ventrexs.com',
-      actorRole: 'AGENCY_MANAGER',
-      eventType: 'agency_context_switch',
-      description: `Agency switched active tenant context to business "${targetBusinessId}"`,
-      businessId: targetBusinessId,
-      agencyId,
-      userId: user.id,
-    });
-
-    try {
-      await (supabase as any).from('audit_events').insert(auditPayload as any);
-    } catch {
-      // Non-blocking
-    }
-
-    revalidatePath('/dashboard');
-    return { success: true, activeBusinessId: targetBusinessId };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
+  return {
+    success: false,
+    error: 'Unauthorized: Agency users are isolated to the Agency Dashboard and cannot access customer accounts.',
+  };
 }
 
 /**

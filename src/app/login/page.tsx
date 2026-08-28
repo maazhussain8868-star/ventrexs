@@ -39,18 +39,11 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: string) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      showToast({
-        title: `Signed in with ${provider}`,
-        type: 'success'
-      });
-      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const redirectTo = params?.get('redirectTo');
-      const targetUrl = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard';
-      router.push(targetUrl);
-    }, 500);
+    showToast({
+      title: `${provider} sign-in unavailable`,
+      description: 'Use email and password to authenticate securely.',
+      type: 'info',
+    });
   };
 
   return (

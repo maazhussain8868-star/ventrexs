@@ -143,46 +143,48 @@ export default function AdminPaymentsPage() {
       showBack
       backUrl="/admin"
     >
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-full overflow-hidden">
         {/* Filters */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search tenant, agency, transaction ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 min-h-[36px]"
               />
             </div>
 
-            <select
-              value={filterPurpose}
-              onChange={(e) => setFilterPurpose(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
-            >
-              <option value="ALL">All Purposes</option>
-              <option value="SAAS_SUBSCRIPTION">SaaS Subscription</option>
-              <option value="CUSTOMER_INVOICE">Customer Invoice</option>
-              <option value="DEMO">Demo Sandbox</option>
-            </select>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <select
+                value={filterPurpose}
+                onChange={(e) => setFilterPurpose(e.target.value)}
+                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium min-h-[36px]"
+              >
+                <option value="ALL">All Purposes</option>
+                <option value="SAAS_SUBSCRIPTION">SaaS Subscription</option>
+                <option value="CUSTOMER_INVOICE">Customer Invoice</option>
+                <option value="DEMO">Demo Sandbox</option>
+              </select>
 
-            <select
-              value={filterProvider}
-              onChange={(e) => setFilterProvider(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
-            >
-              <option value="ALL">All Providers</option>
-              <option value="razorpay">Razorpay</option>
-              <option value="stripe">Stripe</option>
-              <option value="skydo">Skydo</option>
-              <option value="google_play">Google Play</option>
-            </select>
+              <select
+                value={filterProvider}
+                onChange={(e) => setFilterProvider(e.target.value)}
+                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium min-h-[36px]"
+              >
+                <option value="ALL">All Providers</option>
+                <option value="razorpay">Razorpay</option>
+                <option value="stripe">Stripe</option>
+                <option value="skydo">Skydo</option>
+                <option value="google_play">Google Play</option>
+              </select>
+            </div>
           </div>
 
-          <span className="text-xs text-slate-500 font-mono font-semibold">
+          <span className="text-xs text-slate-500 font-mono font-semibold pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
             Showing {filtered.length} transactions
           </span>
         </div>
@@ -190,37 +192,37 @@ export default function AdminPaymentsPage() {
         {/* Transactions Table */}
         <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse min-w-[720px]">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
                 <tr>
-                  <th className="p-4">Transaction ID</th>
-                  <th className="p-4">Customer Business</th>
-                  <th className="p-4">Agency Reseller</th>
-                  <th className="p-4">Purpose</th>
-                  <th className="p-4">Provider</th>
-                  <th className="p-4">Amount</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Date</th>
+                  <th className="py-3 px-4">Transaction ID</th>
+                  <th className="py-3 px-4">Customer Business</th>
+                  <th className="py-3 px-4">Agency Reseller</th>
+                  <th className="py-3 px-4">Purpose</th>
+                  <th className="py-3 px-4">Provider</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-800">
                 {filtered.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="p-4 font-mono font-bold text-slate-900">{t.providerTxnId}</td>
-                    <td className="p-4 text-slate-900 font-semibold">{t.tenant}</td>
-                    <td className="p-4 text-slate-500 text-[11px]">{t.agency}</td>
-                    <td className="p-4">{getPurposeBadge(t.purpose)}</td>
-                    <td className="p-4">{getProviderBadge(t.provider)}</td>
-                    <td className="p-4 font-mono font-bold text-slate-900">
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{t.providerTxnId}</td>
+                    <td className="py-3.5 px-4 text-slate-900 font-semibold">{t.tenant}</td>
+                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">{t.agency}</td>
+                    <td className="py-3.5 px-4">{getPurposeBadge(t.purpose)}</td>
+                    <td className="py-3.5 px-4">{getProviderBadge(t.provider)}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                       ${t.amount.toFixed(2)} {t.currency}
                     </td>
-                    <td className="p-4">
+                    <td className="py-3.5 px-4">
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                         <CheckCircle2 className="w-3 h-3" />
                         SUCCESS
                       </span>
                     </td>
-                    <td className="p-4 text-slate-500 font-mono text-right">{t.date}</td>
+                    <td className="py-3.5 px-4 text-slate-500 font-mono text-right">{t.date}</td>
                   </tr>
                 ))}
               </tbody>

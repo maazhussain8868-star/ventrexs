@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.desynthic.ventrexs",
+  "productName": "Ventrexs AI",
+  "copyright": "Copyright © 2026 Desynthic. All rights reserved.",
+  "directories": {
+    "output": "dist/desktop",
+    "buildResources": "desktop/assets"
+  },
+  "files": [
+    "desktop/**/*",
+    "public/**/*",
+    "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+    "!**/*.{o,obj,d.ts,map,spec.ts,test.ts}",
+    "!scripts/**/*",
+    "!tests/**/*",
+    "!.env*",
+    "!*.md"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "desktop/assets/icon.png",
+    "legalTrademarks": "Ventrexs AI is a trademark of Desynthic.",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": "always",
+    "createStartMenuShortcut": true,
+    "shortcutName": "Ventrexs AI",
+    "uninstallDisplayName": "Ventrexs AI",
+    "deleteAppDataOnUninstall": false,
+    "runAfterFinish": true
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "category": "public.app-category.business",
+    "icon": "desktop/assets/icon.png",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "desktop/entitlements.mac.plist",
+    "entitlementsInherit": "desktop/entitlements.mac.plist"
+  },
+  "dmg": {
+    "title": "Ventrexs AI Installer",
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ]
+  },
+  "publish": {
+    "provider": "generic",
+    "url": "https://updates.ventrexs.com/desktop"
+  }
+}

@@ -28,7 +28,6 @@ import {
   initialAgencyDomains,
   initialAgencyActivities,
 } from '@/data/agencyData';
-import { switchBusinessContextAction } from '@/app/actions/agency';
 
 export default function AgencyDashboardPage() {
   const router = useRouter();
@@ -222,24 +221,6 @@ export default function AgencyDashboardPage() {
     }
   };
 
-  const handleSwitchContext = async (client: AgencyClient) => {
-    showToast({
-      title: 'Switching Context...',
-      description: `Entering workspace for "${client.name}" (${client.businessId}).`,
-      type: 'info',
-    });
-
-    try {
-      await switchBusinessContextAction(client.businessId);
-    } catch {
-      // Non-blocking fallback
-    }
-
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 400);
-  };
-
   return (
     <AgencyLayout
       activeTab={activeTab}
@@ -260,7 +241,6 @@ export default function AgencyDashboardPage() {
           onSelectTab={handleSelectTab}
           onOpenAddClient={() => setIsAddClientModalOpen(true)}
           onManageClient={(c) => setSelectedClientForManage(c)}
-          onSwitchContext={handleSwitchContext}
         />
       )}
 
@@ -270,7 +250,6 @@ export default function AgencyDashboardPage() {
           clients={clients}
           onOpenAddClient={() => setIsAddClientModalOpen(true)}
           onManageClient={(c) => setSelectedClientForManage(c)}
-          onSwitchContext={handleSwitchContext}
         />
       )}
 
@@ -320,7 +299,6 @@ export default function AgencyDashboardPage() {
         <AgencyHealth
           clients={clients}
           onManageClient={(c) => setSelectedClientForManage(c)}
-          onSwitchContext={handleSwitchContext}
         />
       )}
 
@@ -336,7 +314,6 @@ export default function AgencyDashboardPage() {
         isOpen={Boolean(selectedClientForManage)}
         onClose={() => setSelectedClientForManage(null)}
         onUpdateClient={handleUpdateClient}
-        onSwitchContext={handleSwitchContext}
       />
 
       {/* Add Client Modal */}

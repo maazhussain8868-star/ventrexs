@@ -41,8 +41,10 @@ export class PaymentService {
   ) {
     if (provider) {
       this.provider = provider;
-    } else if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !process.env.STRIPE_SECRET_KEY) {
+    } else if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
       this.provider = new DemoPaymentAdapter();
+    } else if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error('Payment provider is not configured. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET.');
     } else {
       this.provider = new StripeCustomerPaymentAdapter(
         process.env.STRIPE_SECRET_KEY,

@@ -6,7 +6,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
-import { PLANS_CONFIG, PlanKey, BillingInterval } from '@/lib/billing/types';
+import { PLANS_CONFIG, AGENCY_PLANS_CONFIG, PlanKey, AgencyPlanKey, BillingInterval } from '@/lib/billing/types';
 import { 
   CheckCircle2, 
   Sparkles, 
@@ -16,15 +16,19 @@ import {
   Zap,
   Bot,
   Users,
+  Building2,
+  Globe,
+  Layers,
   Award
 } from 'lucide-react';
 
 export default function PricingPage() {
-  const { subscription, createCheckoutSession, showToast } = useApp();
+  const { subscription, createCheckoutSession, showToast, profile } = useApp();
+  const [planCategory, setPlanCategory] = useState<'business' | 'agency'>('business');
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
-  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const handleSelectPlan = async (planKey: PlanKey) => {
+  const handleSelectBusinessPlan = async (planKey: PlanKey) => {
     if (planKey === subscription.plan) {
       showToast({
         title: 'Current Plan',
@@ -51,6 +55,10 @@ export default function PricingPage() {
       a: 'Ventrexs operates on strict non-compounding, zero-interest calculations. We never charge punitive late fees or predatory interest on overdue balances.',
     },
     {
+      q: 'What is the difference between Business and Agency plans?',
+      a: 'Business plans are designed for individual contractor and trade companies managing their own jobs, dispatch, and AI reception. Agency plans are multi-tenant reseller tiers for marketing agencies managing fleets of 10 to 100+ contractor clients under custom white-label branding.',
+    },
+    {
       q: 'Can I upgrade, downgrade, or cancel at any time?',
       a: 'Yes, seamlessly. When you upgrade, changes apply immediately with prorated billing. When you cancel, your access continues uninterrupted until the end of the paid billing period.',
     },
@@ -60,7 +68,7 @@ export default function PricingPage() {
     },
     {
       q: 'What payment methods do you support for SaaS subscriptions?',
-      a: 'We accept all major credit cards, debit cards, and bank transfers securely processed via Stripe.',
+      a: 'We accept all major credit cards, debit cards, UPI, net banking, and international wire transfers securely processed via Razorpay (India) and Stripe (International).',
     },
   ];
 
@@ -71,25 +79,53 @@ export default function PricingPage() {
         <div className="text-center max-w-2xl mx-auto pt-4">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-3 border border-primary/20">
             <Sparkles className="w-3.5 h-3.5" />
-            Transparent Service Business SaaS
+            Transparent Commercial SaaS Pricing
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold text-on-surface mb-3 tracking-tight">
-            Simple, Transparent Pricing
+            Plans Built for Scale
           </h1>
           <p className="text-sm sm:text-base text-on-surface-variant leading-relaxed">
-            Choose the plan that matches your dispatch crew size. Autonomous AI receptionist triage, field work orders, estimates, and Google review management included.
+            Choose between standalone contractor operating software and multi-tenant white-label agency reseller tiers.
           </p>
         </div>
 
-        {/* Monthly / Annual Toggle */}
-        <div className="flex justify-center">
-          <div className="bg-surface-container-high rounded-full p-1.5 flex border border-outline-variant/80 shadow-xs">
+        {/* Plan Category Switcher (Business vs Agency) */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="bg-surface-container-high rounded-2xl p-1.5 flex border border-outline-variant/80 shadow-xs max-w-md w-full">
+            <button
+              type="button"
+              onClick={() => setPlanCategory('business')}
+              className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+                planCategory === 'business'
+                  ? 'bg-surface-container-lowest text-primary shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Business Plans</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlanCategory('agency')}
+              className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+                planCategory === 'agency'
+                  ? 'bg-surface-container-lowest text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+              <span>Agency / Reseller</span>
+            </button>
+          </div>
+
+          {/* Monthly / Annual Toggle */}
+          <div className="bg-surface-container rounded-full p-1 flex border border-outline-variant/60 shadow-2xs text-xs font-semibold">
             <button
               type="button"
               onClick={() => setBillingInterval('monthly')}
-              className={`px-5 py-2 rounded-full font-bold text-xs sm:text-sm transition-all ${
+              className={`px-4 py-1.5 rounded-full transition-all ${
                 billingInterval === 'monthly'
-                  ? 'bg-surface-container-lowest text-on-surface shadow-xs'
+                  ? 'bg-surface-container-lowest text-on-surface shadow-2xs font-bold'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
@@ -98,9 +134,9 @@ export default function PricingPage() {
             <button
               type="button"
               onClick={() => setBillingInterval('annual')}
-              className={`px-5 py-2 rounded-full font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
                 billingInterval === 'annual'
-                  ? 'bg-surface-container-lowest text-on-surface shadow-xs'
+                  ? 'bg-surface-container-lowest text-on-surface shadow-2xs font-bold'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
@@ -112,92 +148,191 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {(['Starter', 'Professional', 'Enterprise'] as PlanKey[]).map((key) => {
-            const plan = PLANS_CONFIG[key];
-            const isCurrent = subscription.plan === key;
-            const price = billingInterval === 'annual' ? plan.priceAnnual : plan.priceMonthly;
+        {/* 1. BUSINESS PLANS GRID */}
+        {planCategory === 'business' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            {(['Starter', 'Professional', 'Enterprise'] as PlanKey[]).map((key) => {
+              const plan = PLANS_CONFIG[key];
+              const isCurrent = subscription.plan === key;
+              const price = billingInterval === 'annual' ? plan.priceAnnual : plan.priceMonthly;
 
-            return (
-              <div
-                key={key}
-                className={`rounded-2xl p-7 flex flex-col justify-between transition-all bg-surface-container-lowest border ${
-                  plan.popular
-                    ? 'border-primary ring-2 ring-primary/20 shadow-lg relative'
-                    : isCurrent
-                    ? 'border-tertiary shadow-xs'
-                    : 'border-outline-variant/80 shadow-xs hover:border-outline-variant'
-                }`}
-              >
-                {plan.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
-                    Most Popular for Contractors
-                  </span>
-                )}
+              return (
+                <div
+                  key={key}
+                  className={`rounded-2xl p-7 flex flex-col justify-between transition-all bg-surface-container-lowest border ${
+                    plan.popular
+                      ? 'border-primary ring-2 ring-primary/20 shadow-lg relative'
+                      : isCurrent
+                      ? 'border-tertiary shadow-xs'
+                      : 'border-outline-variant/80 shadow-xs hover:border-outline-variant'
+                  }`}
+                >
+                  {plan.popular && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                      Most Popular for Contractors
+                    </span>
+                  )}
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xl font-bold text-on-surface">{plan.name}</h3>
-                    {isCurrent && <Badge variant="info" label="Current Plan" />}
-                  </div>
-                  <p className="text-xs text-on-surface-variant min-h-[36px] mb-4">
-                    {plan.tagline}
-                  </p>
-
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-on-surface font-mono">
-                        ${price}
-                      </span>
-                      <span className="text-xs text-on-surface-variant font-medium">
-                        /{billingInterval === 'annual' ? 'year' : 'month'}
-                      </span>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xl font-bold text-on-surface">{plan.name}</h3>
+                      {isCurrent && <Badge variant="info" label="Current Plan" />}
                     </div>
-                    {billingInterval === 'annual' && (
-                      <p className="text-[11px] text-tertiary font-semibold mt-1">
-                        Billed annually (Includes 2 months free)
-                      </p>
+                    <p className="text-xs text-on-surface-variant min-h-[36px] mb-4">
+                      {plan.tagline}
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-extrabold text-on-surface font-mono">
+                          ${price}
+                        </span>
+                        <span className="text-xs text-on-surface-variant font-medium">
+                          /{billingInterval === 'annual' ? 'year' : 'month'}
+                        </span>
+                      </div>
+                      {billingInterval === 'annual' && (
+                        <p className="text-[11px] text-tertiary font-semibold mt-1">
+                          Billed annually (${plan.priceAnnual}/yr • Includes 2 months free)
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-outline-variant/60 pt-4 mb-6">
+                      <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-3">
+                        What&apos;s Included:
+                      </span>
+                      <ul className="space-y-2.5">
+                        {plan.features.map((feat, idx) => (
+                          <li key={idx} className="flex items-start text-xs text-on-surface gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    {profile.email ? (
+                      <Button
+                        variant={isCurrent ? 'outline' : plan.popular ? 'primary' : 'outline'}
+                        size="md"
+                        onClick={() => handleSelectBusinessPlan(key)}
+                        disabled={isCurrent || loadingPlan === key}
+                        className="w-full font-bold text-xs gap-1.5 shadow-xs"
+                      >
+                        {isCurrent ? (
+                          'Active Plan'
+                        ) : loadingPlan === key ? (
+                          'Preparing Checkout...'
+                        ) : (
+                          <>
+                            <span>Get Started with {plan.name}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <Link href={`/signup?type=business&plan=${key}`} className="w-full block">
+                        <Button
+                          variant={plan.popular ? 'primary' : 'outline'}
+                          size="md"
+                          className="w-full font-bold text-xs gap-1.5 shadow-xs"
+                        >
+                          <span>Get Started with {plan.name}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </Link>
                     )}
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-                  <div className="border-t border-outline-variant/60 pt-4 mb-6">
-                    <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-3">
-                      What&apos;s Included:
+        {/* 2. AGENCY / RESELLER PLANS GRID */}
+        {planCategory === 'agency' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            {(['AgencyStarter', 'AgencyGrowth', 'AgencyEnterprise'] as AgencyPlanKey[]).map((key) => {
+              const plan = AGENCY_PLANS_CONFIG[key];
+              const price = billingInterval === 'annual' ? plan.priceAnnual : plan.priceMonthly;
+
+              return (
+                <div
+                  key={key}
+                  className={`rounded-2xl p-7 flex flex-col justify-between transition-all bg-surface-container-lowest border ${
+                    plan.popular
+                      ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg relative'
+                      : 'border-outline-variant/80 shadow-xs hover:border-outline-variant'
+                  }`}
+                >
+                  {plan.popular && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                      Most Popular for Agencies
                     </span>
-                    <ul className="space-y-2.5">
-                      {plan.features.map((feat, idx) => (
-                        <li key={idx} className="flex items-start text-xs text-on-surface gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xl font-bold text-on-surface">{plan.name}</h3>
+                      <Badge variant="neutral" label={`Fleet: ${plan.limits.maxClients || '10+'} Clients`} />
+                    </div>
+                    <p className="text-xs text-on-surface-variant min-h-[36px] mb-4">
+                      {plan.tagline}
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-extrabold text-on-surface font-mono">
+                          ${price}
+                        </span>
+                        <span className="text-xs text-on-surface-variant font-medium">
+                          /{billingInterval === 'annual' ? 'year' : 'month'}
+                        </span>
+                      </div>
+                      {billingInterval === 'annual' && (
+                        <p className="text-[11px] text-tertiary font-semibold mt-1">
+                          Billed annually (${plan.priceAnnual}/yr • Includes 2 months free)
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-outline-variant/60 pt-4 mb-6">
+                      <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-3">
+                        Agency Reseller Features:
+                      </span>
+                      <ul className="space-y-2.5">
+                        {plan.features.map((feat, idx) => (
+                          <li key={idx} className="flex items-start text-xs text-on-surface gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <Link href={`/signup?type=agency&plan=${key}`} className="w-full block">
+                      <Button
+                        variant={plan.popular ? 'primary' : 'outline'}
+                        size="md"
+                        className={`w-full font-bold text-xs gap-1.5 shadow-xs ${
+                          plan.popular ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : ''
+                        }`}
+                      >
+                        <span>Start Agency Plan</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
-
-                <Button
-                  variant={isCurrent ? 'outline' : plan.popular ? 'primary' : 'outline'}
-                  size="md"
-                  onClick={() => handleSelectPlan(key)}
-                  disabled={isCurrent || loadingPlan === key}
-                  className="w-full font-bold text-xs gap-1.5 shadow-xs"
-                >
-                  {isCurrent ? (
-                    'Active Plan'
-                  ) : loadingPlan === key ? (
-                    'Preparing Checkout...'
-                  ) : (
-                    <>
-                      <span>Get Started with {plan.name}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Feature Matrix / Comparison Callout */}
         <div className="rounded-2xl p-6 bg-surface-container-high/60 border border-outline-variant/60 flex flex-col md:flex-row items-center justify-between gap-6">

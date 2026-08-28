@@ -43,7 +43,7 @@ export default function SubscriptionTermsPage() {
             <div className="p-4 rounded-2xl bg-[#050812] border border-slate-800 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-sm text-white">Starter</h3>
-                <span className="text-xs font-mono font-bold text-blue-400">$19/mo</span>
+                <span className="text-xs font-mono font-bold text-blue-400">$29/mo</span>
               </div>
               <p className="text-xs text-slate-400">Essential invoicing and email collection automation for small business operators.</p>
               <ul className="space-y-1.5 text-[11px] text-slate-300">
@@ -57,7 +57,7 @@ export default function SubscriptionTermsPage() {
             <div className="p-4 rounded-2xl bg-[#050812] border border-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.15)] space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-sm text-white">Professional</h3>
-                <span className="text-xs font-mono font-bold text-blue-400">$49/mo</span>
+                <span className="text-xs font-mono font-bold text-blue-400">$79/mo</span>
               </div>
               <p className="text-xs text-slate-400">Multi-channel communication, AI copilot intelligence, and ACH bank payment rails.</p>
               <ul className="space-y-1.5 text-[11px] text-slate-300">
@@ -71,7 +71,7 @@ export default function SubscriptionTermsPage() {
             <div className="p-4 rounded-2xl bg-[#050812] border border-slate-800 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-sm text-white">Enterprise</h3>
-                <span className="text-xs font-mono font-bold text-blue-400">$99/mo</span>
+                <span className="text-xs font-mono font-bold text-blue-400">$249/mo</span>
               </div>
               <p className="text-xs text-slate-400">High-volume organizations requiring dedicated DPA, SLA guarantees, and priority support.</p>
               <ul className="space-y-1.5 text-[11px] text-slate-300">

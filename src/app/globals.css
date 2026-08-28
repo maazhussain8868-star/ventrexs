@@ -118,12 +118,36 @@
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background-color: var(--background);
   color: var(--on-background);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe area padding utilities for modern mobile devices */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+}
+.pt-safe {
+  padding-top: max(0rem, env(safe-area-inset-top, 0rem));
+}
+.pl-safe {
+  padding-left: max(0rem, env(safe-area-inset-left, 0rem));
+}
+.pr-safe {
+  padding-right: max(0rem, env(safe-area-inset-right, 0rem));
 }
 
 /* Material Symbols configuration */
@@ -196,4 +220,36 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #737686;
+}
+
+/* Mobile Touch Target minimum */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fluid Container & Responsive Table Helpers */
+.container-fluid {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.responsive-table-container {
+  overflow-x: auto;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Breakpoint Utilities */
+@media (max-width: 768px) {
+  .hide-on-mobile { display: none !important; }
+}
+
+@media (max-width: 1024px) {
+  .hide-on-tablet { display: none !important; }
 }

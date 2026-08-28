@@ -3,6 +3,7 @@ import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { ToastContainer } from '@/components/ui/Toast';
 import { BRAND } from '@/config/brand';
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 
 export const viewport: Viewport = {
   themeColor: '#070B14',
@@ -88,6 +89,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[#070B14] text-slate-100 antialiased min-h-screen">
+        <GoogleAnalytics />
         <AppProvider>
           {children}
           <ToastContainer />

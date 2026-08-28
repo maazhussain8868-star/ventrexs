@@ -42,23 +42,25 @@ export const AgencyActivity: React.FC<AgencyActivityProps> = ({ activities }) =>
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Agency Activity Feed</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-1">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
+            Agency Activity Feed
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 line-clamp-2">
             Real-time audit log of client onboarding, domain changes, subscriptions, and deployment tasks.
           </p>
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl shrink-0 self-start sm:self-auto">
           {['ALL', 'BILLING', 'CLIENTS', 'DOMAINS', 'DEPLOYMENTS'].map((cat) => (
             <button
               key={cat}
               onClick={() => setFilterCategory(cat)}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+              className={`px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all min-h-[32px] ${
                 filterCategory === cat
                   ? 'bg-white text-violet-700 shadow-2xs font-extrabold'
                   : 'text-slate-500 hover:text-slate-900'
@@ -71,30 +73,32 @@ export const AgencyActivity: React.FC<AgencyActivityProps> = ({ activities }) =>
       </div>
 
       {/* Activity Timeline List */}
-      <section className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden divide-y divide-slate-100">
+      <section className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden divide-y divide-slate-100 min-w-0">
         {filtered.map((act) => (
-          <div key={act.id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors text-xs">
-            <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
+          <div key={act.id} className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-slate-50/70 transition-colors text-xs min-w-0">
+            <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                 {getCategoryIcon(act.category)}
               </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900">{act.title}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 uppercase">
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-slate-900 truncate">{act.title}</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 uppercase shrink-0">
                     {act.category}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500">{act.description}</p>
-                <span className="text-[11px] font-mono text-slate-400">Tenant: {act.clientName || 'General'}</span>
+                <p className="text-xs text-slate-500 line-clamp-2">{act.description}</p>
+                <span className="text-[10px] sm:text-[11px] font-mono text-slate-400 block truncate">
+                  Tenant: {act.clientName || 'General'}
+                </span>
               </div>
             </div>
 
-            <div className="text-right space-y-1 shrink-0">
+            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 <CheckCircle2 className="w-3 h-3" /> SUCCESS
               </span>
-              <p className="text-[11px] text-slate-400 font-mono">{act.timeAgo || act.timestamp}</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono">{act.timeAgo || act.timestamp}</p>
             </div>
           </div>
         ))}

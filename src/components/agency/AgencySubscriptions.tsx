@@ -106,90 +106,94 @@ export const AgencySubscriptions: React.FC<AgencySubscriptionsProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Client SaaS Subscriptions</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-1">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
+            Client SaaS Subscriptions
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 line-clamp-2">
             Audit recurring SaaS subscription plans, billing gateways, renewal schedules, and client MRR breakdown.
           </p>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Subscriptions</span>
-          <span className="text-3xl font-extrabold text-slate-900 font-mono">{activeSubs}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">{activeSubs}</span>
           <p className="text-[11px] text-emerald-600 font-semibold">100% active retention</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Monthly MRR</span>
-          <span className="text-3xl font-extrabold text-slate-900 font-mono">${totalMrr.toLocaleString()}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">${totalMrr.toLocaleString()}</span>
           <p className="text-[11px] text-emerald-600 font-semibold">+18.4% growth</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Trials in Progress</span>
-          <span className="text-3xl font-extrabold text-blue-600 font-mono">{trialSubs}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-blue-600 font-mono">{trialSubs}</span>
           <p className="text-[11px] text-slate-400">14-day trial evaluation</p>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-1">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Google Play MRR</span>
-          <span className="text-3xl font-extrabold text-emerald-600 font-mono">$580</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-mono">$580</span>
           <p className="text-[11px] text-slate-400">Android app subscribers</p>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search by client or plan..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+              className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 min-h-[36px]"
             />
           </div>
 
-          <select
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-violet-500 font-medium"
-          >
-            <option value="ALL">All Plans</option>
-            <option value="Starter">Starter</option>
-            <option value="Professional">Professional</option>
-            <option value="Enterprise">Enterprise</option>
-          </select>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-none focus:border-violet-500 font-medium min-h-[36px]"
+            >
+              <option value="ALL">All Plans</option>
+              <option value="Starter">Starter</option>
+              <option value="Professional">Professional</option>
+              <option value="Enterprise">Enterprise</option>
+            </select>
 
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-violet-500 font-medium"
-          >
-            <option value="ALL">All Billing Sources</option>
-            <option value="GOOGLE_PLAY">Google Play</option>
-            <option value="STRIPE">Stripe</option>
-            <option value="RAZORPAY">Razorpay</option>
-          </select>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-none focus:border-violet-500 font-medium min-h-[36px]"
+            >
+              <option value="ALL">All Sources</option>
+              <option value="GOOGLE_PLAY">Google Play</option>
+              <option value="STRIPE">Stripe</option>
+              <option value="RAZORPAY">Razorpay</option>
+            </select>
+          </div>
         </div>
 
-        <span className="text-xs text-slate-500 font-mono font-semibold">
-          {filteredClients.length} Subscriptions Listed
+        <span className="text-xs text-slate-500 font-mono font-semibold pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+          {filteredClients.length} Subscriptions
         </span>
       </div>
 
       {/* Subscriptions Table */}
       <section className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[650px]">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
               <tr>
                 <th className="py-3 px-4">Client Tenant</th>
@@ -213,7 +217,7 @@ export const AgencySubscriptions: React.FC<AgencySubscriptionsProps> = ({
                   <td className="py-3.5 px-4 text-right">
                     <button
                       onClick={() => onManageClient && onManageClient(c)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors min-h-[32px]"
                     >
                       Manage Plan
                     </button>

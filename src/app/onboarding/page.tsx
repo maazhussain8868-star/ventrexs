@@ -1,90 +1,97 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle, 
-  Sparkles, 
-  Building2, 
-  Phone, 
-  Mail, 
-  Globe, 
-  MapPin, 
-  Wrench, 
-  Clock, 
+import {
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  Sparkles,
+  Building2,
+  Phone,
+  Mail,
+  Globe,
+  MapPin,
+  Wrench,
+  Clock,
   ShieldCheck,
   Plus,
-  X
+  X,
+  User,
+  CreditCard,
+  Zap,
+  Check,
 } from 'lucide-react';
-import { IndustryType, BusinessHours } from '@/types';
+import { IndustryType } from '@/types';
+import { PLANS_CONFIG, PlanKey } from '@/lib/billing/types';
+import { Button } from '@/components/ui/Button';
 
 const INDUSTRY_OPTIONS: { id: IndustryType; label: string; icon: string }[] = [
-  { id: 'HVAC', label: 'HVAC & Air Conditioning', icon: 'hvac' },
-  { id: 'Roofing', label: 'Roofing & Siding', icon: 'roofing' },
+  { id: 'HVAC', label: 'HVAC & Heating', icon: 'hvac' },
   { id: 'Plumbing', label: 'Plumbing & Drains', icon: 'plumbing' },
-  { id: 'Electrical', label: 'Electrical Services', icon: 'electric_bolt' },
-  { id: 'Concrete', label: 'Concrete & Masonry', icon: 'foundation' },
-  { id: 'General Contractor', label: 'General Contractor', icon: 'construction' },
+  { id: 'Electrical', label: 'Electrical & Power', icon: 'electric_bolt' },
+  { id: 'Roofing', label: 'Roofing & Siding', icon: 'roofing' },
+  { id: 'Cleaning', label: 'Commercial & Home Cleaning', icon: 'cleaning_services' },
   { id: 'Landscaping', label: 'Landscaping & Tree Care', icon: 'yard' },
+  { id: 'General Contractor', label: 'General Contractor', icon: 'construction' },
+  { id: 'Concrete', label: 'Concrete & Masonry', icon: 'foundation' },
   { id: 'Garage Door', label: 'Garage Door Services', icon: 'garage' },
-  { id: 'Pest Control', label: 'Pest Control', icon: 'pest_control' },
-  { id: 'Cleaning', label: 'Commercial / Home Cleaning', icon: 'cleaning_services' },
-  { id: 'Other', label: 'Other Service Business', icon: 'handyman' },
+  { id: 'Pest Control', label: 'Pest Control Services', icon: 'pest_control' },
+  { id: 'Other', label: 'Other Trade Business', icon: 'engineering' },
 ];
 
-const DEFAULT_HOURS: BusinessHours = {
-  monday: { open: '08:00', close: '17:00', closed: false },
-  tuesday: { open: '08:00', close: '17:00', closed: false },
-  wednesday: { open: '08:00', close: '17:00', closed: false },
-  thursday: { open: '08:00', close: '17:00', closed: false },
-  friday: { open: '08:00', close: '17:00', closed: false },
-  saturday: { open: '09:00', close: '14:00', closed: false },
-  sunday: { open: '09:00', close: '14:00', closed: true },
+const DEFAULT_SERVICES_BY_INDUSTRY: Record<string, string[]> = {
+  HVAC: ['AC Diagnostic & Repair', 'Heating Installation', 'Duct Inspection & Cleaning', 'Emergency Triage', 'Seasonal Tune-up'],
+  Plumbing: ['Drain Snaking & Clearing', 'Water Heater Replacement', 'Leak Detection & Pipe Repair', 'Emergency Plumbing', 'Fixture Installation'],
+  Electrical: ['Panel Upgrade & Replacement', 'Lighting & Outlet Wiring', 'EV Charger Installation', 'Electrical Inspection', 'Emergency Service'],
+  Roofing: ['Roof Replacement', 'Shingle & Leak Repair', 'Storm Damage Assessment', 'Gutter Installation', 'Commercial Flat Roof'],
+  Cleaning: ['Deep Commercial Cleaning', 'Move-in / Move-out Cleaning', 'Carpet & Upholstery', 'Post-Construction Cleaning', 'Window Washing'],
+  Landscaping: ['Lawn Maintenance & Mowing', 'Landscape Design & Installation', 'Tree Trimming & Removal', 'Irrigation & Drainage', 'Hardscaping'],
+  Construction: ['Full Home Renovation', 'Kitchen & Bathroom Remodel', 'Framing & Drywall', 'Custom Additions', 'Structural Repair'],
+  'General Contractor': ['General Contracting', 'Subcontractor Management', 'Permit & Code Compliance', 'Commercial Build-out', 'Residential Remodeling'],
+  Concrete: ['Driveway & Patio Pouring', 'Foundation Repair', 'Stamped Concrete', 'Retaining Walls', 'Sidewalk Masonry'],
+  'Garage Door': ['Spring & Cable Replacement', 'Garage Door Opener Installation', 'Emergency Off-Track Repair', 'New Door Installation', 'Tune-up'],
+  'Pest Control': ['Termite Treatment', 'Rodent Exclusion', 'Mosquito Control', 'Quarterly Pest Shield', 'Bed Bug Heat Treatment'],
+  Other: ['Standard Diagnostics', 'Field Service Dispatch', 'Emergency Call-out', 'Preventative Maintenance', 'Consultation'],
 };
 
-export default function OnboardingPage() {
+export default function BusinessOnboardingPage() {
   const router = useRouter();
   const { businessProfile, completeOnboarding, showToast } = useApp();
 
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 10-Step Form States
-  const [name, setName] = useState(businessProfile?.name || 'Apex Comfort HVAC');
+  // STEP 1 — About You
+  const [ownerName, setOwnerName] = useState(businessProfile?.name ? 'Jane Doe' : 'Jane Doe');
+  const [ownerEmail, setOwnerEmail] = useState(businessProfile?.email || 'jane@company.com');
+  const [ownerPhone, setOwnerPhone] = useState(businessProfile?.phone || '+1 (555) 382-9912');
+  const [country, setCountry] = useState('United States');
+  const [city, setCity] = useState('Austin, TX');
+
+  // STEP 2 — Your Business
+  const [businessName, setBusinessName] = useState(businessProfile?.name || 'Apex Comfort HVAC');
   const [industry, setIndustry] = useState<IndustryType>(businessProfile?.industry || 'HVAC');
-  const [phone, setPhone] = useState(businessProfile?.phone || '+1 (555) 382-9912');
-  const [email, setEmail] = useState(businessProfile?.email || 'service@apexcomfort.com');
+  const [businessType, setBusinessType] = useState('Independent Contractor');
   const [website, setWebsite] = useState(businessProfile?.website || 'https://apexcomfort.com');
-  const [serviceAreas, setServiceAreas] = useState<string[]>(
-    businessProfile?.serviceAreas || ['Austin, TX', 'Round Rock', 'Cedar Park', 'Pflugerville', '78701', '78704']
-  );
-  const [newAreaInput, setNewAreaInput] = useState('');
-  
+  const [businessAddress, setBusinessAddress] = useState('100 Congress Ave, Suite 400, Austin, TX');
+
+  // STEP 3 — Services
   const [services, setServices] = useState<string[]>(
-    businessProfile?.services || ['AC Repair & Diagnostics', 'Heating Installation', 'Duct Cleaning', 'Seasonal Maintenance', 'Emergency Dispatch']
+    DEFAULT_SERVICES_BY_INDUSTRY[industry] || DEFAULT_SERVICES_BY_INDUSTRY.HVAC
   );
   const [newServiceInput, setNewServiceInput] = useState('');
 
-  const [businessHours, setBusinessHours] = useState<BusinessHours>(
-    businessProfile?.businessHours || DEFAULT_HOURS
-  );
-  const [timezone, setTimezone] = useState(businessProfile?.timezone || 'America/Chicago');
-  const [about, setAbout] = useState(
-    businessProfile?.about || 'Licensed, insured HVAC professionals delivering residential & commercial climate solutions.'
-  );
+  // STEP 4 — Choose Plan
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('Professional');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
-  const handleAddArea = () => {
-    if (!newAreaInput.trim()) return;
-    if (!serviceAreas.includes(newAreaInput.trim())) {
-      setServiceAreas([...serviceAreas, newAreaInput.trim()]);
-    }
-    setNewAreaInput('');
-  };
-
-  const handleRemoveArea = (item: string) => {
-    setServiceAreas(serviceAreas.filter(a => a !== item));
+  // Update suggested services when industry changes
+  const handleIndustryChange = (newInd: IndustryType) => {
+    setIndustry(newInd);
+    const suggested = DEFAULT_SERVICES_BY_INDUSTRY[newInd] || DEFAULT_SERVICES_BY_INDUSTRY.Other;
+    setServices(suggested);
   };
 
   const handleAddService = () => {
@@ -95,330 +102,325 @@ export default function OnboardingPage() {
     setNewServiceInput('');
   };
 
-  const handleRemoveService = (item: string) => {
-    setServices(services.filter(s => s !== item));
+  const handleRemoveService = (service: string) => {
+    setServices(services.filter((s) => s !== service));
   };
 
-  const handleNext = () => {
-    if (step < 10) {
+  const handleNextStep = () => {
+    if (step === 1 && (!ownerName || !ownerEmail)) {
+      showToast({ title: 'Missing Info', description: 'Please provide your name and email.', type: 'error' });
+      return;
+    }
+    if (step === 2 && !businessName) {
+      showToast({ title: 'Missing Info', description: 'Please enter your business name.', type: 'error' });
+      return;
+    }
+    if (step < 5) {
       setStep(step + 1);
-    } else {
-      // Step 10: Complete Onboarding
+    }
+  };
+
+  const handleFinishOnboarding = async () => {
+    setIsSubmitting(true);
+    try {
       completeOnboarding({
-        name,
+        name: businessName,
         industry,
-        phone,
-        email,
+        phone: ownerPhone,
+        email: ownerEmail,
         website,
-        serviceAreas,
+        serviceAreas: [city],
         services,
-        businessHours,
-        timezone,
-        about,
+        businessHours: {
+          monday: { open: '08:00', close: '17:00', closed: false },
+          tuesday: { open: '08:00', close: '17:00', closed: false },
+          wednesday: { open: '08:00', close: '17:00', closed: false },
+          thursday: { open: '08:00', close: '17:00', closed: false },
+          friday: { open: '08:00', close: '17:00', closed: false },
+          saturday: { open: '09:00', close: '14:00', closed: false },
+          sunday: { open: '09:00', close: '14:00', closed: true },
+        },
+        timezone: 'America/Chicago',
+        about: `${businessName} provides licensed ${industry} services in ${city}.`,
+      });
+
+      showToast({
+        title: 'Workspace Initialized',
+        description: 'Your Ventrexs AI contractor operations workspace is ready!',
+        type: 'success',
       });
 
       router.push('/dashboard');
+    } catch (err: any) {
+      showToast({
+        title: 'Setup Notice',
+        description: err.message || 'Workspace created. Redirecting to dashboard...',
+        type: 'info',
+      });
+      router.push('/dashboard');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-background flex flex-col">
-      {/* Top App Bar */}
-      <header className="sticky top-0 z-50 flex justify-between items-center w-full px-6 py-4 bg-surface/95 backdrop-blur-md border-b border-outline-variant">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      {/* Top Header Bar */}
+      <header className="sticky top-0 z-50 flex justify-between items-center w-full px-4 sm:px-8 py-3.5 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-2xs">
-            <span className="material-symbols-outlined text-[20px] fill-icon">payments</span>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-2xs">
+            <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <span className="font-extrabold text-base text-primary tracking-tight">Ventrexs</span>
-            <span className="text-[10px] font-semibold text-outline tracking-wider uppercase ml-1.5">Setup Wizard</span>
+            <span className="font-extrabold text-base text-slate-900 tracking-tight">Ventrexs AI</span>
+            <span className="text-[10px] font-bold text-blue-600 tracking-wider uppercase ml-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+              Business Setup
+            </span>
           </div>
         </div>
 
-        <div className="text-xs font-bold text-on-surface-variant">
-          Step {step} of 10
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-slate-500 font-mono">
+            Step {step} of 5
+          </span>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
+          >
+            Skip for now
+          </button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col px-4 sm:px-6 py-8 max-w-xl mx-auto w-full">
+      <main className="flex-1 flex flex-col px-4 sm:px-6 py-6 sm:py-10 max-w-2xl mx-auto w-full">
         {/* Step Progress Bar */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Step {step}: {
-                step === 1 ? 'Business Name' :
-                step === 2 ? 'Industry' :
-                step === 3 ? 'Business Phone' :
-                step === 4 ? 'Business Email' :
-                step === 5 ? 'Website' :
-                step === 6 ? 'Service Area' :
-                step === 7 ? 'Services Offered' :
-                step === 8 ? 'Business Hours' :
-                step === 9 ? 'Timezone' : 'Review & Launch'
-              }
+            <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider">
+              {step === 1 && 'Step 1: About You'}
+              {step === 2 && 'Step 2: Your Business'}
+              {step === 3 && 'Step 3: Trade Services'}
+              {step === 4 && 'Step 4: Choose Plan'}
+              {step === 5 && 'Step 5: Launch Workspace'}
             </span>
-            <span className="text-xs font-semibold text-on-surface-variant">
-              {Math.round((step / 10) * 100)}% Complete
+            <span className="text-xs font-semibold text-slate-500 font-mono">
+              {Math.round((step / 5) * 100)}% Complete
             </span>
           </div>
-          <div className="h-2 bg-surface-container-high rounded-full w-full overflow-hidden">
-            <div 
-              className="h-full bg-primary rounded-full transition-all duration-300"
-              style={{ width: `${(step / 10) * 100}%` }}
+          <div className="h-2 bg-slate-200 rounded-full w-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-300"
+              style={{ width: `${(step / 5) * 100}%` }}
             />
           </div>
         </div>
 
-        {/* Step Body */}
-        <div className="flex-1 flex flex-col justify-between">
-          {/* STEP 1: Business Name */}
+        {/* Step Body Card */}
+        <div className="flex-1 flex flex-col justify-between bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-8 shadow-xs min-w-0">
+          {/* ============================================================ */}
+          {/* STEP 1: ABOUT YOU */}
+          {/* ============================================================ */}
           {step === 1 && (
-            <div className="space-y-6">
+            <div className="space-y-5 animate-fade-in">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  What is your business name?
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Welcome! Let's start with your contact profile
                 </h1>
-                <p className="text-sm text-on-surface-variant">
-                  This will appear on your customer quotes, invoices, payment portal, and client communications.
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  This identity will be assigned as the primary workspace owner and emergency point of contact.
                 </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-on-surface mb-2">
-                  Business / Company Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Apex Comfort HVAC & Heating"
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-3.5 text-base text-on-surface font-semibold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                />
+              <div className="space-y-3.5 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Owner Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={ownerName}
+                      onChange={(e) => setOwnerName(e.target.value)}
+                      placeholder="Jane Doe"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Owner Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={ownerEmail}
+                      onChange={(e) => setOwnerEmail(e.target.value)}
+                      placeholder="jane@company.com"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Direct Phone *</label>
+                    <input
+                      type="text"
+                      value={ownerPhone}
+                      onChange={(e) => setOwnerPhone(e.target.value)}
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Country</label>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
+                    >
+                      <option value="United States">United States</option>
+                      <option value="Canada">Canada</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="Australia">Australia</option>
+                      <option value="India">India</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">City / Region</label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Austin, TX"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* STEP 2: Industry */}
+          {/* ============================================================ */}
+          {/* STEP 2: YOUR BUSINESS */}
+          {/* ============================================================ */}
           {step === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-5 animate-fade-in">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  Select your primary trade
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Tell us about your business
                 </h1>
-                <p className="text-sm text-on-surface-variant">
-                  We customize your pipeline workflows, appointment booking, and invoice line-items for your trade.
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  We customize invoice templates, CRM pipelines, and AI reception for your trade.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[360px] overflow-y-auto pr-1">
-                {INDUSTRY_OPTIONS.map((ind) => (
-                  <button
-                    key={ind.id}
-                    type="button"
-                    onClick={() => setIndustry(ind.id)}
-                    className={`p-3.5 rounded-xl border text-left transition-all flex items-center gap-3 ${
-                      industry === ind.id
-                        ? 'bg-primary-fixed/20 border-primary text-primary font-bold shadow-xs'
-                        : 'bg-surface-container-lowest border-outline-variant text-on-surface hover:bg-surface-container-low'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[20px] shrink-0 text-primary">
-                      {ind.icon}
-                    </span>
-                    <span className="text-xs sm:text-sm font-semibold truncate">{ind.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Business Phone */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  What is your main dispatch phone?
-                </h1>
-                <p className="text-sm text-on-surface-variant">
-                  The primary phone number for receiving client calls, dispatching technicians, and SMS reminders.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-on-surface mb-2">
-                  Main Business / Dispatch Phone *
-                </label>
-                <div className="relative">
-                  <Phone className="w-5 h-5 text-outline absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3.5 text-base text-on-surface font-semibold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: Business Email */}
-          {step === 4 && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  What is your billing & support email?
-                </h1>
-                <p className="text-sm text-on-surface-variant">
-                  Invoices, payment receipts, and customer questions will be delivered to this inbox.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-on-surface mb-2">
-                  Business Email Address *
-                </label>
-                <div className="relative">
-                  <Mail className="w-5 h-5 text-outline absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="office@yourcompany.com"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3.5 text-base text-on-surface font-semibold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: Website */}
-          {step === 5 && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  What is your company website?
-                </h1>
-                <p className="text-sm text-on-surface-variant">
-                  Optional: If you have a website, we link it to your customer portal and automated estimates.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-on-surface mb-2">
-                  Website URL
-                </label>
-                <div className="relative">
-                  <Globe className="w-5 h-5 text-outline absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="url"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="https://www.yourcompany.com"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3.5 text-base text-on-surface font-semibold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 6: Service Area */}
-          {step === 6 && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  Where do you provide services?
-                </h1>
-                <p className="text-sm text-on-surface-variant">
-                  Add the cities, counties, or zip codes in your primary dispatch service radius.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex gap-2">
+              <div className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Business Name *</label>
                   <input
                     type="text"
-                    value={newAreaInput}
-                    onChange={(e) => setNewAreaInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddArea())}
-                    placeholder="e.g. Austin, TX or 78701"
-                    className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
+                    required
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="e.g. Apex Comfort HVAC & Plumbing"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddArea}
-                    className="px-4 py-2.5 bg-primary text-on-primary rounded-xl font-bold text-xs hover:bg-on-primary-fixed-variant transition-colors"
-                  >
-                    + Add Area
-                  </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {serviceAreas.map((area) => (
-                    <span
-                      key={area}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs font-bold text-on-surface"
-                    >
-                      <MapPin className="w-3.5 h-3.5 text-primary" />
-                      <span>{area}</span>
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1.5">Primary Trade / Industry *</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 border border-slate-100 rounded-xl">
+                    {INDUSTRY_OPTIONS.map((ind) => (
                       <button
+                        key={ind.id}
                         type="button"
-                        onClick={() => handleRemoveArea(area)}
-                        className="hover:text-error ml-1"
+                        onClick={() => handleIndustryChange(ind.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2 min-h-[44px] ${
+                          industry === ind.id
+                            ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold shadow-2xs'
+                            : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <span className="text-xs truncate">{ind.label}</span>
                       </button>
-                    </span>
-                  ))}
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Business Website (Optional)</label>
+                    <input
+                      type="text"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      placeholder="https://apexcomfort.com"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Business Address (Optional)</label>
+                    <input
+                      type="text"
+                      value={businessAddress}
+                      onChange={(e) => setBusinessAddress(e.target.value)}
+                      placeholder="100 Main St, Suite 200"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* STEP 7: Services Offered */}
-          {step === 7 && (
-            <div className="space-y-6">
+          {/* ============================================================ */}
+          {/* STEP 3: SERVICES */}
+          {/* ============================================================ */}
+          {step === 3 && (
+            <div className="space-y-5 animate-fade-in">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                   What services do you offer?
                 </h1>
-                <p className="text-sm text-on-surface-variant">
-                  Add the standard job types you quote and perform for homeowners and commercial clients.
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  These services will be suggested automatically when creating estimates and dispatching jobs.
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3.5">
+                {/* Add new service form */}
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newServiceInput}
                     onChange={(e) => setNewServiceInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddService())}
-                    placeholder="e.g. AC Installation, Emergency Repair..."
-                    className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
+                    placeholder="Add custom service (e.g., Emergency Drain Snaking)"
+                    className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[38px]"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={handleAddService}
-                    className="px-4 py-2.5 bg-primary text-on-primary rounded-xl font-bold text-xs hover:bg-on-primary-fixed-variant transition-colors"
+                    leftIcon={<Plus className="w-3.5 h-3.5" />}
+                    className="text-xs bg-white text-slate-700 min-h-[38px]"
                   >
-                    + Add Service
-                  </button>
+                    Add
+                  </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {services.map((srv) => (
+                {/* Service Tag Pills */}
+                <div className="flex flex-wrap gap-2 pt-1 max-h-56 overflow-y-auto">
+                  {services.map((srv, idx) => (
                     <span
-                      key={srv}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary-fixed/20 border border-primary/30 text-xs font-bold text-primary"
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs"
                     >
-                      <Wrench className="w-3.5 h-3.5" />
+                      <Wrench className="w-3 h-3 text-blue-500" />
                       <span>{srv}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveService(srv)}
-                        className="hover:text-error ml-1"
+                        className="hover:text-red-600 transition-colors ml-0.5"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -429,70 +431,83 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* STEP 8: Business Hours */}
-          {step === 8 && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  What are your operating hours?
-                </h1>
-                <p className="text-sm text-on-surface-variant">
-                  Set standard hours when technicians can be booked for field visits.
-                </p>
+          {/* ============================================================ */}
+          {/* STEP 4: CHOOSE PLAN */}
+          {/* ============================================================ */}
+          {step === 4 && (
+            <div className="space-y-5 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    Select your subscription tier
+                  </h1>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Start with a 14-day free trial. No charges until your trial concludes.
+                  </p>
+                </div>
+
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle('monthly')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all min-h-[32px] ${
+                      billingCycle === 'monthly' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle('annual')}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all min-h-[32px] ${
+                      billingCycle === 'annual' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Annual (2 mo free)
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-                {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day) => {
-                  const item = businessHours[day] || { open: '08:00', close: '17:00', closed: false };
+              {/* Plan Options Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(['Starter', 'Professional', 'Enterprise'] as PlanKey[]).map((pKey) => {
+                  const p = PLANS_CONFIG[pKey];
+                  const isSelected = selectedPlan === pKey;
+                  const price = billingCycle === 'monthly' ? p.priceMonthly : Math.round(p.priceAnnual / 12);
+
                   return (
-                    <div key={day} className="p-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest flex items-center justify-between gap-3">
-                      <span className="w-24 text-xs font-bold text-on-surface uppercase tracking-wider">
-                        {day}
-                      </span>
+                    <div
+                      key={pKey}
+                      onClick={() => setSelectedPlan(pKey)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                        isSelected
+                          ? 'bg-blue-50/60 border-blue-600 shadow-md ring-2 ring-blue-500/20'
+                          : 'bg-slate-50/60 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-sm text-slate-900">{p.name}</span>
+                          {p.popular && (
+                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-blue-600 text-white uppercase">
+                              Popular
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-black text-slate-900 font-mono">${price}</span>
+                          <span className="text-xs text-slate-500">/mo</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{p.tagline}</p>
+                      </div>
 
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1.5 text-xs text-on-surface-variant cursor-pointer mr-2">
-                          <input
-                            type="checkbox"
-                            checked={item.closed}
-                            onChange={(e) => {
-                              setBusinessHours({
-                                ...businessHours,
-                                [day]: { ...item, closed: e.target.checked }
-                              });
-                            }}
-                            className="rounded text-primary"
-                          />
-                          <span>Closed</span>
-                        </label>
-
-                        {!item.closed && (
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="time"
-                              value={item.open}
-                              onChange={(e) => {
-                                setBusinessHours({
-                                  ...businessHours,
-                                  [day]: { ...item, open: e.target.value }
-                                });
-                              }}
-                              className="bg-surface border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface"
-                            />
-                            <span className="text-xs text-outline">to</span>
-                            <input
-                              type="time"
-                              value={item.close}
-                              onChange={(e) => {
-                                setBusinessHours({
-                                  ...businessHours,
-                                  [day]: { ...item, close: e.target.value }
-                                });
-                              }}
-                              className="bg-surface border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface"
-                            />
+                      <div className="pt-2 border-t border-slate-200/60 text-[11px] space-y-1 text-slate-600">
+                        {p.features.slice(0, 3).map((feat, fIdx) => (
+                          <div key={fIdx} className="flex items-center gap-1.5">
+                            <Check className="w-3 h-3 text-blue-600 shrink-0" />
+                            <span className="truncate">{feat}</span>
                           </div>
-                        )}
+                        ))}
                       </div>
                     </div>
                   );
@@ -501,124 +516,89 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* STEP 9: Timezone & About */}
-          {step === 9 && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  Operating Timezone & Bio
+          {/* ============================================================ */}
+          {/* STEP 5: FINISH SETUP & GUIDED LAUNCH */}
+          {/* ============================================================ */}
+          {step === 5 && (
+            <div className="space-y-5 text-center py-2 animate-fade-in">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white mx-auto shadow-lg shadow-emerald-500/25">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  Ready to Launch
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  Your Ventrexs workspace is ready!
                 </h1>
-                <p className="text-sm text-on-surface-variant">
-                  Ensure accurate scheduling for customer appointments and automated payment receipts.
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+                  <strong>{businessName}</strong> has been configured with AI receptionist triage, custom invoice templates, and your selected <strong>{selectedPlan}</strong> plan.
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-2">
-                    Primary Business Timezone
-                  </label>
-                  <select
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-3 text-sm text-on-surface focus:outline-none focus:border-primary"
-                  >
-                    <option value="America/New_York">Eastern Time (ET - America/New_York)</option>
-                    <option value="America/Chicago">Central Time (CT - America/Chicago)</option>
-                    <option value="America/Denver">Mountain Time (MT - America/Denver)</option>
-                    <option value="America/Los_Angeles">Pacific Time (PT - America/Los_Angeles)</option>
-                    <option value="America/Phoenix">Arizona (MST - America/Phoenix)</option>
-                    <option value="America/Anchorage">Alaska Time (AKT - America/Anchorage)</option>
-                    <option value="Pacific/Honolulu">Hawaii Time (HST - Pacific/Honolulu)</option>
-                  </select>
+              {/* First-time guided quick checklist */}
+              <div className="max-w-md mx-auto p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left space-y-2.5 text-xs">
+                <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">
+                  Recommended First Steps:
+                </span>
+                <div className="flex items-center gap-2 text-slate-700">
+                  <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0">1</div>
+                  <span>Create your first contractor invoice or customer quote</span>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-2">
-                    About / Mission Statement
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={about}
-                    onChange={(e) => setAbout(e.target.value)}
-                    placeholder="Short description of your trade license, insured status, and service excellence..."
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-3 text-sm text-on-surface focus:outline-none focus:border-primary"
-                  />
+                <div className="flex items-center gap-2 text-slate-700">
+                  <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0">2</div>
+                  <span>Test the 24/7 AI Voice Receptionist simulation</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-700">
+                  <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0">3</div>
+                  <span>Invite your crew or field technicians</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* STEP 10: Review & Complete Setup */}
-          {step === 10 && (
-            <div className="space-y-6">
-              <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-tertiary-container/20 text-tertiary mb-2">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Ready for Deployment</span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-background tracking-tight mb-2">
-                  Review & Launch Your Operating System
-                </h1>
-                <p className="text-sm text-on-surface-variant">
-                  Here is a summary of your configured Ventrexs Service OS environment:
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant space-y-3 text-xs">
-                <div className="flex items-center justify-between py-1 border-b border-outline-variant/60">
-                  <span className="text-outline">Business Name:</span>
-                  <span className="font-bold text-on-surface">{name}</span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-outline-variant/60">
-                  <span className="text-outline">Trade Industry:</span>
-                  <span className="font-bold text-primary">{industry}</span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-outline-variant/60">
-                  <span className="text-outline">Phone:</span>
-                  <span className="font-semibold text-on-surface">{phone}</span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-outline-variant/60">
-                  <span className="text-outline">Email:</span>
-                  <span className="font-semibold text-on-surface">{email}</span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-outline-variant/60">
-                  <span className="text-outline">Service Areas:</span>
-                  <span className="font-semibold text-on-surface">{serviceAreas.join(', ')}</span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-outline-variant/60">
-                  <span className="text-outline">Services Configured:</span>
-                  <span className="font-semibold text-on-surface">{services.length} services</span>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-outline">Timezone:</span>
-                  <span className="font-semibold text-on-surface">{timezone}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Controls */}
-          <div className="mt-8 pt-4 border-t border-outline-variant flex items-center gap-3">
-            {step > 1 && (
-              <button
+          {/* Navigation Buttons */}
+          <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between gap-3">
+            {step > 1 ? (
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => setStep(step - 1)}
-                className="px-5 py-3 rounded-xl border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-colors flex items-center gap-1.5"
+                leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
+                className="text-xs min-h-[38px]"
               >
-                <ArrowLeft className="w-4 h-4" />
                 Back
-              </button>
+              </Button>
+            ) : (
+              <div />
             )}
 
-            <button
-              type="button"
-              onClick={handleNext}
-              className="flex-1 bg-primary text-on-primary font-bold text-sm py-3 px-6 rounded-xl hover:bg-on-primary-fixed-variant transition-all shadow-sm flex items-center justify-center gap-2"
-            >
-              <span>{step === 10 ? 'Launch Operating System' : 'Continue'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {step < 5 ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleNextStep}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold min-h-[38px]"
+              >
+                Continue
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleFinishOnboarding}
+                isLoading={isSubmitting}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold min-h-[42px] px-6 shadow-md"
+              >
+                Enter Dashboard
+              </Button>
+            )}
           </div>
         </div>
       </main>

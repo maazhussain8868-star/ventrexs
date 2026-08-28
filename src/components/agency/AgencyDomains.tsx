@@ -75,12 +75,14 @@ export const AgencyDomains: React.FC<AgencyDomainsProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Custom Domains & SSL Provisioning</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-1">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
+            Custom Domains & SSL
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 line-clamp-2">
             Manage branded customer domains, automatic TLS certificate renewals, and DNS verification records.
           </p>
         </div>
@@ -93,7 +95,7 @@ export const AgencyDomains: React.FC<AgencyDomainsProps> = ({
             showToast({ title: 'Add Domain', description: 'Enter custom CNAME target.', type: 'info' });
           }}
           leftIcon={<Plus className="w-3.5 h-3.5" />}
-          className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
+          className="text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-xs shrink-0 min-h-[36px]"
         >
           + Add Domain
         </Button>
@@ -101,15 +103,15 @@ export const AgencyDomains: React.FC<AgencyDomainsProps> = ({
 
       {/* Domain Registry Table */}
       <section className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 truncate">
             Domain Verification Registry ({domains.length})
           </h3>
-          <span className="text-[11px] text-slate-500 font-mono">CNAME: cname.ventrexs.com</span>
+          <span className="text-[11px] text-slate-500 font-mono shrink-0">CNAME: cname.ventrexs.com</span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[680px]">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
               <tr>
                 <th className="py-3 px-4">Custom Domain</th>
@@ -125,28 +127,28 @@ export const AgencyDomains: React.FC<AgencyDomainsProps> = ({
               {domains.map((dom) => (
                 <tr key={dom.id} className="hover:bg-slate-50/70 transition-colors">
                   <td className="py-3.5 px-4 font-mono font-bold text-slate-900 flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-violet-600" />
-                    <span>{dom.domain}</span>
+                    <Globe className="w-4 h-4 text-violet-600 shrink-0" />
+                    <span className="truncate">{dom.domain}</span>
                   </td>
-                  <td className="py-3.5 px-4 font-bold text-slate-800">{dom.clientName}</td>
-                  <td className="py-3.5 px-4">
+                  <td className="py-3.5 px-4 font-bold text-slate-800 whitespace-nowrap">{dom.clientName}</td>
+                  <td className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
                       <Lock className="w-3 h-3 text-emerald-600" /> {dom.sslStatus || 'Active (TLS 1.3)'}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-slate-500">
+                  <td className="py-3.5 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">
                     CNAME &rarr; {dom.cnameTarget || 'cname.ventrexs.com'}
                   </td>
-                  <td className="py-3.5 px-4">{getStatusBadge(dom.status)}</td>
-                  <td className="py-3.5 px-4 text-slate-500 font-mono">{dom.lastChecked || 'Today, 12:40 UTC'}</td>
-                  <td className="py-3.5 px-4 text-right space-x-1.5">
+                  <td className="py-3.5 px-4 whitespace-nowrap">{getStatusBadge(dom.status)}</td>
+                  <td className="py-3.5 px-4 text-slate-500 font-mono whitespace-nowrap">{dom.lastChecked || 'Today, 12:40 UTC'}</td>
+                  <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleVerify(dom.id, dom.domain)}
                       disabled={verifyingId === dom.id}
                       leftIcon={<RefreshCw className={`w-3 h-3 ${verifyingId === dom.id ? 'animate-spin' : ''}`} />}
-                      className="text-xs bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100"
+                      className="text-xs bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100 min-h-[32px]"
                     >
                       {verifyingId === dom.id ? 'Verifying...' : 'Check DNS'}
                     </Button>

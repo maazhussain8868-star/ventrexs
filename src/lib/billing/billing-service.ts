@@ -173,7 +173,7 @@ export class BillingService {
       event.type === 'payment_succeeded'
     ) {
       if (businessId) {
-        const planKey: PlanKey = event.plan || 'Starter';
+        const planKey: PlanKey = (event.plan as PlanKey) || 'Starter';
         const planConfig = PLANS_CONFIG[planKey] || PLANS_CONFIG.Starter;
         const isAnnual = event.interval === 'annual';
         const price = isAnnual ? planConfig.priceAnnual : planConfig.priceMonthly;
@@ -193,7 +193,7 @@ export class BillingService {
             business_id: businessId,
             plan: planKey,
             billing_cycle: event.interval || 'monthly',
-            status: event.status || 'active',
+            status: (event.status as any) || 'active',
             price_amount: price,
             currency: 'USD',
             provider: event.provider,

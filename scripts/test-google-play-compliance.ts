@@ -1,4 +1,5 @@
 process.env.NEXT_PUBLIC_DEMO_MODE = 'true';
+process.env.VENTREXS_TEST_MODE = 'true';
 
 import {
   requestAccountDeletionAction,

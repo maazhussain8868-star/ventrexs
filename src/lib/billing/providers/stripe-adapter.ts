@@ -1,5 +1,14 @@
 import crypto from 'crypto';
-import { CheckoutSessionParams, CheckoutSessionResult, PaymentProvider, WebhookEvent } from '../types';
+import {
+  CheckoutSessionParams,
+  CheckoutSessionResult,
+  PaymentProvider,
+  WebhookEvent,
+  PLANS_CONFIG,
+  AGENCY_PLANS_CONFIG,
+  PlanKey,
+  AgencyPlanKey,
+} from '../types';
 
 /**
  * Production-ready Stripe Payment Provider Adapter
@@ -15,11 +24,18 @@ export class StripePaymentProviderAdapter implements PaymentProvider {
 
   async createCheckoutSession(params: CheckoutSessionParams): Promise<CheckoutSessionResult> {
     const isAnnual = params.interval === 'annual';
-    const amountInCents = params.plan === 'Starter'
-      ? (isAnnual ? 19000 : 1900)
-      : params.plan === 'Professional'
-      ? (isAnnual ? 49000 : 4900)
-      : (isAnnual ? 199000 : 19900);
+    const planConfig = (params.plan in PLANS_CONFIG)
+      ? PLANS_CONFIG[params.plan as PlanKey]
+      : (params.plan in AGENCY_PLANS_CONFIG)
+      ? AGENCY_PLANS_CONFIG[params.plan as AgencyPlanKey]
+      : null;
+
+    if (!planConfig) {
+      throw new Error(`Invalid plan requested: ${params.plan}`);
+    }
+
+    const price = isAnnual ? planConfig.priceAnnual : planConfig.priceMonthly;
+    const amountInCents = Math.round(price * 100);
 
     const bodyParams = new URLSearchParams({
       'mode': 'subscription',
@@ -31,8 +47,9 @@ export class StripePaymentProviderAdapter implements PaymentProvider {
       'line_items[0][price_data][unit_amount]': amountInCents.toString(),
       'line_items[0][price_data][recurring][interval]': isAnnual ? 'year' : 'month',
       'line_items[0][quantity]': '1',
-      'client_reference_id': params.businessId,
-      'metadata[business_id]': params.businessId,
+      'client_reference_id': params.businessId || params.agencyId || '',
+      'metadata[business_id]': params.businessId || '',
+      'metadata[agency_id]': params.agencyId || '',
       'metadata[plan]': params.plan,
       'metadata[interval]': params.interval,
     });

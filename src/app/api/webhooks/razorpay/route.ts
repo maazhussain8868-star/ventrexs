@@ -24,8 +24,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      ProductionLogger.error('WEBHOOK', 'Razorpay webhook rejected: webhook secret is not configured');
+      return NextResponse.json(
+        { error: 'Razorpay webhook is not configured.' },
+        { status: 503 }
+      );
+    }
+
     const adminSupabase = createAdminClient();
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_whsec_placeholder';
     const handler = new RazorpayWebhookHandler(adminSupabase, webhookSecret);
 
     const result = await handler.handleWebhook(rawBody, signature, webhookSecret);
