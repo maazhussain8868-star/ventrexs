@@ -27,27 +27,43 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
+  // Synchronous submission lock to block parallel / double-click requests
+  const isSubmittingRef = React.useRef(false);
+  const isResendingRef = React.useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSubmittingRef.current || isLoading) {
+      return;
+    }
+
     if (!email || !password) {
       setError('Please fill in all fields.');
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsLoading(true);
     setError('');
     setResendSuccess(false);
 
-    const res = await signIn(email, password);
-    setIsLoading(false);
+    try {
+      const res = await signIn(email.trim(), password);
 
-    if (res.success) {
-      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const redirectTo = params?.get('redirectTo');
-      const targetUrl = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard';
-      router.push(targetUrl);
-    } else {
-      setError(res.error || 'Failed to sign in. Please verify your credentials.');
+      if (res.success) {
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const redirectTo = params?.get('redirectTo');
+        const targetUrl = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard';
+        router.push(targetUrl);
+      } else {
+        setError(res.error || 'Failed to sign in. Please verify your credentials.');
+      }
+    } catch (submitErr: any) {
+      setError(submitErr?.message || 'Failed to sign in. Please verify your credentials.');
+    } finally {
+      setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -56,18 +72,25 @@ export default function LoginPage() {
       setError('Please enter your account email address to receive verification.');
       return;
     }
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || isResendingRef.current || resendLoading) return;
 
+    isResendingRef.current = true;
     setResendLoading(true);
     setError('');
-    const res = await resendVerificationEmail(email);
-    setResendLoading(false);
 
-    if (res.success) {
-      setResendSuccess(true);
-      setResendCooldown(60);
-    } else {
-      setError(res.error || 'Unable to dispatch verification email.');
+    try {
+      const res = await resendVerificationEmail(email.trim());
+      if (res.success) {
+        setResendSuccess(true);
+        setResendCooldown(60);
+      } else {
+        setError(res.error || 'Unable to dispatch verification email.');
+      }
+    } catch (resendErr: any) {
+      setError(resendErr?.message || 'Unable to dispatch verification email.');
+    } finally {
+      setResendLoading(false);
+      isResendingRef.current = false;
     }
   };
 

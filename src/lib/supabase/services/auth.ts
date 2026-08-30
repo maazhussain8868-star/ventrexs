@@ -129,6 +129,11 @@ export class AuthService {
     businessName: string;
   }) {
     try {
+      const origin =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL || 'https://ventrexs.com';
+
       const { data: authData, error: authError } = await this.client.auth.signUp({
         email: params.email,
         password: params.password,
@@ -137,11 +142,21 @@ export class AuthService {
             name: params.name,
             business_name: params.businessName,
           },
+          emailRedirectTo: `${origin}/onboarding`,
         },
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Failed to create user account');
+
+      // Supabase returns an empty identities array if the user already exists
+      if (
+        authData.user &&
+        Array.isArray(authData.user.identities) &&
+        authData.user.identities.length === 0
+      ) {
+        throw new Error('An account with this email already exists. Please sign in instead.');
+      }
 
       let business = null;
       try {

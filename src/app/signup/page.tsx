@@ -44,6 +44,10 @@ export default function SignupPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendSuccess, setResendSuccess] = useState(false);
 
+  // Synchronous submission lock to block parallel / double-click requests
+  const isSubmittingRef = React.useRef(false);
+  const isResendingRef = React.useRef(false);
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (resendCooldown > 0) {
@@ -60,6 +64,10 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isSubmittingRef.current || isLoading) {
+      return;
+    }
+
     if (accountType === 'DEMO_GUEST') {
       router.push('/demo');
       return;
@@ -74,42 +82,48 @@ export default function SignupPage() {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsLoading(true);
     setError('');
     setResendSuccess(false);
 
-    const res = await signUp({
-      email,
-      password,
-      name,
-      businessName: businessOrAgencyName,
-    });
-
-    setIsLoading(false);
-
-    if (res.success) {
-      // Record Attribution asynchronously
-      const { lastTouch, firstTouch } = getStoredAttribution();
-      const attributionToSave = lastTouch || firstTouch;
-      if (attributionToSave) {
-        recordAcquisitionAttributionAction({
-          attribution: attributionToSave,
-        }).catch((err) => console.warn('Attribution save notice:', err));
-      }
-
-      showToast({
-        title: 'Account Created',
-        description: 'Welcome to Ventrexs AI. Directing to setup...',
-        type: 'success',
+    try {
+      const res = await signUp({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+        businessName: businessOrAgencyName.trim(),
       });
 
-      if (accountType === 'AGENCY_OWNER') {
-        router.push('/agency/onboarding');
+      if (res.success) {
+        // Record Attribution asynchronously
+        const { lastTouch, firstTouch } = getStoredAttribution();
+        const attributionToSave = lastTouch || firstTouch;
+        if (attributionToSave) {
+          recordAcquisitionAttributionAction({
+            attribution: attributionToSave,
+          }).catch((err) => console.warn('Attribution save notice:', err));
+        }
+
+        showToast({
+          title: 'Account Created',
+          description: 'Welcome to Ventrexs AI. Directing to setup...',
+          type: 'success',
+        });
+
+        if (accountType === 'AGENCY_OWNER') {
+          router.push('/agency/onboarding');
+        } else {
+          router.push('/onboarding');
+        }
       } else {
-        router.push('/onboarding');
+        setError(res.error || 'Failed to create account. Please try again.');
       }
-    } else {
-      setError(res.error || 'Failed to create account. Please try again.');
+    } catch (submitErr: any) {
+      setError(submitErr?.message || 'An unexpected error occurred during signup.');
+    } finally {
+      setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -118,18 +132,25 @@ export default function SignupPage() {
       setError('Please enter your work email to receive verification.');
       return;
     }
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || isResendingRef.current || resendLoading) return;
 
+    isResendingRef.current = true;
     setResendLoading(true);
     setError('');
-    const res = await resendVerificationEmail(email);
-    setResendLoading(false);
 
-    if (res.success) {
-      setResendSuccess(true);
-      setResendCooldown(60);
-    } else {
-      setError(res.error || 'Unable to dispatch verification email.');
+    try {
+      const res = await resendVerificationEmail(email.trim());
+      if (res.success) {
+        setResendSuccess(true);
+        setResendCooldown(60);
+      } else {
+        setError(res.error || 'Unable to dispatch verification email.');
+      }
+    } catch (resendErr: any) {
+      setError(resendErr?.message || 'Unable to dispatch verification email.');
+    } finally {
+      setResendLoading(false);
+      isResendingRef.current = false;
     }
   };
 
