@@ -813,7 +813,7 @@ export interface TechnicianReputationMetric {
 
 export type PlanKey = 'Starter' | 'Professional' | 'Enterprise';
 export type BillingInterval = 'monthly' | 'annual';
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused';
+export type SubscriptionStatus = 'pending' | 'checkout_started' | 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused' | 'expired';
 
 export type UsageMetric = 
   | 'ai_receptionist_chats'

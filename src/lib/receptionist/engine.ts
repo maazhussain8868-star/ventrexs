@@ -190,9 +190,17 @@ function matchService(
     if (mainTitle.length > 3 && lower.includes(mainTitle)) {
       return s;
     }
+    // Check parts separated by / or & or (
+    const parts = sName.split(/[&/()]+/).map(p => p.trim()).filter(p => p.length > 3);
+    for (const part of parts) {
+      if (lower.includes(part)) {
+        return s;
+      }
+    }
     // Check keywords in service name
-    const words = sName.split(/\s+/).filter(w => w.length > 3 && !['and', 'with', 'the', 'for'].includes(w));
-    if (words.length > 0 && words.every(w => lower.includes(w))) {
+    const words = sName.split(/[\s/&()-]+/).filter(w => w.length > 3 && !['and', 'with', 'the', 'for', 'home', 'whole'].includes(w));
+    const matchingWords = words.filter(w => lower.includes(w));
+    if (words.length > 0 && (matchingWords.length >= 2 || (words.length === 1 && matchingWords.length === 1))) {
       return s;
     }
   }
@@ -228,9 +236,12 @@ export function processReceptionistMessage(
 
   const cleanText = safety.sanitizedInput;
 
-  // 2. Check Human Handoff Triggers
+  // 2. Detect Intent
+  const { intent, confidence } = detectIntent(cleanText);
+
+  // 3. Check Human Handoff Triggers (for non-emergency human requests)
   const handoff = checkHandoffTriggers(cleanText, settings?.humanHandoffKeywords || []);
-  if (handoff.shouldHandoff) {
+  if (handoff.shouldHandoff && intent !== 'EMERGENCY') {
     return {
       replyText: "I've flagged your request for our team. An authorized representative or on-call specialist has been notified and will contact you directly.",
       state: 'HANDOFF_REQUIRED',
@@ -243,9 +254,6 @@ export function processReceptionistMessage(
       handoffReason: handoff.reason,
     };
   }
-
-  // 3. Detect Intent
-  const { intent, confidence } = detectIntent(cleanText);
 
   // 4. Extract Customer Information
   const extractedInfo: ExtractedCustomerInfo = {

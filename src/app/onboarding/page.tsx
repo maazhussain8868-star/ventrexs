@@ -58,28 +58,39 @@ const DEFAULT_SERVICES_BY_INDUSTRY: Record<string, string[]> = {
 
 export default function BusinessOnboardingPage() {
   const router = useRouter();
-  const { businessProfile, completeOnboarding, showToast } = useApp();
+  const { user, profile, businessProfile, completeOnboarding, showToast } = useApp();
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // STEP 1 — About You
-  const [ownerName, setOwnerName] = useState(businessProfile?.name ? 'Jane Doe' : 'Jane Doe');
-  const [ownerEmail, setOwnerEmail] = useState(businessProfile?.email || 'jane@company.com');
-  const [ownerPhone, setOwnerPhone] = useState(businessProfile?.phone || '+1 (555) 382-9912');
+  const [ownerName, setOwnerName] = useState(profile?.name || (user?.user_metadata?.name as string) || '');
+  const [ownerEmail, setOwnerEmail] = useState(profile?.email || user?.email || '');
+  const [ownerPhone, setOwnerPhone] = useState(businessProfile?.phone || '');
   const [country, setCountry] = useState('United States');
-  const [city, setCity] = useState('Austin, TX');
+  const [city, setCity] = useState('');
 
   // STEP 2 — Your Business
-  const [businessName, setBusinessName] = useState(businessProfile?.name || 'Apex Comfort HVAC');
-  const [industry, setIndustry] = useState<IndustryType>(businessProfile?.industry || 'HVAC');
+  const [businessName, setBusinessName] = useState(
+    businessProfile?.name || profile?.businessName || (user?.user_metadata?.business_name as string) || ''
+  );
+  const [industry, setIndustry] = useState<IndustryType>(businessProfile?.industry || 'General Contractor');
   const [businessType, setBusinessType] = useState('Independent Contractor');
-  const [website, setWebsite] = useState(businessProfile?.website || 'https://apexcomfort.com');
-  const [businessAddress, setBusinessAddress] = useState('100 Congress Ave, Suite 400, Austin, TX');
+  const [website, setWebsite] = useState(businessProfile?.website || '');
+  const [businessAddress, setBusinessAddress] = useState(businessProfile?.address || '');
+
+  // Sync profile when loaded asynchronously
+  useEffect(() => {
+    if (profile?.name && !ownerName) setOwnerName(profile.name);
+    if ((profile?.email || user?.email) && !ownerEmail) setOwnerEmail(profile?.email || user?.email || '');
+    if ((businessProfile?.name || profile?.businessName) && !businessName) {
+      setBusinessName(businessProfile?.name || profile?.businessName || '');
+    }
+  }, [profile, businessProfile, user, ownerName, ownerEmail, businessName]);
 
   // STEP 3 — Services
   const [services, setServices] = useState<string[]>(
-    DEFAULT_SERVICES_BY_INDUSTRY[industry] || DEFAULT_SERVICES_BY_INDUSTRY.HVAC
+    DEFAULT_SERVICES_BY_INDUSTRY[industry] || DEFAULT_SERVICES_BY_INDUSTRY['General Contractor'] || []
   );
   const [newServiceInput, setNewServiceInput] = useState('');
 
@@ -146,18 +157,19 @@ export default function BusinessOnboardingPage() {
 
       showToast({
         title: 'Workspace Initialized',
-        description: 'Your Ventrexs AI contractor operations workspace is ready!',
+        description: 'Your workspace is ready. Choose a plan to activate it.',
         type: 'success',
       });
 
-      router.push('/dashboard');
+      // Direct to billing — subscription must be active before accessing dashboard
+      router.push('/billing');
     } catch (err: any) {
       showToast({
         title: 'Setup Notice',
-        description: err.message || 'Workspace created. Redirecting to dashboard...',
+        description: err.message || 'Workspace created. Choose a plan to get started.',
         type: 'info',
       });
-      router.push('/dashboard');
+      router.push('/billing');
     } finally {
       setIsSubmitting(false);
     }
@@ -184,7 +196,7 @@ export default function BusinessOnboardingPage() {
             Step {step} of 5
           </span>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/billing')}
             className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
           >
             Skip for now

@@ -13,14 +13,17 @@ import {
   Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useApp } from '@/context/AppContext';
 
 export default function DemoTokenAccessPage({ params }: { params: Promise<{ token: string }> }) {
   const resolvedParams = use(params);
   const rawToken = resolvedParams.token;
   const router = useRouter();
+  const { enterDemoMode } = useApp();
 
   const handleLaunchDemo = () => {
     // Immediate entry into isolated demo workspace
+    enterDemoMode();
     router.push('/dashboard');
   };
 

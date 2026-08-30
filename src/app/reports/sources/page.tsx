@@ -19,15 +19,21 @@ import {
 } from 'lucide-react';
 
 export default function LeadSourcesReportPage() {
-  const { showToast, businessProfile, profile } = useApp();
+  const { user, isDemoMode, leads, invoices, showToast, businessProfile, profile } = useApp();
   const [sources, setSources] = useState<LeadSourceRoiMetric[]>([]);
 
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    const list = analyticsService.getLeadSourceRoi();
-    setSources(list);
-  }, []);
+    const isDemo = isDemoMode || (!user && leads.length === 0);
+    if (isDemo) {
+      const list = analyticsService.getDemoLeadSourceRoi();
+      setSources(list);
+    } else {
+      const list = analyticsService.getLeadSourceRoiFromData({ leads, invoices });
+      setSources(list);
+    }
+  }, [user, isDemoMode, leads, invoices]);
 
   const handleExportCsv = () => {
     const timestamp = new Date().toISOString();

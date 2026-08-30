@@ -14,6 +14,20 @@ import {
   AnomalyAlert,
 } from '@/lib/analytics/types';
 
+export interface AnalyticsWorkspaceData {
+  invoices?: any[];
+  leads?: any[];
+  jobs?: any[];
+  appointments?: any[];
+  estimates?: any[];
+  customers?: any[];
+  receptionistConversations?: any[];
+  reviewRequests?: any[];
+  customerFeedback?: any[];
+  communications?: any[];
+  isDemo?: boolean;
+}
+
 export class AnalyticsService {
   constructor(private client?: SupabaseClient<Database> | null) {}
 
@@ -128,19 +142,178 @@ export class AnalyticsService {
   }
 
   /**
-   * 1. Compute Full Executive Dashboard Metrics
+   * 1. Compute Full Executive Dashboard Metrics dynamically from actual data
    */
-  async getExecutiveDashboardMetrics(
-    businessId: string,
+  getExecutiveDashboardMetricsFromData(
+    data: AnalyticsWorkspaceData,
     preset: DateRangePreset = '30d',
     customStart?: string,
     customEnd?: string
-  ): Promise<ExecutiveDashboardMetrics> {
+  ): ExecutiveDashboardMetrics {
     const { filter } = AnalyticsService.parseDateRange(preset, customStart, customEnd);
 
-    // If client is unavailable or in demo mode, compute with high-fidelity realistic operational values
+    // If explicit demo mode is requested, return demo figures
+    if (data.isDemo) {
+      return this.getDemoExecutiveDashboardMetrics(filter);
+    }
+
+    const invoices = data.invoices || [];
+    const leads = data.leads || [];
+    const jobs = data.jobs || [];
+    const estimates = data.estimates || [];
+    const customers = data.customers || [];
+    const receptionistConversations = data.receptionistConversations || [];
+    const communications = data.communications || [];
+    const reviewRequests = data.reviewRequests || [];
+    const customerFeedback = data.customerFeedback || [];
+
+    // Revenue calculations (Halal-compliant: principal amounts only)
+    const paidInvoices = invoices.filter(i => i.status === 'paid');
+    const totalRevenueAmount = invoices.reduce((sum, i) => sum + (Number(i.originalAmountDue || i.original_amount || i.amount || 0)), 0);
+    const paidAmount = invoices.reduce((sum, i) => sum + (Number(i.paymentsReceived || i.amount_paid || 0)), 0);
+    const outstandingAmount = invoices.reduce((sum, i) => sum + (Number(i.remainingBalance || i.remaining_balance || 0)), 0);
+    const avgInvVal = invoices.length > 0 ? Math.round(totalRevenueAmount / invoices.length) : 0;
+
+    // Monthly revenue
+    const now = new Date();
+    const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const revenueThisMonth = invoices
+      .filter(i => (i.issueDate || i.issue_date || i.createdAt || '').startsWith(currentMonthPrefix))
+      .reduce((sum, i) => sum + (Number(i.paymentsReceived || i.amount_paid || 0)), 0);
+
+    // Sales metrics
+    const newLeadsCount = leads.filter(l => l.status === 'NEW').length;
+    const qualifiedLeadsCount = leads.filter(l => l.status === 'QUALIFIED').length;
+    const estimatesSentCount = estimates.filter(e => e.status === 'SENT').length;
+    const estimatesApprovedCount = estimates.filter(e => e.status === 'APPROVED').length;
+    const approvalRate = estimates.length > 0 ? Math.round((estimatesApprovedCount / estimates.length) * 1000) / 10 : 0;
+    const wonDealsCount = leads.filter(l => l.status === 'WON').length;
+    const lostDealsCount = leads.filter(l => l.status === 'LOST').length;
+    const conversionRate = leads.length > 0 ? Math.round((wonDealsCount / leads.length) * 1000) / 10 : 0;
+
+    // Operations metrics
+    const totalJobsCount = jobs.length;
+    const scheduledJobsCount = jobs.filter(j => j.status === 'SCHEDULED' || j.status === 'DISPATCHED').length;
+    const inProgressJobsCount = jobs.filter(j => j.status === 'IN_PROGRESS' || j.status === 'ON_HOLD').length;
+    const completedJobsCount = jobs.filter(j => j.status === 'COMPLETED' || j.status === 'INVOICED').length;
+    const cancelledJobsCount = jobs.filter(j => j.status === 'CANCELLED').length;
+    const cancellationRate = totalJobsCount > 0 ? Math.round((cancelledJobsCount / totalJobsCount) * 1000) / 10 : 0;
+
+    // Customer metrics
+    const newCustomersCount = customers.length;
+    const returningCustomersCount = 0;
+    const repeatServiceRate = 0;
+    const satisfactionScore = customerFeedback.length > 0
+      ? Math.round((customerFeedback.reduce((sum, f) => sum + (Number(f.rating) || 0), 0) / (customerFeedback.length * 5)) * 1000) / 10
+      : 0;
+
+    // AI Receptionist metrics
+    const totalConversations = receptionistConversations.length;
+    const leadsCreatedFromAI = receptionistConversations.filter(c => !!c.leadId).length;
+    const appointmentsBookedFromAI = receptionistConversations.filter(c => c.state === 'BOOKED' || !!c.appointmentId).length;
+    const handoffsFromAI = receptionistConversations.filter(c => c.state === 'HANDOFF_REQUIRED' || c.handoffRequired).length;
+    const aiConvRate = totalConversations > 0 ? Math.round((appointmentsBookedFromAI / totalConversations) * 1000) / 10 : 0;
+
+    // Communications metrics
+    const emailsSent = communications.filter(c => c.channel === 'email' && c.deliveryStatus === 'delivered').length;
+    const smsSent = communications.filter(c => c.channel === 'sms' && c.deliveryStatus === 'delivered').length;
+    const whatsappSent = communications.filter(c => c.channel === 'whatsapp' && c.deliveryStatus === 'delivered').length;
+    const totalCommSent = emailsSent + smsSent + whatsappSent;
+    const failedMessages = communications.filter(c => c.deliveryStatus === 'failed').length;
+    const deliveryRate = totalCommSent > 0 ? Math.round(((totalCommSent - failedMessages) / totalCommSent) * 1000) / 10 : 100;
+    const optOuts = communications.filter(c => c.deliveryStatus === 'opted_out').length;
+
+    // Reputation metrics
+    const reviewRequestsCount = reviewRequests.length;
+    const reviewsReceivedCount = customerFeedback.length;
+    const avgRating = customerFeedback.length > 0
+      ? Math.round((customerFeedback.reduce((sum, f) => sum + (Number(f.rating) || 0), 0) / customerFeedback.length) * 10) / 10
+      : 0;
+    const positiveCount = customerFeedback.filter(f => (Number(f.rating) || 0) >= 4).length;
+    const negativeCount = customerFeedback.filter(f => (Number(f.rating) || 0) <= 2).length;
+    const repResponseRate = reviewRequestsCount > 0 ? Math.round((reviewsReceivedCount / reviewRequestsCount) * 1000) / 10 : 0;
+
     return {
       dateRange: filter,
+      revenue: {
+        totalRevenue: AnalyticsService.calculateTrend(totalRevenueAmount, 0, true),
+        revenueThisMonth,
+        revenuePreviousMonth: 0,
+        revenueGrowthPercent: 0,
+        outstandingBalance: AnalyticsService.calculateTrend(outstandingAmount, 0, false),
+        paidInvoiceAmount: AnalyticsService.calculateTrend(paidAmount, 0, true),
+        averageInvoiceValue: AnalyticsService.calculateTrend(avgInvVal, 0, true),
+      },
+      sales: {
+        newLeads: AnalyticsService.calculateTrend(newLeadsCount, 0, true),
+        qualifiedLeads: AnalyticsService.calculateTrend(qualifiedLeadsCount, 0, true),
+        estimatesSent: AnalyticsService.calculateTrend(estimatesSentCount, 0, true),
+        estimatesApproved: AnalyticsService.calculateTrend(estimatesApprovedCount, 0, true),
+        estimateApprovalRate: AnalyticsService.calculateTrend(approvalRate, 0, true),
+        wonDeals: AnalyticsService.calculateTrend(wonDealsCount, 0, true),
+        lostDeals: AnalyticsService.calculateTrend(lostDealsCount, 0, false),
+        conversionRate: AnalyticsService.calculateTrend(conversionRate, 0, true),
+      },
+      operations: {
+        totalJobs: AnalyticsService.calculateTrend(totalJobsCount, 0, true),
+        scheduledJobs: scheduledJobsCount,
+        inProgressJobs: inProgressJobsCount,
+        completedJobs: AnalyticsService.calculateTrend(completedJobsCount, 0, true),
+        cancelledJobs: cancelledJobsCount,
+        cancellationRate,
+        averageCompletionHours: AnalyticsService.calculateTrend(0, 0, false),
+      },
+      customers: {
+        newCustomers: AnalyticsService.calculateTrend(newCustomersCount, 0, true),
+        returningCustomers: returningCustomersCount,
+        repeatServiceRate,
+        satisfactionScore,
+      },
+      receptionist: {
+        conversations: AnalyticsService.calculateTrend(totalConversations, 0, true),
+        leadsCreated: AnalyticsService.calculateTrend(leadsCreatedFromAI, 0, true),
+        leadsQualified: AnalyticsService.calculateTrend(0, 0, true),
+        appointmentsProposed: 0,
+        appointmentsBooked: AnalyticsService.calculateTrend(appointmentsBookedFromAI, 0, true),
+        humanHandoffs: AnalyticsService.calculateTrend(handoffsFromAI, 0, false),
+        emergencyEscalations: AnalyticsService.calculateTrend(0, 0, false),
+        aiConversionRate: AnalyticsService.calculateTrend(aiConvRate, 0, true),
+        avgResponseTimeSeconds: 0,
+      },
+      communications: {
+        emailsSent: AnalyticsService.calculateTrend(emailsSent, 0, true),
+        smsSent: AnalyticsService.calculateTrend(smsSent, 0, true),
+        whatsappSent: AnalyticsService.calculateTrend(whatsappSent, 0, true),
+        deliveryRate: AnalyticsService.calculateTrend(deliveryRate, 0, true),
+        optOuts: AnalyticsService.calculateTrend(optOuts, 0, false),
+        failedMessages: AnalyticsService.calculateTrend(failedMessages, 0, false),
+      },
+      reputation: {
+        reviewRequests: AnalyticsService.calculateTrend(reviewRequestsCount, 0, true),
+        reviewsReceived: AnalyticsService.calculateTrend(reviewsReceivedCount, 0, true),
+        averageRating: AnalyticsService.calculateTrend(avgRating, 0, true),
+        positiveFeedbackCount: positiveCount,
+        negativeFeedbackCount: negativeCount,
+        responseRate: AnalyticsService.calculateTrend(repResponseRate, 0, true),
+      },
+    };
+  }
+
+  /**
+   * Demo metrics helper for the explicit Explore Demo experience
+   */
+  getDemoExecutiveDashboardMetrics(filter?: DateRangeFilter | DateRangePreset | string): ExecutiveDashboardMetrics {
+    let resolvedFilter: DateRangeFilter;
+    if (!filter) {
+      resolvedFilter = AnalyticsService.parseDateRange('30d').filter;
+    } else if (typeof filter === 'string') {
+      resolvedFilter = AnalyticsService.parseDateRange(filter as DateRangePreset).filter;
+    } else {
+      resolvedFilter = filter;
+    }
+
+    return {
+      dateRange: resolvedFilter,
       revenue: {
         totalRevenue: AnalyticsService.calculateTrend(48250, 41600, true),
         revenueThisMonth: 28400,
@@ -206,9 +379,99 @@ export class AnalyticsService {
   }
 
   /**
-   * 2. Compute 6-Stage CRM & Sales Conversion Funnel
+   * Compatibility wrapper for getExecutiveDashboardMetrics
    */
-  getConversionFunnel(): LeadFunnelStage[] {
+  async getExecutiveDashboardMetrics(
+    businessId: string,
+    preset: DateRangePreset = '30d',
+    customStart?: string,
+    customEnd?: string
+  ): Promise<ExecutiveDashboardMetrics> {
+    const { filter } = AnalyticsService.parseDateRange(preset, customStart, customEnd);
+    return this.getDemoExecutiveDashboardMetrics(filter);
+  }
+
+  /**
+   * 2. Compute 6-Stage CRM & Sales Conversion Funnel dynamically
+   */
+  getConversionFunnelFromData(data?: { leads?: any[]; appointments?: any[]; estimates?: any[]; jobs?: any[]; invoices?: any[]; isDemo?: boolean }): LeadFunnelStage[] {
+    if (data?.isDemo) {
+      return this.getDemoConversionFunnel();
+    }
+
+    const leads = data?.leads || [];
+    const estimates = data?.estimates || [];
+    const jobs = data?.jobs || [];
+    const invoices = data?.invoices || [];
+
+    const newLeads = leads.filter(l => l.status === 'NEW');
+    const contactedLeads = leads.filter(l => l.status === 'CONTACTED');
+    const qualifiedLeads = leads.filter(l => l.status === 'QUALIFIED');
+    const estimatesSent = estimates.filter(e => e.status === 'SENT' || e.status === 'APPROVED');
+    const bookedJobs = jobs.filter(j => j.status === 'SCHEDULED' || j.status === 'IN_PROGRESS' || j.status === 'COMPLETED');
+    const wonInvoices = invoices.filter(i => i.status === 'paid');
+
+    const stages = [
+      {
+        stage: 'NEW',
+        label: '1. New Inbound Leads',
+        count: newLeads.length,
+        estimatedValue: newLeads.reduce((s, l) => s + (Number(l.estimatedValue) || 0), 0),
+        href: '/leads?status=NEW',
+      },
+      {
+        stage: 'CONTACTED',
+        label: '2. Contacted & Engaged',
+        count: contactedLeads.length,
+        estimatedValue: contactedLeads.reduce((s, l) => s + (Number(l.estimatedValue) || 0), 0),
+        href: '/leads?status=CONTACTED',
+      },
+      {
+        stage: 'QUALIFIED',
+        label: '3. Qualified Service Prospects',
+        count: qualifiedLeads.length,
+        estimatedValue: qualifiedLeads.reduce((s, l) => s + (Number(l.estimatedValue) || 0), 0),
+        href: '/leads?status=QUALIFIED',
+      },
+      {
+        stage: 'ESTIMATE_SENT',
+        label: '4. Estimates & Proposals Sent',
+        count: estimatesSent.length,
+        estimatedValue: estimatesSent.reduce((s, e) => s + (Number(e.totalAmount) || 0), 0),
+        href: '/estimates?status=SENT',
+      },
+      {
+        stage: 'BOOKED',
+        label: '5. Scheduled / Work Orders',
+        count: bookedJobs.length,
+        estimatedValue: bookedJobs.reduce((s, j) => s + (Number(j.estimatedTotal || j.actualTotal) || 0), 0),
+        href: '/jobs?status=SCHEDULED',
+      },
+      {
+        stage: 'WON',
+        label: '6. Completed & Invoiced (Won)',
+        count: wonInvoices.length,
+        estimatedValue: wonInvoices.reduce((s, i) => s + (Number(i.paymentsReceived || i.originalAmountDue) || 0), 0),
+        href: '/pipeline',
+      },
+    ];
+
+    const initialCount = stages[0].count;
+
+    return stages.map((s, idx) => {
+      const conversionPercent = initialCount > 0 ? Math.round((s.count / initialCount) * 1000) / 10 : 0;
+      const prevCount = idx > 0 ? stages[idx - 1].count : s.count;
+      const dropOffPercent = prevCount > 0 ? Math.round(((prevCount - s.count) / prevCount) * 1000) / 10 : 0;
+
+      return {
+        ...s,
+        conversionPercent,
+        dropOffPercent,
+      };
+    });
+  }
+
+  getDemoConversionFunnel(): LeadFunnelStage[] {
     const rawStages = [
       { stage: 'NEW', label: '1. New Inbound Leads', count: 48, estimatedValue: 55200, href: '/leads?status=NEW' },
       { stage: 'CONTACTED', label: '2. Contacted & Engaged', count: 42, estimatedValue: 48300, href: '/leads?status=CONTACTED' },
@@ -233,10 +496,53 @@ export class AnalyticsService {
     });
   }
 
+  getConversionFunnel(): LeadFunnelStage[] {
+    return this.getDemoConversionFunnel();
+  }
+
   /**
    * 3. Compute Service Category Performance Breakdown
    */
-  getServicePerformance(): ServicePerformanceMetric[] {
+  getServicePerformanceFromData(data?: { jobs?: any[]; leads?: any[]; invoices?: any[]; isDemo?: boolean }): ServicePerformanceMetric[] {
+    if (data?.isDemo) {
+      return this.getDemoServicePerformance();
+    }
+    const jobs = data?.jobs || [];
+    const leads = data?.leads || [];
+
+    if (jobs.length === 0 && leads.length === 0) {
+      return [];
+    }
+
+    const serviceMap = new Map<string, { leadCount: number; jobCount: number; revenue: number }>();
+    leads.forEach(l => {
+      const svc = l.serviceRequested || 'General Service';
+      const cur = serviceMap.get(svc) || { leadCount: 0, jobCount: 0, revenue: 0 };
+      cur.leadCount += 1;
+      serviceMap.set(svc, cur);
+    });
+
+    jobs.forEach(j => {
+      const svc = j.serviceType || 'General Service';
+      const cur = serviceMap.get(svc) || { leadCount: 0, jobCount: 0, revenue: 0 };
+      cur.jobCount += 1;
+      cur.revenue += Number(j.actualTotal || j.estimatedTotal || 0);
+      serviceMap.set(svc, cur);
+    });
+
+    return Array.from(serviceMap.entries()).map(([service, d]) => ({
+      service,
+      leadCount: d.leadCount,
+      jobCount: d.jobCount,
+      revenue: d.revenue,
+      avgTicket: d.jobCount > 0 ? Math.round(d.revenue / d.jobCount) : 0,
+      estimateApprovalRate: 0,
+      avgRating: 5.0,
+      conversionRate: d.leadCount > 0 ? Math.round((d.jobCount / d.leadCount) * 1000) / 10 : 0,
+    }));
+  }
+
+  getDemoServicePerformance(): ServicePerformanceMetric[] {
     return [
       { service: 'HVAC & Heating / Cooling', leadCount: 18, jobCount: 14, revenue: 19400, avgTicket: 1385, estimateApprovalRate: 77.8, avgRating: 4.9, conversionRate: 77.7 },
       { service: 'Plumbing & Drain Cleaning', leadCount: 12, jobCount: 10, revenue: 8600, avgTicket: 860, estimateApprovalRate: 83.3, avgRating: 4.8, conversionRate: 83.3 },
@@ -248,10 +554,47 @@ export class AnalyticsService {
     ];
   }
 
+  getServicePerformance(): ServicePerformanceMetric[] {
+    return this.getDemoServicePerformance();
+  }
+
   /**
    * 4. Compute Technician Performance Reports
    */
-  getTechnicianPerformance(): TechnicianPerformanceReport[] {
+  getTechnicianPerformanceFromData(data?: { jobs?: any[]; reviewRequests?: any[]; customerFeedback?: any[]; invoices?: any[]; isDemo?: boolean }): TechnicianPerformanceReport[] {
+    if (data?.isDemo) {
+      return this.getDemoTechnicianPerformance();
+    }
+    const jobs = data?.jobs || [];
+    if (jobs.length === 0) return [];
+
+    const techMap = new Map<string, { assigned: number; completed: number; revenue: number }>();
+    jobs.forEach(j => {
+      const tech = j.technicianName || j.assignedTechName || 'Unassigned';
+      const cur = techMap.get(tech) || { assigned: 0, completed: 0, revenue: 0 };
+      cur.assigned += 1;
+      if (j.status === 'COMPLETED' || j.status === 'INVOICED') {
+        cur.completed += 1;
+        cur.revenue += Number(j.actualTotal || j.estimatedTotal || 0);
+      }
+      techMap.set(tech, cur);
+    });
+
+    return Array.from(techMap.entries()).map(([technicianName, d]) => ({
+      technicianName,
+      assignedJobs: d.assigned,
+      completedJobs: d.completed,
+      completionRate: d.assigned > 0 ? Math.round((d.completed / d.assigned) * 1000) / 10 : 0,
+      avgCompletionHours: 0,
+      attributedRevenue: d.revenue,
+      avgJobValue: d.completed > 0 ? Math.round(d.revenue / d.completed) : 0,
+      customerRating: 5.0,
+      reviewCount: 0,
+      cancellationRate: 0,
+    }));
+  }
+
+  getDemoTechnicianPerformance(): TechnicianPerformanceReport[] {
     return [
       { technicianName: 'Marcus Vance', assignedJobs: 14, completedJobs: 12, completionRate: 85.7, avgCompletionHours: 2.8, attributedRevenue: 16400, avgJobValue: 1366, customerRating: 4.9, reviewCount: 12, cancellationRate: 0 },
       { technicianName: 'Sarah Jenkins', assignedJobs: 12, completedJobs: 10, completionRate: 83.3, avgCompletionHours: 3.2, attributedRevenue: 12800, avgJobValue: 1280, customerRating: 4.8, reviewCount: 9, cancellationRate: 0 },
@@ -260,10 +603,46 @@ export class AnalyticsService {
     ];
   }
 
+  getTechnicianPerformance(): TechnicianPerformanceReport[] {
+    return this.getDemoTechnicianPerformance();
+  }
+
   /**
    * 5. Compute Lead Source Marketing ROI Matrix
    */
-  getLeadSourceRoi(): LeadSourceRoiMetric[] {
+  getLeadSourceRoiFromData(data?: { leads?: any[]; invoices?: any[]; isDemo?: boolean }): LeadSourceRoiMetric[] {
+    if (data?.isDemo) {
+      return this.getDemoLeadSourceRoi();
+    }
+    const leads = data?.leads || [];
+    if (leads.length === 0) return [];
+
+    const sourceMap = new Map<string, { count: number; won: number; revenue: number }>();
+    leads.forEach(l => {
+      const src = l.source || 'Direct';
+      const cur = sourceMap.get(src) || { count: 0, won: 0, revenue: 0 };
+      cur.count += 1;
+      if (l.status === 'WON') {
+        cur.won += 1;
+        cur.revenue += Number(l.estimatedValue || 0);
+      }
+      sourceMap.set(src, cur);
+    });
+
+    return Array.from(sourceMap.entries()).map(([source, d]) => ({
+      source,
+      leadsCount: d.count,
+      qualifiedCount: 0,
+      estimatesCount: 0,
+      wonDealsCount: d.won,
+      revenue: d.revenue,
+      conversionRate: d.count > 0 ? Math.round((d.won / d.count) * 1000) / 10 : 0,
+      avgDealValue: d.won > 0 ? Math.round(d.revenue / d.won) : 0,
+      costDataAvailable: false,
+    }));
+  }
+
+  getDemoLeadSourceRoi(): LeadSourceRoiMetric[] {
     return [
       { source: 'Google Local Services / Search', leadsCount: 20, qualifiedCount: 16, estimatesCount: 14, wonDealsCount: 10, revenue: 14500, conversionRate: 50.0, avgDealValue: 1450, costDataAvailable: true, adSpend: 1200, costPerLead: 60, customerAcquisitionCost: 120 },
       { source: 'Direct Website / Organic', leadsCount: 12, qualifiedCount: 9, estimatesCount: 8, wonDealsCount: 5, revenue: 6800, conversionRate: 41.7, avgDealValue: 1360, costDataAvailable: false },
@@ -273,10 +652,68 @@ export class AnalyticsService {
     ];
   }
 
+  getLeadSourceRoi(): LeadSourceRoiMetric[] {
+    return this.getDemoLeadSourceRoi();
+  }
+
   /**
-   * 6. Generate Read-Only Owner AI Insights (Strictly advisory, zero mutation)
+   * 6. Generate Read-Only Owner AI Insights dynamically
    */
-  generateOwnerInsights(): OwnerInsight[] {
+  generateOwnerInsightsFromData(data?: {
+    invoices?: any[];
+    leads?: any[];
+    appointments?: any[];
+    jobs?: any[];
+    receptionistConversations?: any[];
+    isDemo?: boolean;
+  }): OwnerInsight[] {
+    if (data?.isDemo) {
+      return this.getDemoOwnerInsights();
+    }
+
+    const insights: OwnerInsight[] = [];
+    const leads = data?.leads || [];
+    const invoices = data?.invoices || [];
+
+    // Real urgent leads check
+    const urgentLeads = leads.filter(l => l.status === 'NEW' && (l.priority === 'urgent' || l.priority === 'URGENT' || l.priority === 'high'));
+    if (urgentLeads.length > 0) {
+      insights.push({
+        id: 'ins_urgent_leads',
+        title: `${urgentLeads.length} Urgent Inbound Lead${urgentLeads.length > 1 ? 's' : ''} Awaiting Triage`,
+        explanation: `${urgentLeads.length} high-priority inquiries are currently in "NEW" status and ready for assignment.`,
+        supportingMetric: `${urgentLeads.length} Unassigned Leads`,
+        category: 'URGENT',
+        severity: 'high',
+        recommendedAction: 'Review lead inquiries and assign technicians for dispatch.',
+        actionHref: '/leads?status=NEW',
+        actionLabel: 'Review Leads',
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // Real overdue invoices check
+    const overdueInvoices = invoices.filter(i => i.status === 'overdue');
+    if (overdueInvoices.length > 0) {
+      const overdueTotal = overdueInvoices.reduce((sum, i) => sum + Number(i.remainingBalance || 0), 0);
+      insights.push({
+        id: 'ins_overdue_invoices',
+        title: `${overdueInvoices.length} Overdue Statement${overdueInvoices.length > 1 ? 's' : ''} ($${overdueTotal.toLocaleString()})`,
+        explanation: `${overdueInvoices.length} invoices have passed their payment due dates.`,
+        supportingMetric: `$${overdueTotal.toLocaleString()} Overdue`,
+        category: 'WARNING',
+        severity: 'medium',
+        recommendedAction: 'Dispatch automated polite payment reminders from the communications queue.',
+        actionHref: '/invoices?filter=overdue',
+        actionLabel: 'Inspect Invoices',
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return insights;
+  }
+
+  getDemoOwnerInsights(): OwnerInsight[] {
     return [
       {
         id: 'ins_001',
@@ -329,10 +766,99 @@ export class AnalyticsService {
     ];
   }
 
+  generateOwnerInsights(): OwnerInsight[] {
+    return this.getDemoOwnerInsights();
+  }
+
   /**
-   * 7. Generate Owner Daily Briefing
+   * 7. Generate Owner Daily Briefing dynamically
    */
-  generateDailyBriefing(businessName: string = 'Apex Comfort'): DailyBriefing {
+  generateDailyBriefingFromData(
+    businessNameOrData?: string | {
+      businessName?: string;
+      appointments?: any[];
+      leads?: any[];
+      estimates?: any[];
+      invoices?: any[];
+      isDemo?: boolean;
+    },
+    maybeData?: {
+      appointments?: any[];
+      leads?: any[];
+      estimates?: any[];
+      invoices?: any[];
+      isDemo?: boolean;
+    }
+  ): DailyBriefing {
+    let businessName = 'Your Business';
+    let data: any = maybeData || {};
+
+    if (typeof businessNameOrData === 'string') {
+      businessName = businessNameOrData;
+    } else if (businessNameOrData && typeof businessNameOrData === 'object') {
+      businessName = businessNameOrData.businessName || 'Your Business';
+      data = businessNameOrData;
+    }
+
+    if (data?.isDemo) {
+      return this.getDemoDailyBriefing(businessName);
+    }
+
+    const today = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    const appointments = data?.appointments || [];
+    const leads = data?.leads || [];
+    const estimates = data?.estimates || [];
+    const invoices = data?.invoices || [];
+
+    const todayIso = new Date().toISOString().split('T')[0];
+    const todayAppointments = appointments.filter((a: any) => a.startTime && a.startTime.startsWith(todayIso));
+    const newLeads = leads.filter((l: any) => l.status === 'NEW');
+    const urgentLeads = leads.filter((l: any) => (l.priority === 'urgent' || l.priority === 'URGENT' || l.priority === 'high') && l.status === 'NEW');
+    const pendingEstimates = estimates.filter((e: any) => e.status === 'DRAFT' || e.status === 'SENT');
+    const outstandingAmount = invoices.reduce((sum: number, i: any) => sum + (Number(i.remainingBalance || 0)), 0);
+
+    const priorityActions = [];
+    if (urgentLeads.length > 0) {
+      priorityActions.push({
+        id: 'act_urgent_leads',
+        title: `Contact ${urgentLeads.length} Urgent Lead${urgentLeads.length > 1 ? 's' : ''}`,
+        detail: 'High-priority inquiries waiting for dispatch.',
+        href: '/leads?status=NEW',
+        actionText: 'Dispatch Now',
+        isUrgent: true,
+      });
+    }
+    if (pendingEstimates.length > 0) {
+      priorityActions.push({
+        id: 'act_pending_estimates',
+        title: `Follow Up on ${pendingEstimates.length} Pending Proposal${pendingEstimates.length > 1 ? 's' : ''}`,
+        detail: 'Estimates awaiting customer approval.',
+        href: '/estimates',
+        actionText: 'Open Estimates',
+      });
+    }
+
+    return {
+      greeting: `Good morning, ${businessName || 'Operations'} Team`,
+      generatedDate: today,
+      snapshot: {
+        scheduledAppointmentsCount: todayAppointments.length,
+        newLeadsCount: newLeads.length,
+        pendingEstimatesCount: pendingEstimates.length,
+        outstandingAmount,
+        urgentLeadsCount: urgentLeads.length,
+        openTechSlotsCount: 0,
+      },
+      priorityActions,
+    };
+  }
+
+  getDemoDailyBriefing(businessName: string = 'Apex Comfort'): DailyBriefing {
     const today = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'short',
@@ -375,6 +901,10 @@ export class AnalyticsService {
         },
       ],
     };
+  }
+
+  generateDailyBriefing(businessName: string = 'Apex Comfort'): DailyBriefing {
+    return this.getDemoDailyBriefing(businessName);
   }
 
   /**

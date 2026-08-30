@@ -3,7 +3,7 @@ export type AgencyPlanKey = 'AgencyStarter' | 'AgencyGrowth' | 'AgencyEnterprise
 export type AnyPlanKey = PlanKey | AgencyPlanKey;
 
 export type BillingInterval = 'monthly' | 'annual';
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused' | 'expired';
+export type SubscriptionStatus = 'pending' | 'checkout_started' | 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused' | 'expired';
 
 export type UsageMetric = 
   | 'ai_receptionist_chats'

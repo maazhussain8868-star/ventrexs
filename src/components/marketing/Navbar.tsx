@@ -71,6 +71,13 @@ export default function Navbar() {
         {/* Action Buttons */}
         <div className="hidden sm:flex items-center gap-2.5">
           <Link
+            href="/test-receptionist"
+            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-semibold text-cyan-300 hover:text-white bg-blue-950/60 hover:bg-blue-900/60 border border-blue-500/40 rounded-xl transition-all shadow-sm"
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Test Receptionist</span>
+          </Link>
+          <Link
             href="/login"
             className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-xl transition-all shadow-sm"
           >
@@ -113,6 +120,14 @@ export default function Navbar() {
           </div>
 
           <div className="pt-3 border-t border-slate-800/80 flex flex-col gap-2">
+            <Link
+              href="/test-receptionist"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-950/80 border border-blue-500/40 text-cyan-300 text-xs font-semibold hover:bg-blue-900/80 shadow-xs"
+            >
+              <Zap className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Test AI Receptionist</span>
+            </Link>
             <Link
               href="/login"
               onClick={() => setMobileMenuOpen(false)}

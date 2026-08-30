@@ -33,7 +33,7 @@ export interface RecordPaymentParams {
 }
 
 export class PaymentService {
-  private provider: PaymentProvider;
+  private provider?: PaymentProvider;
 
   constructor(
     private client: SupabaseClient<Database>,
@@ -44,13 +44,31 @@ export class PaymentService {
     } else if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
       this.provider = new DemoPaymentAdapter();
     } else if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
-      throw new Error('Payment provider is not configured. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET.');
+      if (typeof window !== 'undefined') {
+        this.provider = new DemoPaymentAdapter();
+      }
     } else {
       this.provider = new StripeCustomerPaymentAdapter(
         process.env.STRIPE_SECRET_KEY,
         process.env.STRIPE_WEBHOOK_SECRET
       );
     }
+  }
+
+  private getProvider(): PaymentProvider {
+    if (this.provider) return this.provider;
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      this.provider = new DemoPaymentAdapter();
+      return this.provider;
+    }
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error('Payment provider is not configured. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET.');
+    }
+    this.provider = new StripeCustomerPaymentAdapter(
+      process.env.STRIPE_SECRET_KEY,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+    return this.provider;
   }
 
   /**
@@ -361,7 +379,8 @@ export class PaymentService {
     }
 
     // Process via Provider Adapter
-    const processResult = await this.provider.processPayment({
+    const provider = this.getProvider();
+    const processResult = await provider.processPayment({
       businessId: 'public_anon',
       invoiceId: publicView.invoiceId,
       amount: payAmount,
@@ -395,8 +414,8 @@ export class PaymentService {
       amount: payAmount,
       method: params.paymentMethod as any,
       reference: processResult.transactionId,
-      notes: `Online settlement via ${this.provider.name} provider. Token: ${params.secureToken}`,
-      provider: this.provider.name,
+      notes: `Online settlement via ${provider.name} provider. Token: ${params.secureToken}`,
+      provider: provider.name,
       provider_transaction_id: processResult.transactionId,
       secure_token: params.secureToken,
     });
@@ -462,7 +481,7 @@ export class PaymentService {
       throw new Error('Invoice ID not associated with this payment.');
     }
 
-    const refundResult = await this.provider.refundPayment(params);
+    const refundResult = await this.getProvider().refundPayment(params);
     if (!refundResult.success) {
       throw new Error(refundResult.failureReason || 'Payment provider declined refund.');
     }

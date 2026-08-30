@@ -80,6 +80,7 @@ import {
 } from '@/data/mockData';
 import { createClient } from '@/lib/supabase/client';
 import { createSupabaseServices } from '@/lib/supabase/services';
+import { UserRole } from '@/lib/supabase/types';
 import {
   createInvoiceAction,
   updateInvoiceAction,
@@ -179,8 +180,12 @@ interface AppContextType {
   businessId: string | null;
   isOnline: boolean;
   isLoading: boolean;
+  isDemoMode: boolean;
+  enterDemoMode: () => void;
+  exitDemoMode: () => void;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (params: { email: string; password: string; name: string; businessName: string }) => Promise<{ success: boolean; error?: string }>;
+  resendVerificationEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ success: boolean; error?: string }>;
 
@@ -350,36 +355,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [businessId, setBusinessId] = useState<string | null>(() =>
-    process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? '11111111-1111-1111-1111-111111111111' : null
-  );
+  const [businessId, setBusinessId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
-  const isDemoEnvironment = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-  const [invoices, setInvoices] = useState<Invoice[]>(isDemoEnvironment ? initialInvoices : []);
-  const [customers, setCustomers] = useState<Customer[]>(isDemoEnvironment ? initialCustomers : []);
-  const [leads, setLeads] = useState<Lead[]>(isDemoEnvironment ? initialLeads : []);
-  const [appointments, setAppointments] = useState<Appointment[]>(isDemoEnvironment ? initialAppointments : []);
-  const [jobs, setJobs] = useState<Job[]>(isDemoEnvironment ? initialJobs : []);
-  const [recommendations, setRecommendations] = useState<CopilotRecommendation[]>(isDemoEnvironment ? initialRecommendations : []);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(isDemoEnvironment ? initialNotifications : []);
-  const [profile, setProfile] = useState<UserProfile>(isDemoEnvironment ? initialProfile : { ...initialProfile, email: '', businessName: '' });
-  const [settings, setSettings] = useState<BusinessSettings>(isDemoEnvironment ? initialSettings : { ...initialSettings, businessName: '', businessEmail: '' });
-  const [businessProfile, setBusinessProfile] = useState<ServiceBusinessProfile>(isDemoEnvironment ? initialBusinessProfile : { ...initialBusinessProfile, name: '', email: '' });
-  const [receptionistSettings, setReceptionistSettings] = useState<ReceptionistSettings>(isDemoEnvironment ? initialReceptionistSettings : {} as ReceptionistSettings);
-  const [receptionistServices, setReceptionistServices] = useState<ReceptionistService[]>(isDemoEnvironment ? initialReceptionistServices : []);
-  const [receptionistConversations, setReceptionistConversations] = useState<ReceptionistConversation[]>(isDemoEnvironment ? initialReceptionistConversations : []);
-  const [communications, setCommunications] = useState<CommunicationItem[]>(isDemoEnvironment ? initialCommunications : []);
-  const [communicationTemplates, setCommunicationTemplates] = useState<CommunicationTemplate[]>(isDemoEnvironment ? initialCommunicationTemplates : []);
-  const [communicationConsents, setCommunicationConsents] = useState<CommunicationConsent[]>(isDemoEnvironment ? initialCommunicationConsents : []);
-  const [communicationStats, setCommunicationStats] = useState<CommunicationStats>(isDemoEnvironment ? initialCommunicationStats : {} as CommunicationStats);
-  const [estimates, setEstimates] = useState<Estimate[]>(isDemoEnvironment ? initialEstimates : []);
-  const [reviewSettings, setReviewSettings] = useState<ReviewSettings>(isDemoEnvironment ? initialReviewSettings : {} as ReviewSettings);
-  const [reviewRequests, setReviewRequests] = useState<ReviewRequest[]>(isDemoEnvironment ? initialReviewRequests : []);
-  const [customerFeedback, setCustomerFeedback] = useState<CustomerFeedback[]>(isDemoEnvironment ? initialCustomerFeedback : []);
-  const [subscription, setSubscription] = useState<BusinessSubscription>(isDemoEnvironment ? initialSubscription : { ...initialSubscription, status: 'incomplete' });
-  const [usageRecords, setUsageRecords] = useState(isDemoEnvironment ? initialUsageRecords : {});
-  const [subscriptionEvents, setSubscriptionEvents] = useState<SubscriptionEvent[]>(isDemoEnvironment ? initialSubscriptionEvents : []);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [recommendations, setRecommendations] = useState<CopilotRecommendation[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [profile, setProfile] = useState<UserProfile>({ ...initialProfile, name: '', email: '', businessName: '' });
+  const [settings, setSettings] = useState<BusinessSettings>({ ...initialSettings, businessName: '', businessEmail: '' });
+  const [businessProfile, setBusinessProfile] = useState<ServiceBusinessProfile>({ ...initialBusinessProfile, name: '', email: '' });
+  const [receptionistSettings, setReceptionistSettings] = useState<ReceptionistSettings>({} as ReceptionistSettings);
+  const [receptionistServices, setReceptionistServices] = useState<ReceptionistService[]>([]);
+  const [receptionistConversations, setReceptionistConversations] = useState<ReceptionistConversation[]>([]);
+  const [communications, setCommunications] = useState<CommunicationItem[]>([]);
+  const [communicationTemplates, setCommunicationTemplates] = useState<CommunicationTemplate[]>([]);
+  const [communicationConsents, setCommunicationConsents] = useState<CommunicationConsent[]>([]);
+  const [communicationStats, setCommunicationStats] = useState<CommunicationStats>({} as CommunicationStats);
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [reviewSettings, setReviewSettings] = useState<ReviewSettings>({} as ReviewSettings);
+  const [reviewRequests, setReviewRequests] = useState<ReviewRequest[]>([]);
+  const [customerFeedback, setCustomerFeedback] = useState<CustomerFeedback[]>([]);
+  const [subscription, setSubscription] = useState<BusinessSubscription>({ ...initialSubscription, status: 'incomplete' });
+  const [usageRecords, setUsageRecords] = useState<Record<string, any>>(initialUsageRecords || {});
+  const [subscriptionEvents, setSubscriptionEvents] = useState<SubscriptionEvent[]>([]);
   const [adminStats] = useState<AdminStats>(initialAdminStats);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -403,6 +406,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const enterDemoMode = useCallback(() => {
+    setIsDemoMode(true);
+    setBusinessId('11111111-1111-1111-1111-111111111111');
+    setInvoices(initialInvoices);
+    setCustomers(initialCustomers);
+    setLeads(initialLeads);
+    setAppointments(initialAppointments);
+    setJobs(initialJobs);
+    setRecommendations(initialRecommendations);
+    setNotifications(initialNotifications);
+    setProfile(initialProfile);
+    setSettings(initialSettings);
+    setBusinessProfile(initialBusinessProfile);
+    setReceptionistSettings(initialReceptionistSettings);
+    setReceptionistServices(initialReceptionistServices);
+    setReceptionistConversations(initialReceptionistConversations);
+    setCommunications(initialCommunications);
+    setCommunicationTemplates(initialCommunicationTemplates);
+    setCommunicationConsents(initialCommunicationConsents);
+    setCommunicationStats(initialCommunicationStats);
+    setEstimates(initialEstimates);
+    setReviewSettings(initialReviewSettings);
+    setReviewRequests(initialReviewRequests);
+    setCustomerFeedback(initialCustomerFeedback);
+    setSubscription(initialSubscription);
+    setUsageRecords(initialUsageRecords);
+    setSubscriptionEvents(initialSubscriptionEvents);
+  }, []);
+
+  const exitDemoMode = useCallback(() => {
+    setIsDemoMode(false);
+    setInvoices([]);
+    setCustomers([]);
+    setLeads([]);
+    setAppointments([]);
+    setJobs([]);
+    setRecommendations([]);
+    setNotifications([]);
+    setEstimates([]);
+    setCommunications([]);
+    setReceptionistServices([]);
+    setReceptionistConversations([]);
+    setCommunicationTemplates([]);
+    setCommunicationConsents([]);
+    setReviewRequests([]);
+    setCustomerFeedback([]);
+    setReceptionistSettings({} as ReceptionistSettings);
+    setReviewSettings({} as ReviewSettings);
+    setCommunicationStats({} as CommunicationStats);
+    setBusinessId(null);
+    setProfile({ ...initialProfile, name: '', email: '', businessName: '' });
+    setSettings({ ...initialSettings, businessName: '', businessEmail: '' });
+    setBusinessProfile({ ...initialBusinessProfile, name: '', email: '' });
+    setSubscription({ ...initialSubscription, status: 'incomplete' });
+    setUsageRecords({});
+    setSubscriptionEvents([]);
+  }, []);
+
   const clearTenantState = useCallback(() => {
     setInvoices([]);
     setCustomers([]);
@@ -415,7 +476,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCommunications([]);
     setReceptionistServices([]);
     setReceptionistConversations([]);
-    setCommunications([]);
     setCommunicationTemplates([]);
     setCommunicationConsents([]);
     setReviewRequests([]);
@@ -424,7 +484,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setReviewSettings({} as ReviewSettings);
     setCommunicationStats({} as CommunicationStats);
     setBusinessId(null);
-    setProfile({ ...initialProfile, email: '', businessName: '' });
+    setIsDemoMode(false);
+    setProfile({ ...initialProfile, name: '', email: '', businessName: '' });
     setSettings({ ...initialSettings, businessName: '', businessEmail: '' });
     setBusinessProfile({ ...initialBusinessProfile, name: '', email: '' });
     setSubscription({ ...initialSubscription, status: 'incomplete' });
@@ -433,19 +494,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const hydrateTenantState = useCallback(async (authenticatedUser: User) => {
-    const currentBusiness = await services.business.getCurrentUserBusiness(authenticatedUser.id);
+    setIsDemoMode(false);
+    let currentBusiness = await services.business.getCurrentUserBusiness(authenticatedUser.id);
+    if (!currentBusiness) {
+      try {
+        const result = await services.auth.ensureUserWorkspace({
+          userId: authenticatedUser.id,
+          email: authenticatedUser.email || '',
+          name: (authenticatedUser.user_metadata?.name as string) || 'Owner',
+          businessName: (authenticatedUser.user_metadata?.business_name as string) || 'My Business',
+        });
+        if (result.business) {
+          currentBusiness = { ...result.business, userRole: (result.userRole as UserRole) || 'owner' };
+        }
+      } catch (ensureErr) {
+        console.warn('Auto-workspace initialization notice:', ensureErr);
+      }
+    }
+
     if (!currentBusiness) {
       throw new Error('No authorized business workspace is associated with this account.');
     }
 
     const tenantId = currentBusiness.id;
-    const [customerRows, invoiceRows, leadRows, appointmentRows, jobRows, estimateRows] = await Promise.all([
+    const [customerRows, invoiceRows, leadRows, appointmentRows, jobRows, estimateRows, subscriptionRow] = await Promise.all([
       services.customers.getCustomers(tenantId),
       services.invoices.getInvoices(tenantId),
       services.leads.getLeads(tenantId),
       services.operations.getAppointments(tenantId),
       services.operations.getJobs(tenantId),
       services.estimates.getEstimates(tenantId),
+      supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('business_id', tenantId)
+        .maybeSingle()
+        .then(r => r.data),
     ]);
 
     setBusinessId(tenantId);
@@ -465,8 +549,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       industry: (currentBusiness.industry as IndustryType) || prev.industry,
       website: currentBusiness.website || '',
     }));
-    setCustomers(customerRows as unknown as Customer[]);
-    setInvoices(invoiceRows.map((row: any) => ({
+
+    // Load real subscription from DB — source of truth for billing gate
+    if (subscriptionRow) {
+      setSubscription(prev => ({
+        ...prev,
+        id: subscriptionRow.id,
+        businessId: tenantId,
+        plan: (subscriptionRow.plan || prev.plan) as any,
+        billingCycle: (subscriptionRow.billing_cycle || 'monthly') as any,
+        status: (subscriptionRow.status || 'incomplete') as any,
+        currentPeriodStart: subscriptionRow.current_period_start || prev.currentPeriodStart,
+        currentPeriodEnd: subscriptionRow.current_period_end || prev.currentPeriodEnd,
+        cancelAtPeriodEnd: subscriptionRow.cancel_at_period_end || false,
+        provider: subscriptionRow.provider as any,
+        providerCustomerId: subscriptionRow.provider_customer_id || undefined,
+        providerSubscriptionId: subscriptionRow.provider_subscription_id || undefined,
+        selectedPlan: (subscriptionRow as any).selected_plan || subscriptionRow.plan || 'Starter',
+        selectedBillingCycle: (subscriptionRow as any).selected_billing_cycle || 'monthly',
+      }));
+    } else {
+      // No subscription row yet — brand new user, mark as incomplete
+      setSubscription(prev => ({
+        ...prev,
+        businessId: tenantId,
+        status: 'incomplete' as any,
+      }));
+    }
+
+    setCustomers((customerRows || []) as unknown as Customer[]);
+    setInvoices((invoiceRows || []).map((row: any) => ({
       ...row,
       businessId: row.business_id,
       customerId: row.customer_id,
@@ -475,7 +587,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       remainingBalance: Number(row.remaining_balance || 0),
       timeline: row.invoice_events || [],
     })) as Invoice[]);
-    setLeads(leadRows.map((row: any) => ({
+    setLeads((leadRows || []).map((row: any) => ({
       ...row,
       businessId: row.business_id,
       customerId: row.customer_id || undefined,
@@ -488,7 +600,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notesList: [],
       activities: [],
     })) as Lead[]);
-    setAppointments(appointmentRows.map((row: any) => ({
+    setAppointments((appointmentRows || []).map((row: any) => ({
       ...row,
       businessId: row.business_id,
       customerId: row.customer_id || undefined,
@@ -499,7 +611,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       technicianName: row.technician_name || '',
       createdAt: row.created_at,
     })) as Appointment[]);
-    setJobs(jobRows.map((row: any) => ({
+    setJobs((jobRows || []).map((row: any) => ({
       ...row,
       businessId: row.business_id,
       customerId: row.customer_id || undefined,
@@ -513,7 +625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       technicianName: row.technician_name || 'Unassigned',
       createdAt: row.created_at,
     })) as Job[]);
-    setEstimates(estimateRows.map((row: any) => ({
+    setEstimates((estimateRows || []).map((row: any) => ({
       ...row,
       businessId: row.business_id,
       customerId: row.customer_id || undefined,
@@ -524,26 +636,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       validUntil: row.valid_until || undefined,
       createdAt: row.created_at,
     })) as Estimate[]);
-  }, [services]);
+  }, [services, supabase]);
 
-  // Load only explicit demo state or the authenticated tenant from Supabase.
+  // Load authenticated tenant from Supabase on mount.
   useEffect(() => {
-      const loadSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          try {
-            await hydrateTenantState(session.user);
-          } catch (error) {
-            clearTenantState();
-            console.error('Tenant hydration failed:', error);
-          }
-        } else if (!isDemoEnvironment) clearTenantState();
-      };
-      loadSession().catch(err => {
-        console.warn('Supabase session load notice:', err);
-      });
+    const loadSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        try {
+          await hydrateTenantState(session.user);
+        } catch (error) {
+          clearTenantState();
+          console.error('Tenant hydration failed:', error);
+        }
+      } else {
+        clearTenantState();
+      }
+    };
+    loadSession().catch(err => {
+      console.warn('Supabase session load notice:', err);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
@@ -566,7 +680,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       subscription.unsubscribe();
     };
-  }, [clearTenantState, hydrateTenantState, isDemoEnvironment, supabase]);
+  }, [clearTenantState, hydrateTenantState, supabase]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -576,12 +690,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Auth Operations
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-
     try {
       const { user: authUser, session: authSession } = await services.auth.signIn({ email, password });
       setUser(authUser);
       setSession(authSession);
+      setIsDemoMode(false);
       
       showToast({
         title: 'Welcome Back!',
@@ -604,12 +717,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signUp = async (params: { email: string; password: string; name: string; businessName: string }) => {
     setIsLoading(true);
-    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-
     try {
       const { user: authUser, session: authSession, business } = await services.auth.signUp(params);
       setUser(authUser);
       setSession(authSession);
+      setIsDemoMode(false);
       if (business) setBusinessId(business.id);
 
       setProfile(prev => ({
@@ -641,6 +753,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsLoading(false);
       showToast({
         title: 'Registration Failed',
+        description: errMsg,
+        type: 'error',
+      });
+      return { success: false, error: errMsg };
+    }
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    setIsLoading(true);
+    try {
+      await services.auth.resendVerificationEmail(email);
+      setIsLoading(false);
+      showToast({
+        title: 'Verification Email Dispatched',
+        description: `Please check your inbox at ${email}.`,
+        type: 'success',
+      });
+      return { success: true };
+    } catch (err: any) {
+      setIsLoading(false);
+      const errMsg = err?.message || 'Failed to resend verification email.';
+      showToast({
+        title: 'Resend Notice',
         description: errMsg,
         type: 'error',
       });
@@ -690,7 +825,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
     const computedScore = leadData.score ?? calculateLeadScore(leadData).totalScore;
     
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await createLeadAction({
           business_id: activeBusinessId,
@@ -781,7 +916,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateLead = async (updated: Lead) => {
     const computedScore = updated.score ?? calculateLeadScore(updated).totalScore;
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateLeadAction(updated.id, {
           name: updated.name,
@@ -811,7 +946,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const existing = leads.find(l => l.id === leadId);
     if (!existing) return;
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateLeadStatusAction(leadId, status, notes);
       } catch (err) {
@@ -852,7 +987,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const existing = leads.find(l => l.id === leadId);
     if (!existing) return;
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await assignLeadAction({
           leadId,
@@ -897,7 +1032,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addLeadActivity = async (leadId: string, activityData: Omit<LeadActivity, 'id' | 'createdAt' | 'leadId'>) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await addLeadActivityAction({
           business_id: activeBusinessId,
@@ -938,7 +1073,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const author = authorName || profile.name || 'Team Member';
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await createLeadNoteAction({
           leadId,
@@ -1009,7 +1144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateLeadNote = async (noteId: string, content: string, leadId: string) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateLeadNoteAction({ noteId, content });
       } catch (err) {
@@ -1032,7 +1167,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteLeadNote = async (noteId: string, leadId: string) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await deleteLeadNoteAction(noteId);
       } catch (err) {
@@ -1055,7 +1190,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bulkUpdateLeadStatus = async (leadIds: string[], status: LeadStatus) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await bulkUpdateLeadStatusAction({
           leadIds,
@@ -1087,7 +1222,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bulkAssignLeads = async (leadIds: string[], assignedUserId: string | null, assignedUserName: string | null) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await bulkAssignLeadsAction({
           leadIds,
@@ -1121,7 +1256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bulkDeleteLeads = async (leadIds: string[]) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await bulkDeleteLeadsAction({
           leadIds,
@@ -1141,7 +1276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteLead = async (id: string) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await deleteLeadAction(id, businessId);
       } catch (err) {
@@ -1161,7 +1296,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return null;
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await convertLeadToCustomerAction({
           leadId,
@@ -1236,7 +1371,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addAppointment = async (aptData: Omit<Appointment, 'id' | 'createdAt'> & { id?: string }): Promise<Appointment | null> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await createAppointmentAction({
           business_id: activeBusinessId,
@@ -1289,7 +1424,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateAppointment = async (updated: Appointment) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateAppointmentAction(updated.id, {
           title: updated.title,
@@ -1311,7 +1446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAppointment = async (id: string) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await deleteAppointmentAction(id, businessId);
       } catch (err) {
@@ -1326,7 +1461,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addJob = async (jobData: Omit<Job, 'id' | 'createdAt'> & { id?: string }): Promise<Job | null> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await createJobAction({
           business_id: activeBusinessId,
@@ -1408,7 +1543,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateJob = async (updated: Job) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateJobAction(updated.id, {
           title: updated.title,
@@ -1440,7 +1575,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteJob = async (id: string) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await deleteJobAction(id, businessId);
       } catch (err) {
@@ -1455,7 +1590,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const assignJobTechnician = async (jobId: string, techName: string, techId?: string): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await assignJobTechnicianAction({
           jobId,
@@ -1500,7 +1635,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateJobStatus = async (jobId: string, status: JobStatus, notes?: string): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateJobStatusAction({
           jobId,
@@ -1545,7 +1680,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addJobActivity = async (jobId: string, title: string, description?: string, activityType: string = 'NOTE_ADDED'): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await addJobActivityAction({
           jobId,
@@ -1605,7 +1740,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const discountAmount = Number(estimateData.discountAmount) || 0;
     const totalAmount = Math.max(0, subtotal + taxAmount - discountAmount);
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await createEstimateAction({
           businessId: activeBusinessId,
@@ -1687,7 +1822,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateEstimate = async (id: string, updates: Partial<Estimate>): Promise<Estimate | null> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateEstimateAction(id, activeBusinessId, {
           title: updates.title,
@@ -1719,7 +1854,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const sendEstimate = async (id: string, channel: 'email' | 'sms' | 'whatsapp'): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await sendEstimateAction({
           estimateId: id,
@@ -1745,7 +1880,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const approveEstimate = async (id: string, customerName?: string): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await approveEstimateAction({
           estimateId: id,
@@ -1781,7 +1916,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await rejectEstimateAction({
           estimateId: id,
@@ -1820,7 +1955,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await convertEstimateToInvoiceAction({
           estimateId: id,
@@ -1891,7 +2026,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteEstimate = async (id: string): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await deleteEstimateAction(id, activeBusinessId);
       } catch (err) {
@@ -1910,7 +2045,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateReviewSettings = async (updates: Partial<ReviewSettings>): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await updateReviewSettingsAction(activeBusinessId, updates);
         if (!res.success) {
@@ -1941,7 +2076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const channel = params.channel || reviewSettings.defaultChannel || 'sms';
 
     let serverData: any = null;
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await createReviewRequestAction({
           businessId: activeBusinessId,
@@ -2002,7 +2137,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const sendReviewRequest = async (requestId: string, overrideChannel?: 'email' | 'sms' | 'whatsapp'): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await sendReviewRequestAction({
           requestId,
@@ -2051,7 +2186,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isPositive = rating >= (reviewSettings.positiveThreshold || 4);
     const sentiment = isPositive ? 'positive' : rating === 3 ? 'neutral' : 'negative';
 
-    if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (!isDemoMode) {
       try {
         await submitCustomerFeedbackAction({
           businessId: activeBusinessId,
@@ -2109,7 +2244,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await updateFeedbackFollowUpAction({
           feedbackId,
@@ -2150,7 +2285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addCustomer = async (customerData: Omit<Customer, 'id'>) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await createCustomerAction({
           business_id: activeBusinessId,
@@ -2202,7 +2337,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateCustomer = async (updated: Customer) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateCustomerAction(updated.id, {
           name: updated.name,
@@ -2239,7 +2374,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         let matchedCustomer = customers.find(
           c => c.name.toLowerCase() === invoiceData.customerName.toLowerCase() ||
@@ -2376,7 +2511,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateInvoice = async (updated: Invoice) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateInvoiceAction(updated.id, {
           due_date: updated.dueDate,
@@ -2394,7 +2529,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteInvoice = async (id: string) => {
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await deleteInvoiceAction(id, businessId);
       } catch (err) {
@@ -2417,7 +2552,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await recordPaymentAction({
           business_id: activeBusinessId,
@@ -2552,7 +2687,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBusinessProfile = async (updates: Partial<ServiceBusinessProfile>) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await updateBusinessProfileAction(activeBusinessId, {
           name: updates.name,
@@ -2600,7 +2735,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const completeOnboarding = async (data: Partial<ServiceBusinessProfile>) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await completeOnboardingAction(activeBusinessId, {
           name: data.name,
@@ -2661,7 +2796,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ==========================================
   const updateReceptionistSettings = async (updates: Partial<ReceptionistSettings>): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await updateReceptionistSettingsAction(activeBusinessId, updates);
         if (res.success && res.data) {
@@ -2685,7 +2820,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveReceptionistService = async (svc: Partial<ReceptionistService>): Promise<ReceptionistService | null> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await saveReceptionistServiceAction(activeBusinessId, svc);
         if (res.success && res.data) {
@@ -2733,7 +2868,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteReceptionistService = async (serviceId: string): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await deleteReceptionistServiceAction(activeBusinessId, serviceId);
       } catch (err) {
@@ -2753,7 +2888,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }) => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
 
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         const res = await processReceptionistMessageAction({
           businessId: activeBusinessId,
@@ -2940,7 +3075,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const triggerHandoff = async (conversationId: string, reason: string): Promise<boolean> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
-    if (session && businessId && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+    if (session && businessId && !isDemoMode) {
       try {
         await triggerHumanHandoffAction(activeBusinessId, conversationId, reason);
       } catch (err) {
@@ -3094,7 +3229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const sendCommunication = useCallback(async (req: any): Promise<{ success: boolean; error?: string; data?: any }> => {
     try {
       const activeBizId = businessId || '11111111-1111-1111-1111-111111111111';
-      const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !user;
+      const isDemo = isDemoMode || !user;
 
       if (!isDemo) {
         const result = await sendCommunicationAction({ ...req, businessId: activeBizId });
@@ -3160,7 +3295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const approveCommunication = useCallback(async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const activeBizId = businessId || '11111111-1111-1111-1111-111111111111';
-      const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !user;
+      const isDemo = isDemoMode || !user;
 
       if (!isDemo) {
         const result = await approveCommunicationAction(id, activeBizId);
@@ -3197,7 +3332,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const rejectCommunication = useCallback(async (id: string, reason: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const activeBizId = businessId || '11111111-1111-1111-1111-111111111111';
-      const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !user;
+      const isDemo = isDemoMode || !user;
 
       if (!isDemo) {
         const result = await rejectCommunicationAction(id, activeBizId, reason);
@@ -3232,7 +3367,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const saveCommunicationTemplate = useCallback(async (template: Partial<CommunicationTemplate>): Promise<{ success: boolean; error?: string }> => {
     try {
       const activeBizId = businessId || '11111111-1111-1111-1111-111111111111';
-      const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !user;
+      const isDemo = isDemoMode || !user;
 
       if (template.id && !template.id.startsWith('tmpl-new-')) {
         if (!isDemo) {
@@ -3286,7 +3421,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteCommunicationTemplate = useCallback(async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const activeBizId = businessId || '11111111-1111-1111-1111-111111111111';
-      const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !user;
+      const isDemo = isDemoMode || !user;
 
       if (!isDemo) {
         await deleteCommunicationTemplateAction(id, activeBizId);
@@ -3303,7 +3438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateCommunicationConsent = useCallback(async (params: { customerId?: string; leadId?: string; channel: CommChannel; optedIn: boolean }): Promise<{ success: boolean; error?: string }> => {
     try {
       const activeBizId = businessId || '11111111-1111-1111-1111-111111111111';
-      const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !user;
+      const isDemo = isDemoMode || !user;
 
       if (!isDemo) {
         await updateConsentAction({
@@ -3355,7 +3490,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const recordCommunicationOptOut = useCallback(async (params: { customerId?: string; leadId?: string; channel: CommChannel; reason?: string }): Promise<{ success: boolean; error?: string }> => {
     try {
       const activeBizId = businessId || '11111111-1111-1111-1111-111111111111';
-      const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !user;
+      const isDemo = isDemoMode || !user;
 
       if (!isDemo) {
         await recordOptOutAction({
@@ -3558,8 +3693,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       businessId,
       isOnline,
       isLoading,
+      isDemoMode,
+      enterDemoMode,
+      exitDemoMode,
       signIn,
       signUp,
+      resendVerificationEmail,
       signOut,
       deleteAccount,
       invoices,
@@ -3681,7 +3820,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       usageRecords,
       subscriptionEvents,
       createCheckoutSession: async (plan: PlanKey, interval: BillingInterval) => {
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        if (isDemoMode || !user) {
           setSubscription(prev => ({
             ...prev,
             plan,
@@ -3729,7 +3868,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       },
       createCustomerPortalSession: async () => {
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        if (isDemoMode || !user) {
           showToast({
             title: 'Stripe Customer Portal (Demo)',
             description: 'In production mode, this opens your Stripe Customer Billing Portal for invoice history and payment methods.',
@@ -3754,7 +3893,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       },
       cancelSubscription: async (cancelAtPeriodEnd = true) => {
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        if (isDemoMode || !user) {
           setSubscription(prev => ({
             ...prev,
             cancelAtPeriodEnd,
@@ -3789,7 +3928,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       },
       reactivateSubscription: async () => {
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        if (isDemoMode || !user) {
           setSubscription(prev => ({
             ...prev,
             cancelAtPeriodEnd: false,

@@ -20,7 +20,7 @@ export type RecommendationStatus = 'pending' | 'sent' | 'dismissed';
 export type NotificationType = 'payment' | 'overdue' | 'copilot' | 'system';
 export type SubscriptionPlan = 'Starter' | 'Professional' | 'Enterprise';
 export type BillingCycle = 'monthly' | 'annual';
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused';
+export type SubscriptionStatus = 'pending' | 'checkout_started' | 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused' | 'expired';
 
 export interface Database {
   public: {
@@ -653,6 +653,9 @@ export interface Database {
           plan: SubscriptionPlan;
           billing_cycle: BillingCycle;
           status: SubscriptionStatus;
+          selected_plan?: string | null;
+          selected_billing_cycle?: string | null;
+          checkout_session_id?: string | null;
           price_amount: number;
           currency: string;
           provider: string | null;
@@ -673,6 +676,9 @@ export interface Database {
           plan?: SubscriptionPlan;
           billing_cycle?: BillingCycle;
           status?: SubscriptionStatus;
+          selected_plan?: string | null;
+          selected_billing_cycle?: string | null;
+          checkout_session_id?: string | null;
           price_amount?: number;
           currency?: string;
           provider?: string | null;
@@ -693,6 +699,9 @@ export interface Database {
           plan?: SubscriptionPlan;
           billing_cycle?: BillingCycle;
           status?: SubscriptionStatus;
+          selected_plan?: string | null;
+          selected_billing_cycle?: string | null;
+          checkout_session_id?: string | null;
           price_amount?: number;
           currency?: string;
           provider?: string | null;

@@ -12,18 +12,15 @@ import {
   Globe,
   Sparkles,
   ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
   Check,
-  Users,
-  Briefcase,
-  Layers,
+  Loader2,
+  Send,
 } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signUp, showToast } = useApp();
+  const { signUp, resendVerificationEmail, showToast } = useApp();
 
   // 1. Signup Type Choice
   const initialType = (searchParams.get('type') || '').toUpperCase();
@@ -43,6 +40,17 @@ export default function SignupPage() {
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(prev => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   // 2. Capture Attribution on Mount
   useEffect(() => {
@@ -68,6 +76,7 @@ export default function SignupPage() {
 
     setIsLoading(true);
     setError('');
+    setResendSuccess(false);
 
     const res = await signUp({
       email,
@@ -101,6 +110,26 @@ export default function SignupPage() {
       }
     } else {
       setError(res.error || 'Failed to create account. Please try again.');
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Please enter your work email to receive verification.');
+      return;
+    }
+    if (resendCooldown > 0) return;
+
+    setResendLoading(true);
+    setError('');
+    const res = await resendVerificationEmail(email);
+    setResendLoading(false);
+
+    if (res.success) {
+      setResendSuccess(true);
+      setResendCooldown(60);
+    } else {
+      setError(res.error || 'Unable to dispatch verification email.');
     }
   };
 
@@ -147,7 +176,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setAccountType('BUSINESS_OWNER')}
-              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 min-h-[90px] ${
+              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 min-h-[90px] cursor-pointer ${
                 accountType === 'BUSINESS_OWNER'
                   ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm ring-1 ring-blue-500'
                   : 'bg-slate-800/60 border-slate-700/80 text-slate-300 hover:bg-slate-800'
@@ -166,7 +195,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setAccountType('AGENCY_OWNER')}
-              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 min-h-[90px] ${
+              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 min-h-[90px] cursor-pointer ${
                 accountType === 'AGENCY_OWNER'
                   ? 'bg-violet-600/20 border-violet-500 text-white shadow-sm ring-1 ring-violet-500'
                   : 'bg-slate-800/60 border-slate-700/80 text-slate-300 hover:bg-slate-800'
@@ -185,7 +214,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() => setAccountType('DEMO_GUEST')}
-              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 min-h-[90px] ${
+              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 min-h-[90px] cursor-pointer ${
                 accountType === 'DEMO_GUEST'
                   ? 'bg-amber-600/20 border-amber-500 text-white shadow-sm ring-1 ring-amber-500'
                   : 'bg-slate-800/60 border-slate-700/80 text-slate-300 hover:bg-slate-800'
@@ -222,8 +251,34 @@ export default function SignupPage() {
           /* Signup Form */
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-semibold text-red-400">
-                {error}
+              <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-2xl text-xs font-semibold text-red-400 space-y-2">
+                <p className="leading-relaxed">{error}</p>
+                {(error.toLowerCase().includes('rate limit') || error.toLowerCase().includes('already exists')) && (
+                  <div className="pt-2 border-t border-red-500/20 flex flex-wrap items-center gap-3">
+                    <Link
+                      href={email ? `/login?email=${encodeURIComponent(email)}` : '/login'}
+                      className="text-xs font-bold text-white bg-red-600/80 hover:bg-red-600 px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-1 shadow-sm"
+                    >
+                      <span>Sign In to Existing Account</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendLoading || resendCooldown > 0}
+                      className="text-[11px] font-bold text-slate-300 hover:text-white inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      {resendLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                      {resendCooldown > 0 ? `Retry in ${resendCooldown}s` : 'Request new verification'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {resendSuccess && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400">
+                Verification email dispatched! Please check your inbox.
               </div>
             )}
 
@@ -236,10 +291,10 @@ export default function SignupPage() {
                   id="name"
                   type="text"
                   required
-                  placeholder="Jane Doe"
+                  placeholder="e.g. Alex Johnson"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none min-h-[40px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-hidden min-h-[40px]"
                 />
               </div>
               <div>
@@ -250,10 +305,10 @@ export default function SignupPage() {
                   id="business"
                   type="text"
                   required
-                  placeholder={accountType === 'AGENCY_OWNER' ? 'Apex Growth Marketing' : 'Apex Comfort HVAC'}
+                  placeholder={accountType === 'AGENCY_OWNER' ? 'e.g. Apex Marketing Agency' : 'e.g. Johnson Home Services'}
                   value={businessOrAgencyName}
                   onChange={(e) => setBusinessOrAgencyName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none min-h-[40px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-hidden min-h-[40px]"
                 />
               </div>
             </div>
@@ -266,10 +321,10 @@ export default function SignupPage() {
                 id="email"
                 type="email"
                 required
-                placeholder="jane@company.com"
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none min-h-[40px]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-hidden min-h-[40px]"
               />
             </div>
 
@@ -284,7 +339,7 @@ export default function SignupPage() {
                 placeholder="Minimum 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none min-h-[40px]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-hidden min-h-[40px]"
               />
 
               {/* Password strength meter */}
@@ -327,7 +382,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm py-3 rounded-xl shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all mt-2 disabled:opacity-50 flex items-center justify-center gap-2 min-h-[44px]"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm py-3 rounded-xl shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all mt-2 disabled:opacity-50 flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
             >
               {isLoading ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

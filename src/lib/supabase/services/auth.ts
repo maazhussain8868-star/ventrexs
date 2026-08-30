@@ -1,49 +1,103 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types';
 
+export function formatAuthErrorMessage(error: any): string {
+  if (!error) return 'An unexpected authentication error occurred.';
+  const msg = typeof error === 'string' ? error : error.message || error.error_description || error.msg || '';
+  const code = typeof error === 'object' && error !== null ? String(error.code || error.error_code || '') : '';
+  const lower = (msg + ' ' + code).toLowerCase();
+
+  if (
+    lower.includes('rate limit') ||
+    lower.includes('over_email_send_rate_limit') ||
+    lower.includes('too many requests') ||
+    lower.includes('email_rate_limit_exceeded') ||
+    lower.includes('email rate limit exceeded') ||
+    error.status === 429 ||
+    error.statusCode === 429
+  ) {
+    return 'Email rate limit exceeded. Too many signup/verification emails were requested recently. Please wait a few minutes before trying again, or try signing in if you already created an account.';
+  }
+
+  if (
+    lower.includes('user already registered') ||
+    lower.includes('email already in use') ||
+    lower.includes('already exists') ||
+    lower.includes('user_already_exists')
+  ) {
+    return 'An account with this email already exists. Please sign in instead.';
+  }
+
+  if (lower.includes('invalid login credentials') || lower.includes('invalid_credentials') || lower.includes('invalid credentials')) {
+    return 'Invalid login credentials. Please verify your email and password.';
+  }
+
+  if (lower.includes('email not confirmed') || lower.includes('email_not_confirmed')) {
+    return 'Your email address is not yet confirmed. Please check your inbox or request a new verification email.';
+  }
+
+  if (lower.includes('password') && (lower.includes('short') || lower.includes('least 6') || lower.includes('least 8'))) {
+    return 'Password must be at least 8 characters long.';
+  }
+
+  return msg || 'Authentication failed. Please try again.';
+}
+
 export class AuthService {
   constructor(private client: SupabaseClient<Database>) {}
 
-  async signUp(params: {
+  /**
+   * Idempotently ensure user profile and a single dedicated business workspace exist
+   */
+  async ensureUserWorkspace(params: {
+    userId: string;
     email: string;
-    password: string;
-    name: string;
-    businessName: string;
+    name?: string;
+    businessName?: string;
   }) {
-    const { data: authData, error: authError } = await this.client.auth.signUp({
-      email: params.email,
-      password: params.password,
-      options: {
-        data: {
-          name: params.name,
-          business_name: params.businessName,
-        },
-      },
-    });
+    const { userId, email, name = 'Owner', businessName = 'My Business' } = params;
 
-    if (authError) throw authError;
-    if (!authData.user) throw new Error('Failed to create user account');
-
-    // Create Profile
+    // 1. Create or update profile
     const { error: profileError } = await this.client
       .from('profiles')
       .upsert({
-        id: authData.user.id,
-        name: params.name,
-        email: params.email,
+        id: userId,
+        name,
+        email,
         role: 'owner',
       });
 
     if (profileError) {
-      console.warn('Profile creation notice:', profileError.message);
+      console.warn('Profile sync notice:', profileError.message);
     }
 
-    // Create Business
-    const { data: business, error: businessError } = await this.client
+    // 2. Check if the user already has a business workspace
+    const { data: existingMembership } = await this.client
+      .from('business_members')
+      .select('business_id, role, is_primary')
+      .eq('user_id', userId)
+      .order('is_primary', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingMembership) {
+      const { data: existingBusiness } = await this.client
+        .from('businesses')
+        .select('*')
+        .eq('id', existingMembership.business_id)
+        .maybeSingle();
+
+      if (existingBusiness) {
+        return { business: existingBusiness, userRole: existingMembership.role };
+      }
+    }
+
+    // 3. Create fresh isolated workspace with NO demo seed records
+    const { data: newBusiness, error: businessError } = await this.client
       .from('businesses')
       .insert({
-        name: params.businessName,
-        email: params.email,
+        name: businessName,
+        email,
         currency: 'USD ($)',
         payment_terms_days: 14,
         auto_reminder_enabled: true,
@@ -53,28 +107,90 @@ export class AuthService {
 
     if (businessError) {
       console.warn('Business creation notice:', businessError.message);
-    } else if (business) {
-      // Add user as primary business member / owner
+      return { business: null, userRole: 'owner' };
+    }
+
+    if (newBusiness) {
       await this.client.from('business_members').insert({
-        business_id: business.id,
-        user_id: authData.user.id,
+        business_id: newBusiness.id,
+        user_id: userId,
         role: 'owner',
         is_primary: true,
       });
-
     }
 
-    return { user: authData.user, session: authData.session, business };
+    return { business: newBusiness, userRole: 'owner' };
+  }
+
+  async signUp(params: {
+    email: string;
+    password: string;
+    name: string;
+    businessName: string;
+  }) {
+    try {
+      const { data: authData, error: authError } = await this.client.auth.signUp({
+        email: params.email,
+        password: params.password,
+        options: {
+          data: {
+            name: params.name,
+            business_name: params.businessName,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user account');
+
+      let business = null;
+      try {
+        const result = await this.ensureUserWorkspace({
+          userId: authData.user.id,
+          email: params.email,
+          name: params.name,
+          businessName: params.businessName,
+        });
+        business = result.business;
+      } catch (dbErr: any) {
+        console.warn('Workspace initialization warning:', dbErr?.message);
+      }
+
+      return { user: authData.user, session: authData.session, business };
+    } catch (err: any) {
+      const formatted = formatAuthErrorMessage(err);
+      throw new Error(formatted);
+    }
+  }
+
+  async resendVerificationEmail(email: string) {
+    try {
+      const { data, error } = await this.client.auth.resend({
+        type: 'signup',
+        email,
+      });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (err: any) {
+      const formatted = formatAuthErrorMessage(err);
+      throw new Error(formatted);
+    }
   }
 
   async signIn(params: { email: string; password: string }) {
-    const { data, error } = await this.client.auth.signInWithPassword({
-      email: params.email,
-      password: params.password,
-    });
+    try {
+      const { data, error } = await this.client.auth.signInWithPassword({
+        email: params.email,
+        password: params.password,
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      return data;
+    } catch (err: any) {
+      const formatted = formatAuthErrorMessage(err);
+      throw new Error(formatted);
+    }
   }
 
   async signOut() {

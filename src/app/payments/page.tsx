@@ -28,7 +28,7 @@ import {
 import Link from 'next/link';
 
 export default function PaymentsPage() {
-  const { invoices, showToast } = useApp();
+  const { invoices, showToast, isDemoMode } = useApp();
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,100 +40,53 @@ export default function PaymentsPage() {
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [selectedPaymentForRefund, setSelectedPaymentForRefund] = useState<PaymentRecord | null>(null);
 
-  // Mock & In-Memory Payments Ledger
-  const mockPaymentsList: PaymentRecord[] = useMemo(() => {
-    return [
-      {
-        id: 'pay-001',
-        businessId: 'biz-1',
-        invoiceId: 'inv-1',
-        invoiceNumber: 'INV-2026-001',
-        customerName: 'Michael Scott',
-        amount: 3200.0,
-        currency: 'USD',
-        method: 'ACH Transfer',
-        status: 'SUCCEEDED',
-        provider: 'ach',
-        providerTransactionId: 'ach_sec_882910',
-        paymentDate: '2026-08-24T14:30:00Z',
+  /**
+   * Derive real payment records from the authenticated user's invoices.
+   * Each paid/partially-paid invoice represents at least one payment transaction.
+   * This is scoped to the current business_id by Supabase RLS — no cross-tenant leakage.
+   * New users with no invoices see an empty state.
+   */
+  const realPaymentsList: PaymentRecord[] = useMemo(() => {
+    const records: PaymentRecord[] = [];
+    for (const inv of invoices) {
+      const paid = Number(inv.paymentsReceived || (inv as any).amount_paid || 0);
+      if (paid <= 0) continue;
+
+      // Map each invoice's payment to a ledger record
+      records.push({
+        id: `pay-inv-${inv.id}`,
+        businessId: (inv as any).businessId || (inv as any).business_id || '',
+        invoiceId: inv.id,
+        invoiceNumber: (inv as any).invoice_number || inv.id.slice(0, 8).toUpperCase(),
+        customerName: (inv as any).customer_name ||
+          (inv as any).customers?.name ||
+          (inv as any).customerName ||
+          'Customer',
+        amount: paid,
+        currency: (inv as any).currency || 'USD',
+        method: ((inv as any).payment_method || 'Other') as any,
+        status: inv.remainingBalance <= 0.001 ? 'SUCCEEDED' : 'SUCCEEDED',
+        provider: ((inv as any).payment_provider || 'manual') as any,
+        providerTransactionId: (inv as any).provider_transaction_id || undefined,
+        paymentDate: (inv as any).paid_date || (inv as any).updated_at || (inv as any).createdAt || (inv as any).created_at || new Date().toISOString(),
         refundedAmount: 0,
-        notes: 'Monthly HVAC preventative maintenance contract payment.',
-        createdAt: '2026-08-24T14:30:00Z',
-      },
-      {
-        id: 'pay-002',
-        businessId: 'biz-1',
-        invoiceId: 'inv-2',
-        invoiceNumber: 'INV-2026-002',
-        customerName: 'Sarah Connor',
-        amount: 1850.0,
-        currency: 'USD',
-        method: 'Credit Card',
-        status: 'SUCCEEDED',
-        provider: 'stripe',
-        providerTransactionId: 'pi_3Kj8829011',
-        paymentDate: '2026-08-25T09:15:00Z',
-        refundedAmount: 0,
-        notes: 'Emergency commercial roof repair - Final balance.',
-        createdAt: '2026-08-25T09:15:00Z',
-      },
-      {
-        id: 'pay-003',
-        businessId: 'biz-1',
-        invoiceId: 'inv-3',
-        invoiceNumber: 'INV-2026-003',
-        customerName: 'Jim Halpert',
-        amount: 750.0,
-        currency: 'USD',
-        method: 'Check',
-        status: 'SUCCEEDED',
-        provider: 'manual',
-        reference: 'CHK #4492',
-        paymentDate: '2026-08-25T11:45:00Z',
-        refundedAmount: 0,
-        notes: 'Partial payment on plumbing line replacement.',
-        createdAt: '2026-08-25T11:45:00Z',
-      },
-      {
-        id: 'pay-004',
-        businessId: 'biz-1',
-        invoiceId: 'inv-4',
-        invoiceNumber: 'INV-2026-004',
-        customerName: 'Dwight Schrute',
-        amount: 2400.0,
-        currency: 'USD',
-        method: 'Credit Card',
-        status: 'FAILED',
-        provider: 'stripe',
-        providerTransactionId: 'pi_fail_99812',
-        failureReason: 'Card was declined due to insufficient funds.',
-        paymentDate: '2026-08-23T16:20:00Z',
-        refundedAmount: 0,
-        createdAt: '2026-08-23T16:20:00Z',
-      },
-      {
-        id: 'pay-005',
-        businessId: 'biz-1',
-        invoiceId: 'inv-5',
-        invoiceNumber: 'INV-2026-005',
-        customerName: 'Stanley Hudson',
-        amount: 1200.0,
-        currency: 'USD',
-        method: 'Credit Card',
-        status: 'REFUNDED',
-        provider: 'stripe',
-        providerTransactionId: 'pi_ref_00291',
-        paymentDate: '2026-08-20T10:00:00Z',
-        refundedAmount: 1200.0,
-        notes: 'Full refund issued due to rescheduled project scope.',
-        createdAt: '2026-08-20T10:00:00Z',
-      },
-    ];
-  }, []);
+        notes: (inv as any).notes || undefined,
+        createdAt: (inv as any).createdAt || (inv as any).created_at || new Date().toISOString(),
+      });
+    }
+    // Sort newest first
+    return records.sort((a, b) =>
+      new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
+    );
+  }, [invoices]);
+
+  // Use real data (which is empty for new users — correct behavior)
+  const allPayments = realPaymentsList;
+
 
   // Filtered Payments
   const filteredPayments = useMemo(() => {
-    return mockPaymentsList.filter((p) => {
+    return allPayments.filter((p) => {
       // Search
       const matchSearch =
         searchQuery === '' ||
@@ -150,9 +103,9 @@ export default function PaymentsPage() {
 
       return matchSearch && matchStatus && matchMethod;
     });
-  }, [mockPaymentsList, searchQuery, statusFilter, methodFilter]);
+  }, [allPayments, searchQuery, statusFilter, methodFilter]);
 
-  // Aggregate Metrics
+  // Aggregate Metrics from real data
   const summary = useMemo(() => {
     let totalCollected = 0;
     let collectionsToday = 0;
@@ -162,9 +115,9 @@ export default function PaymentsPage() {
 
     const todayStr = new Date().toISOString().substring(0, 10);
 
-    for (const p of mockPaymentsList) {
+    for (const p of allPayments) {
       if (p.status === 'SUCCEEDED' || p.status === 'PARTIALLY_REFUNDED') {
-        const net = p.amount - p.refundedAmount;
+        const net = p.amount - (p.refundedAmount || 0);
         totalCollected += net;
         if (p.paymentDate.startsWith(todayStr)) {
           collectionsToday += net;
@@ -174,8 +127,12 @@ export default function PaymentsPage() {
       } else if (p.status === 'FAILED') {
         failed += p.amount;
       }
-      refunded += p.refundedAmount;
+      refunded += (p.refundedAmount || 0);
     }
+
+    const total = allPayments.length;
+    const succeeded = allPayments.filter(p => p.status === 'SUCCEEDED').length;
+    const rate = total > 0 ? `${Math.round((succeeded / total) * 100)}%` : '—';
 
     return {
       totalCollected,
@@ -183,9 +140,10 @@ export default function PaymentsPage() {
       pending,
       failed,
       refunded,
-      rate: '96.2%',
+      rate,
     };
-  }, [mockPaymentsList]);
+  }, [allPayments]);
+
 
   return (
     <AppShell
@@ -315,6 +273,7 @@ export default function PaymentsPage() {
         <section className="bg-surface-container-lowest border border-outline-variant/70 rounded-2xl shadow-xs overflow-hidden">
           <div className="p-4 border-b border-outline-variant/60 flex items-center justify-between">
             <h3 className="font-bold text-sm text-on-surface">Payment Transactions ({filteredPayments.length})</h3>
+
             <span className="text-xs text-on-surface-variant font-mono">Immutable Revenue Ledger</span>
           </div>
 
@@ -332,10 +291,33 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/40 text-on-surface">
-                {filteredPayments.map((p) => {
+                {filteredPayments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-surface-container-low border border-outline-variant flex items-center justify-center">
+                          <DollarSign className="w-6 h-6 text-on-surface-variant" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-on-surface">No payment transactions yet</p>
+                          <p className="text-xs text-on-surface-variant mt-0.5">
+                            Create an invoice and record a payment to see it here.
+                          </p>
+                        </div>
+                        <Link
+                          href="/invoices"
+                          className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                        >
+                          Go to Invoices <ArrowUpRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredPayments.map((p) => {
                   const isSucceeded = p.status === 'SUCCEEDED';
                   const isFailed = p.status === 'FAILED';
                   const isRefunded = p.status === 'REFUNDED';
+
 
                   return (
                     <tr key={p.id} className="hover:bg-surface-container-low/50 transition-colors">

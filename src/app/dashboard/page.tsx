@@ -44,10 +44,13 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const {
+    user,
+    isDemoMode,
     invoices,
     leads,
     appointments,
     jobs,
+    receptionistConversations,
     businessProfile,
     profile,
     businessId,
@@ -63,20 +66,69 @@ export default function DashboardPage() {
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    // Load deterministic business intelligence metrics for the selected range
-    const execMetrics = analyticsService.getExecutiveDashboardMetrics(businessId || 'biz_demo', dateRange);
-    const funnelStages = analyticsService.getConversionFunnel();
-    const ownerInsights = analyticsService.generateOwnerInsights();
-    const dailyBrief = analyticsService.generateDailyBriefing(businessProfile?.name || profile.businessName);
+    const isDemo = isDemoMode || (!user && !businessId);
 
-    Promise.resolve(execMetrics).then(setMetrics);
-    setFunnel(funnelStages);
-    setInsights(ownerInsights);
-    setBriefing(dailyBrief);
-  }, [dateRange, businessId, businessProfile, profile]);
+    if (isDemo) {
+      const execMetrics = analyticsService.getDemoExecutiveDashboardMetrics(dateRange);
+      const funnelStages = analyticsService.getDemoConversionFunnel();
+      const ownerInsights = analyticsService.getDemoOwnerInsights();
+      const dailyBrief = analyticsService.getDemoDailyBriefing(businessProfile?.name || profile.businessName || 'Apex Comfort HVAC');
 
-  const currentBusinessName = businessProfile?.name || profile.businessName;
-  const currentIndustry = businessProfile?.industry || 'HVAC & Field Service';
+      Promise.resolve(execMetrics).then(setMetrics);
+      setFunnel(funnelStages);
+      setInsights(ownerInsights);
+      setBriefing(dailyBrief);
+    } else {
+      const execMetrics = analyticsService.getExecutiveDashboardMetricsFromData(
+        {
+          invoices,
+          leads,
+          appointments,
+          jobs,
+          receptionistConversations,
+        },
+        dateRange
+      );
+      const funnelStages = analyticsService.getConversionFunnelFromData({
+        leads,
+        appointments,
+        jobs,
+        invoices,
+      });
+      const ownerInsights = analyticsService.generateOwnerInsightsFromData({
+        leads,
+        appointments,
+        jobs,
+        invoices,
+      });
+      const dailyBrief = analyticsService.generateDailyBriefingFromData({
+        businessName: businessProfile?.name || profile.businessName || 'My Workspace',
+        appointments,
+        invoices,
+        leads,
+      });
+
+      Promise.resolve(execMetrics).then(setMetrics);
+      setFunnel(funnelStages);
+      setInsights(ownerInsights);
+      setBriefing(dailyBrief);
+    }
+  }, [
+    dateRange,
+    businessId,
+    businessProfile,
+    profile,
+    user,
+    isDemoMode,
+    invoices,
+    leads,
+    appointments,
+    jobs,
+    receptionistConversations,
+  ]);
+
+  const currentBusinessName = businessProfile?.name || profile.businessName || 'My Workspace';
+  const currentIndustry = businessProfile?.industry || 'Field Service';
 
   // Active work orders
   const activeJobs = jobs.slice(0, 3);

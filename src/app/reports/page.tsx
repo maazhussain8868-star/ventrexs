@@ -39,7 +39,19 @@ import {
 } from 'lucide-react';
 
 export default function ReportsPage() {
-  const { showToast, businessId, businessProfile, profile } = useApp();
+  const {
+    user,
+    isDemoMode,
+    invoices,
+    leads,
+    appointments,
+    jobs,
+    receptionistConversations,
+    showToast,
+    businessId,
+    businessProfile,
+    profile,
+  } = useApp();
   const [dateRange, setDateRange] = useState<DateRangePreset>('30d');
   const [activeTab, setActiveTab] = useState<
     'overview' | 'services' | 'funnel' | 'receptionist' | 'reputation'
@@ -52,20 +64,57 @@ export default function ReportsPage() {
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    const execMetrics = analyticsService.getExecutiveDashboardMetrics(
-      businessId || 'biz_demo',
-      dateRange
-    );
-    const funnelStages = analyticsService.getConversionFunnel();
-    const serviceList = analyticsService.getServicePerformance();
+    const isDemo = isDemoMode || (!user && !businessId);
 
-    Promise.resolve(execMetrics).then(setMetrics);
-    setFunnel(funnelStages);
-    setServices(serviceList);
-  }, [dateRange, businessId]);
+    if (isDemo) {
+      const execMetrics = analyticsService.getDemoExecutiveDashboardMetrics(dateRange);
+      const funnelStages = analyticsService.getDemoConversionFunnel();
+      const serviceList = analyticsService.getDemoServicePerformance();
+
+      Promise.resolve(execMetrics).then(setMetrics);
+      setFunnel(funnelStages);
+      setServices(serviceList);
+    } else {
+      const execMetrics = analyticsService.getExecutiveDashboardMetricsFromData(
+        {
+          invoices,
+          leads,
+          appointments,
+          jobs,
+          receptionistConversations,
+        },
+        dateRange
+      );
+      const funnelStages = analyticsService.getConversionFunnelFromData({
+        leads,
+        appointments,
+        jobs,
+        invoices,
+      });
+      const serviceList = analyticsService.getServicePerformanceFromData({
+        jobs,
+        invoices,
+      });
+
+      Promise.resolve(execMetrics).then(setMetrics);
+      setFunnel(funnelStages);
+      setServices(serviceList);
+    }
+  }, [
+    dateRange,
+    businessId,
+    user,
+    isDemoMode,
+    invoices,
+    leads,
+    appointments,
+    jobs,
+    receptionistConversations,
+  ]);
 
   const handleExportCsv = async () => {
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+    const isDemo = isDemoMode || !user;
+    if (isDemo) {
       const csv = analyticsService.generateCsvExport(
         activeTab === 'services' ? 'services' : 'revenue',
         businessProfile?.name || profile.businessName

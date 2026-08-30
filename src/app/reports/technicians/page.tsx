@@ -19,15 +19,21 @@ import {
 } from 'lucide-react';
 
 export default function TechnicianReportsPage() {
-  const { showToast, businessProfile, profile } = useApp();
+  const { user, isDemoMode, jobs, invoices, showToast, businessProfile, profile } = useApp();
   const [technicians, setTechnicians] = useState<TechnicianPerformanceReport[]>([]);
 
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    const list = analyticsService.getTechnicianPerformance();
-    setTechnicians(list);
-  }, []);
+    const isDemo = isDemoMode || (!user && jobs.length === 0);
+    if (isDemo) {
+      const list = analyticsService.getDemoTechnicianPerformance();
+      setTechnicians(list);
+    } else {
+      const list = analyticsService.getTechnicianPerformanceFromData({ jobs, invoices });
+      setTechnicians(list);
+    }
+  }, [user, isDemoMode, jobs, invoices]);
 
   const handleExportCsv = () => {
     const csv = analyticsService.generateCsvExport(

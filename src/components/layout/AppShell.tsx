@@ -42,7 +42,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const pathname = usePathname();
-  const { profile, businessProfile, notifications, leads } = useApp();
+  const { user, isDemoMode, exitDemoMode, profile, businessProfile, notifications, leads } = useApp();
   
   const unreadNotifs = notifications.filter(n => !n.read).length;
   const newLeadsCount = leads?.filter(l => l.status === 'NEW').length || 0;
@@ -159,8 +159,8 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Live Demo Status Banner */}
-        {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+        {/* Live Demo Status Banner: ONLY shown for unauthenticated explore demo visitors */}
+        {!user && isDemoMode && (
           <div className="bg-gradient-to-r from-blue-900/30 via-indigo-900/20 to-blue-900/30 border-b border-blue-500/30 px-4 py-1.5 text-xs text-on-surface flex items-center justify-between z-30">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-700 dark:text-blue-300 font-extrabold text-[10px] tracking-wider uppercase border border-blue-500/40">
@@ -171,7 +171,11 @@ export const AppShell: React.FC<AppShellProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+              <Link
+                href="/"
+                onClick={() => exitDemoMode()}
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+              >
                 Exit Demo
               </Link>
             </div>

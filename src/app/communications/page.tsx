@@ -28,6 +28,8 @@ import { CommChannel, CommStatus } from '@/types';
 
 export default function CommunicationsPage() {
   const {
+    user,
+    isDemoMode,
     communications,
     communicationTemplates,
     communicationConsents,
@@ -198,7 +200,7 @@ export default function CommunicationsPage() {
         </div>
 
         {/* Demo Mode Notice */}
-        {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+        {!user && isDemoMode && (
           <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />

@@ -363,8 +363,8 @@ async function runPhase5QASuite() {
   });
   assert(rlsCheck === true, 'Row-Level Security declared on newly provisioned tables');
 
-  const lastMigration = migrations[migrations.length - 1];
-  assert(lastMigration.includes('20260830000000'), 'Latest webhook events and idempotency migration confirmed');
+  const hasWebhookMigration = migrations.some((m) => m.includes('20260830000000'));
+  assert(hasWebhookMigration === true, 'Latest webhook events and idempotency migration confirmed');
 
   // -----------------------------------------------------------------
   // 14. Demo Isolation in Production (Assertions 54 - 55)

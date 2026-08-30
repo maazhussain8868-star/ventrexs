@@ -16,12 +16,15 @@ import {
   Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useApp } from '@/context/AppContext';
 
 export default function DemoGatewayPage() {
   const router = useRouter();
+  const { enterDemoMode } = useApp();
 
   const handleLaunchDemo = () => {
     // Immediate entry into isolated demo workspace
+    enterDemoMode();
     router.push('/dashboard');
   };
 
@@ -97,17 +100,28 @@ export default function DemoGatewayPage() {
             </p>
           </div>
 
-          {/* Launch Button */}
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            onClick={handleLaunchDemo}
-            className="w-full text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/30 border border-blue-400/30 py-3.5 rounded-xl cursor-pointer"
-            rightIcon={<ArrowRight className="w-4 h-4" />}
-          >
-            Explore Live Demo Now
-          </Button>
+          {/* Action CTAs */}
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/test-receptionist"
+              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-sm shadow-lg shadow-blue-600/30 border border-blue-400/30 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 text-center"
+            >
+              <Sparkles className="w-4 h-4 text-cyan-200 animate-pulse" />
+              <span>Test AI Receptionist Live (Voice Demo)</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={handleLaunchDemo}
+              className="w-full text-sm font-semibold bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-200 hover:text-white py-3.5 rounded-xl cursor-pointer"
+              rightIcon={<ArrowRight className="w-4 h-4 text-slate-400" />}
+            >
+              Explore Full Workspace Sandbox
+            </Button>
+          </div>
 
           {/* Alternative links */}
           <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">

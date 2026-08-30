@@ -185,7 +185,60 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 4. Authenticated user visiting login/signup
+  // 5. SUBSCRIPTION GATE — Authenticated users must have an active subscription
+  //    to access protected customer routes.
+  //    This is checked server-side using the subscriptions table.
+  //    Demo mode bypasses this gate.
+  //    Admin and agency routes are NOT gated here.
+  if (isCustomerProtectedRoute && user && !isDemoMode && supabaseUrl && supabaseAnonKey) {
+    try {
+      const supabaseForSub = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          get(name: string) {
+            return req.cookies.get(name)?.value;
+          },
+          set(_name: string, _value: string, _options: CookieOptions) {},
+          remove(_name: string, _options: CookieOptions) {},
+        },
+      });
+
+      // Find the business this user belongs to
+      const { data: membership } = await supabaseForSub
+        .from('business_members')
+        .select('business_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (membership?.business_id) {
+        // Check subscription status from DB (source of truth — not localStorage/cookies)
+        const { data: sub } = await supabaseForSub
+          .from('subscriptions')
+          .select('status')
+          .eq('business_id', membership.business_id)
+          .maybeSingle();
+
+        const status = sub?.status;
+        const hasActiveSubscription =
+          status === 'active' || status === 'trialing';
+
+        if (!hasActiveSubscription) {
+          const redirectUrl = req.nextUrl.clone();
+          redirectUrl.pathname = '/billing';
+          // Preserve where they wanted to go so we can redirect after payment
+          redirectUrl.searchParams.set('from', pathname);
+          return NextResponse.redirect(redirectUrl);
+        }
+      }
+      // If no membership found, let the dashboard handle the redirect to onboarding
+    } catch {
+      // If subscription check fails (e.g. DB unreachable), fail open to avoid locking out users
+      // The dashboard will re-check and redirect if needed
+    }
+  }
+
+  // 6. Authenticated user visiting login/signup
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = hostContext === 'ADMIN' ? '/admin' : hostContext === 'AGENCY' ? '/agency' : '/dashboard';
@@ -198,6 +251,8 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/',
+    '/billing/:path*',
+    '/onboarding/:path*',
     '/dashboard/:path*',
     '/leads/:path*',
     '/pipeline/:path*',
@@ -224,4 +279,5 @@ export const config = {
     '/signup',
   ],
 };
+
 

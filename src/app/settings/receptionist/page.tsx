@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
@@ -40,16 +40,31 @@ function ReceptionistSettingsContent() {
   } = useApp();
 
   // Form states for general settings
-  const [greeting, setGreeting] = useState(receptionistSettings.greeting);
-  const [businessDescription, setBusinessDescription] = useState(receptionistSettings.businessDescription);
-  const [tone, setTone] = useState<ReceptionistTone>(receptionistSettings.tone);
-  const [afterHoursMessage, setAfterHoursMessage] = useState(receptionistSettings.afterHoursMessage);
-  const [emergencyInstructions, setEmergencyInstructions] = useState(receptionistSettings.emergencyInstructions);
-  const [bookingEnabled, setBookingEnabled] = useState(receptionistSettings.bookingEnabled);
-  const [bookingLeadTimeHours, setBookingLeadTimeHours] = useState(receptionistSettings.bookingLeadTimeHours);
-  const [bookingMaxDaysAhead, setBookingMaxDaysAhead] = useState(receptionistSettings.bookingMaxDaysAhead);
-  const [handoffKeywordsInput, setHandoffKeywordsInput] = useState(receptionistSettings.humanHandoffKeywords.join(', '));
-  const [faqs, setFaqs] = useState<ReceptionistFAQ[]>(receptionistSettings.faqs || []);
+  const [greeting, setGreeting] = useState(receptionistSettings?.greeting || '');
+  const [businessDescription, setBusinessDescription] = useState(receptionistSettings?.businessDescription || '');
+  const [tone, setTone] = useState<ReceptionistTone>(receptionistSettings?.tone || 'professional');
+  const [afterHoursMessage, setAfterHoursMessage] = useState(receptionistSettings?.afterHoursMessage || '');
+  const [emergencyInstructions, setEmergencyInstructions] = useState(receptionistSettings?.emergencyInstructions || '');
+  const [bookingEnabled, setBookingEnabled] = useState(receptionistSettings?.bookingEnabled ?? true);
+  const [bookingLeadTimeHours, setBookingLeadTimeHours] = useState(receptionistSettings?.bookingLeadTimeHours || 2);
+  const [bookingMaxDaysAhead, setBookingMaxDaysAhead] = useState(receptionistSettings?.bookingMaxDaysAhead || 14);
+  const [handoffKeywordsInput, setHandoffKeywordsInput] = useState(receptionistSettings?.humanHandoffKeywords?.join(', ') || '');
+  const [faqs, setFaqs] = useState<ReceptionistFAQ[]>(receptionistSettings?.faqs || []);
+
+  useEffect(() => {
+    if (receptionistSettings) {
+      setGreeting(receptionistSettings.greeting || '');
+      setBusinessDescription(receptionistSettings.businessDescription || '');
+      setTone(receptionistSettings.tone || 'professional');
+      setAfterHoursMessage(receptionistSettings.afterHoursMessage || '');
+      setEmergencyInstructions(receptionistSettings.emergencyInstructions || '');
+      setBookingEnabled(receptionistSettings.bookingEnabled ?? true);
+      setBookingLeadTimeHours(receptionistSettings.bookingLeadTimeHours || 2);
+      setBookingMaxDaysAhead(receptionistSettings.bookingMaxDaysAhead || 14);
+      setHandoffKeywordsInput(receptionistSettings.humanHandoffKeywords?.join(', ') || '');
+      setFaqs(receptionistSettings.faqs || []);
+    }
+  }, [receptionistSettings]);
 
   // Service modal state
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
