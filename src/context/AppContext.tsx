@@ -1,13 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Invoice, 
-  Customer, 
-  CopilotRecommendation, 
-  NotificationItem, 
-  UserProfile, 
-  BusinessSettings, 
+import {
+  Invoice,
+  Customer,
+  CopilotRecommendation,
+  NotificationItem,
+  UserProfile,
+  BusinessSettings,
   AdminStats,
   PaymentMethod,
   Lead,
@@ -49,13 +49,13 @@ import {
   UsageMetric,
   IndustryType,
 } from '@/types';
-import { 
-  initialInvoices, 
-  initialCustomers, 
-  initialRecommendations, 
-  initialNotifications, 
-  initialProfile, 
-  initialSettings, 
+import {
+  initialInvoices,
+  initialCustomers,
+  initialRecommendations,
+  initialNotifications,
+  initialProfile,
+  initialSettings,
   initialAdminStats,
   initialLeads,
   initialAppointments,
@@ -184,7 +184,7 @@ interface AppContextType {
   enterDemoMode: () => void;
   exitDemoMode: () => void;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (params: { email: string; password: string; name: string; businessName: string }) => Promise<{ success: boolean; error?: string }>;
+  signUp: (params: { email: string; password: string; name: string; businessName: string }) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }>;
   resendVerificationEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ success: boolean; error?: string }>;
@@ -202,7 +202,7 @@ interface AppContextType {
   businessProfile: ServiceBusinessProfile;
   adminStats: AdminStats;
   toasts: ToastMessage[];
-  
+
   // CRM Lead actions
   addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'lastActivityAt'> & { id?: string }) => Promise<Lead | null>;
   updateLead: (lead: Lead) => Promise<void>;
@@ -225,39 +225,39 @@ interface AppContextType {
   addJob: (job: Omit<Job, 'id' | 'createdAt'> & { id?: string }) => Promise<Job | null>;
   updateJob: (job: Job) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
-  
+
   // Invoice actions
   addInvoice: (invoice: Omit<Invoice, 'id' | 'timeline' | 'remainingBalance' | 'paymentsReceived' | 'originalAmountDue' | 'daysOverdue'> & { id?: string; originalAmountDue?: number; paymentsReceived?: number; remainingBalance?: number; daysOverdue?: number }) => Promise<Invoice | null> | Invoice;
   updateInvoice: (invoice: Invoice) => Promise<void> | void;
   deleteInvoice: (id: string) => Promise<void> | void;
   recordPayment: (invoiceId: string, amount: number, method: PaymentMethod, note?: string) => Promise<void>;
   sendInvoiceReminder: (invoiceId: string, customSubject?: string, customBody?: string) => void;
-  
+
   // Customer actions
   addCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer | null> | Customer;
   updateCustomer: (customer: Customer) => Promise<void> | void;
-  
+
   // Copilot actions
   approveRecommendation: (id: string, customDraft?: { subject?: string; message?: string; channel?: 'email' | 'sms' | 'whatsapp' }) => Promise<void> | void;
   dismissRecommendation: (id: string) => Promise<void> | void;
   refreshAIRecommendations?: (businessId?: string) => Promise<void>;
   generateFollowUpContent: (invoiceId: string, tone: 'gentle' | 'professional' | 'firm' | 'urgent', channel: 'email' | 'sms' | 'whatsapp') => { subject: string; body: string };
-  
+
   // Notification actions
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   clearNotifications: () => void;
-  
+
   // Business Profile / Settings actions
   updateProfile: (profile: Partial<UserProfile>) => void;
   updateSettings: (settings: Partial<BusinessSettings>) => void;
   updateBusinessProfile: (updates: Partial<ServiceBusinessProfile>) => Promise<void>;
   completeOnboarding: (data: Partial<ServiceBusinessProfile>) => Promise<void>;
-  
+
   // Toast notifications
   showToast: (toast: Omit<ToastMessage, 'id'>) => void;
   dismissToast: (id: string) => void;
-  
+
   // AI Receptionist actions & state
   receptionistSettings: ReceptionistSettings;
   receptionistServices: ReceptionistService[];
@@ -344,6 +344,7 @@ interface AppContextType {
   reactivateSubscription: () => Promise<boolean>;
   recordUsageMetric: (metric: UsageMetric, amount?: number) => void;
   checkEntitlement: (feature: string) => boolean;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -695,7 +696,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUser(authUser);
       setSession(authSession);
       setIsDemoMode(false);
-      
+
       showToast({
         title: 'Welcome Back!',
         description: `Signed in as ${email}`,
@@ -715,10 +716,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const signUp = async (params: { email: string; password: string; name: string; businessName: string }) => {
+  const signUp = async (params: { email: string; password: string; name: string; businessName: string }): Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }> => {
     setIsLoading(true);
     try {
-      const { user: authUser, session: authSession, business } = await services.auth.signUp(params);
+      const res = await services.auth.signUp(params);
+      const { user: authUser, session: authSession, business, needsEmailConfirmation } = res;
       setUser(authUser);
       setSession(authSession);
       setIsDemoMode(false);
@@ -741,18 +743,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         email: params.email,
       }));
 
-      showToast({
-        title: 'Account Created Successfully!',
-        description: 'Your service workspace is initialized.',
-        type: 'success',
-      });
+      if (needsEmailConfirmation) {
+        showToast({
+          title: 'Verification Email Sent',
+          description: `Please check ${params.email} to confirm your account and complete setup.`,
+          type: 'info',
+        });
+      } else {
+        showToast({
+          title: 'Account Created Successfully!',
+          description: 'Your service workspace is initialized.',
+          type: 'success',
+        });
+      }
       setIsLoading(false);
-      return { success: true };
+      return { success: true, needsEmailConfirmation };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Failed to create account.';
       setIsLoading(false);
       showToast({
-        title: 'Registration Failed',
+        title: 'Registration Notice',
         description: errMsg,
         type: 'error',
       });
@@ -824,7 +834,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addLead = async (leadData: Omit<Lead, 'id' | 'createdAt' | 'lastActivityAt'> & { id?: string }): Promise<Lead | null> => {
     const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
     const computedScore = leadData.score ?? calculateLeadScore(leadData).totalScore;
-    
+
     if (session && businessId && !isDemoMode) {
       try {
         const res = await createLeadAction({
@@ -2378,7 +2388,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         let matchedCustomer = customers.find(
           c => c.name.toLowerCase() === invoiceData.customerName.toLowerCase() ||
-               c.company.toLowerCase() === invoiceData.customerCompany.toLowerCase()
+            c.company.toLowerCase() === invoiceData.customerCompany.toLowerCase()
         );
 
         if (!matchedCustomer) {
@@ -3988,6 +3998,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (feature === 'advancedReports') return subscription.plan !== 'Starter';
         if (feature === 'apiAccess') return subscription.plan === 'Enterprise';
         return true;
+      },
+      refreshSubscription: async () => {
+        try {
+          let targetBusinessId = businessId;
+          if (!targetBusinessId && user) {
+            const { data: member } = await supabase
+              .from('business_members')
+              .select('business_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            targetBusinessId = member?.business_id || null;
+          }
+          if (!targetBusinessId) return;
+
+          const { data: subRow } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('business_id', targetBusinessId)
+            .maybeSingle();
+
+          if (subRow) {
+            setSubscription(prev => ({
+              ...prev,
+              id: subRow.id,
+              businessId: targetBusinessId!,
+              plan: (subRow.plan || prev.plan) as any,
+              billingCycle: (subRow.billing_cycle || 'monthly') as any,
+              status: (subRow.status || 'incomplete') as any,
+              currentPeriodStart: subRow.current_period_start || prev.currentPeriodStart,
+              currentPeriodEnd: subRow.current_period_end || prev.currentPeriodEnd,
+              cancelAtPeriodEnd: subRow.cancel_at_period_end || false,
+              provider: subRow.provider as any,
+              providerCustomerId: subRow.provider_customer_id || undefined,
+              providerSubscriptionId: subRow.provider_subscription_id || undefined,
+              selectedPlan: (subRow as any).selected_plan || subRow.plan || 'Starter',
+              selectedBillingCycle: (subRow as any).selected_billing_cycle || 'monthly',
+            }));
+          }
+        } catch (refreshErr) {
+          console.warn('Subscription refresh notice:', refreshErr);
+        }
       },
     }}>
       {children}

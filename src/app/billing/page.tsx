@@ -21,10 +21,18 @@ export default function BillingPage() {
   const searchParams = useSearchParams();
   const { user, businessProfile, subscription, showToast } = useApp();
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('Professional');
+  const planFromUrl = searchParams.get('plan') as PlanKey | null;
+  const initialPlan: PlanKey = planFromUrl && (planFromUrl in PLANS_CONFIG) ? planFromUrl : 'Professional';
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>(initialPlan);
   const [billingCycle, setBillingCycle] = useState<BillingInterval>('monthly');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
+
+  useEffect(() => {
+    if (planFromUrl && (planFromUrl in PLANS_CONFIG)) {
+      setSelectedPlan(planFromUrl);
+    }
+  }, [planFromUrl]);
 
   // Show cancellation message if returning from payment provider
   const cancelled = searchParams.get('cancelled') === 'true';

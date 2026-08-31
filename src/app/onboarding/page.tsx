@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import {
   ArrowRight,
@@ -58,6 +58,7 @@ const DEFAULT_SERVICES_BY_INDUSTRY: Record<string, string[]> = {
 
 export default function BusinessOnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, profile, businessProfile, completeOnboarding, showToast } = useApp();
 
   const [step, setStep] = useState(1);
@@ -94,8 +95,10 @@ export default function BusinessOnboardingPage() {
   );
   const [newServiceInput, setNewServiceInput] = useState('');
 
-  // STEP 4 — Choose Plan
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('Professional');
+  // STEP 4 — Choose Plan (Preserve from URL if present)
+  const planFromUrl = searchParams.get('plan') as PlanKey | null;
+  const initialPlan: PlanKey = planFromUrl && (planFromUrl in PLANS_CONFIG) ? planFromUrl : 'Professional';
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>(initialPlan);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   // Update suggested services when industry changes
@@ -161,15 +164,15 @@ export default function BusinessOnboardingPage() {
         type: 'success',
       });
 
-      // Direct to billing — subscription must be active before accessing dashboard
-      router.push('/billing');
+      // Direct to billing with selected plan preserved
+      router.push(`/billing?plan=${encodeURIComponent(selectedPlan)}`);
     } catch (err: any) {
       showToast({
         title: 'Setup Notice',
         description: err.message || 'Workspace created. Choose a plan to get started.',
         type: 'info',
       });
-      router.push('/billing');
+      router.push(`/billing?plan=${encodeURIComponent(selectedPlan)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -196,7 +199,7 @@ export default function BusinessOnboardingPage() {
             Step {step} of 5
           </span>
           <button
-            onClick={() => router.push('/billing')}
+            onClick={() => router.push(`/billing?plan=${encodeURIComponent(selectedPlan)}`)}
             className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors"
           >
             Skip for now

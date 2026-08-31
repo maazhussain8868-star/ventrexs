@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RazorpayWebhookHandler } from '@/lib/payments/webhooks/razorpay';
+import { RazorpayPaymentAdapter } from '@/lib/payments/adapters/razorpay-adapter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ProductionLogger } from '@/lib/monitoring/logger';
 
@@ -33,15 +34,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const adapter = new RazorpayPaymentAdapter(undefined, undefined, webhookSecret);
+    const verification = await adapter.verifyWebhookSignature(rawBody, signature, webhookSecret);
+    if (!verification.isValid) {
+      ProductionLogger.warn('WEBHOOK', `Razorpay webhook verification failed: ${verification.error}`);
+      return NextResponse.json(
+        { error: verification.error || 'Invalid webhook signature or payload' },
+        { status: 400 }
+      );
+    }
+
     const adminSupabase = createAdminClient();
     const handler = new RazorpayWebhookHandler(adminSupabase, webhookSecret);
 
     const result = await handler.handleWebhook(rawBody, signature, webhookSecret);
 
     if (!result.success) {
-      ProductionLogger.warn('WEBHOOK', `Razorpay webhook verification failed: ${result.error}`);
+      ProductionLogger.warn('WEBHOOK', `Razorpay webhook processing failed: ${result.error}`);
       return NextResponse.json(
-        { error: result.error || 'Invalid webhook signature or payload' },
+        { error: result.error || 'Webhook processing failed' },
         { status: 400 }
       );
     }

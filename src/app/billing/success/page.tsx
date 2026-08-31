@@ -23,28 +23,39 @@ import { useApp } from '@/context/AppContext';
 export default function BillingSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { subscription } = useApp();
+  const { subscription, refreshSubscription } = useApp();
 
   const plan = searchParams.get('plan') || '';
-  const [status, setStatus] = useState<'verifying' | 'success' | 'timeout'>('verifying');
+  const isActivated = searchParams.get('activated') === 'true';
+  const [status, setStatus] = useState<'verifying' | 'success' | 'timeout'>(
+    isActivated ? 'success' : 'verifying'
+  );
   const [pollCount, setPollCount] = useState(0);
   const MAX_POLLS = 20;
-  const POLL_INTERVAL_MS = 3000;
+  const POLL_INTERVAL_MS = 2500;
 
   useEffect(() => {
-    // If subscription is already active on mount, go straight to success
-    if (subscription?.status === 'active' || subscription?.status === 'trialing') {
+    // If subscription is already active on mount or arrived from verified route, go straight to success
+    if (isActivated || subscription?.status === 'active' || subscription?.status === 'trialing') {
       setStatus('success');
       return;
     }
 
-    // Poll the context (which re-fetches from DB) until active or timeout
+    // Actively refresh subscription from DB and poll until active or timeout
     let timer: ReturnType<typeof setTimeout>;
     let count = 0;
+    let isCancelled = false;
 
     const poll = async () => {
+      if (isCancelled) return;
       count++;
       setPollCount(count);
+
+      try {
+        await refreshSubscription();
+      } catch {
+        // Non-blocking
+      }
 
       const currentStatus = subscription?.status;
       if (currentStatus === 'active' || currentStatus === 'trialing') {
@@ -60,9 +71,12 @@ export default function BillingSuccessPage() {
       timer = setTimeout(poll, POLL_INTERVAL_MS);
     };
 
-    timer = setTimeout(poll, POLL_INTERVAL_MS);
-    return () => clearTimeout(timer);
-  }, [subscription?.status]);
+    timer = setTimeout(poll, 1500);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isActivated, refreshSubscription, subscription?.status]);
 
   // Redirect to dashboard a moment after confirming success
   useEffect(() => {

@@ -22,8 +22,9 @@ export default function SignupPage() {
   const searchParams = useSearchParams();
   const { signUp, resendVerificationEmail, showToast } = useApp();
 
-  // 1. Signup Type Choice
+  // 1. Signup Type & Plan Choice
   const initialType = (searchParams.get('type') || '').toUpperCase();
+  const selectedPlan = searchParams.get('plan') || '';
   const [accountType, setAccountType] = useState<SignupAccountType>(
     initialType === 'AGENCY' || initialType === 'AGENCY_OWNER'
       ? 'AGENCY_OWNER'
@@ -42,7 +43,9 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [submitCooldown, setSubmitCooldown] = useState(0);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   // Synchronous submission lock to block parallel / double-click requests
   const isSubmittingRef = React.useRef(false);
@@ -56,6 +59,14 @@ export default function SignupPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (submitCooldown > 0) {
+      timer = setTimeout(() => setSubmitCooldown(prev => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [submitCooldown]);
+
   // 2. Capture Attribution on Mount
   useEffect(() => {
     captureAcquisitionAttribution();
@@ -64,7 +75,7 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isSubmittingRef.current || isLoading) {
+    if (isSubmittingRef.current || isLoading || submitCooldown > 0) {
       return;
     }
 
@@ -105,22 +116,36 @@ export default function SignupPage() {
           }).catch((err) => console.warn('Attribution save notice:', err));
         }
 
+        if (res.needsEmailConfirmation) {
+          setVerificationSent(true);
+          return;
+        }
+
         showToast({
           title: 'Account Created',
           description: 'Welcome to Ventrexs AI. Directing to setup...',
           type: 'success',
         });
 
+        const planQuery = selectedPlan ? `?plan=${encodeURIComponent(selectedPlan)}` : '';
         if (accountType === 'AGENCY_OWNER') {
-          router.push('/agency/onboarding');
+          router.push(`/agency/onboarding${planQuery}`);
         } else {
-          router.push('/onboarding');
+          router.push(`/onboarding${planQuery}`);
         }
       } else {
-        setError(res.error || 'Failed to create account. Please try again.');
+        const errorMsg = res.error || 'Failed to create account. Please try again.';
+        setError(errorMsg);
+        if (errorMsg.toLowerCase().includes('rate limit')) {
+          setSubmitCooldown(60);
+        }
       }
     } catch (submitErr: any) {
-      setError(submitErr?.message || 'An unexpected error occurred during signup.');
+      const errMsg = submitErr?.message || 'An unexpected error occurred during signup.';
+      setError(errMsg);
+      if (errMsg.toLowerCase().includes('rate limit')) {
+        setSubmitCooldown(60);
+      }
     } finally {
       setIsLoading(false);
       isSubmittingRef.current = false;
@@ -268,6 +293,50 @@ export default function SignupPage() {
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+        ) : verificationSent ? (
+          <div className="p-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center mx-auto">
+              <Send className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-extrabold text-white">Check Your Email</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                We sent a confirmation link to <strong className="text-white">{email}</strong>. Please click the link to activate your workspace and continue to setup.
+              </p>
+            </div>
+
+            {resendSuccess && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400">
+                A fresh verification link was dispatched!
+              </div>
+            )}
+
+            <div className="pt-2 flex flex-col gap-2">
+              <Link
+                href={`/login?email=${encodeURIComponent(email)}`}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-md inline-flex items-center justify-center gap-1.5"
+              >
+                <span>Sign In to Your Account</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading || resendCooldown > 0}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition-all border border-slate-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+              >
+                {resendLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                {resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : 'Resend Verification Email'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setVerificationSent(false)}
+                className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors pt-1"
+              >
+                Change email or try again
+              </button>
+            </div>
+          </div>
         ) : (
           /* Signup Form */
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -402,11 +471,13 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || submitCooldown > 0}
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm py-3 rounded-xl shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all mt-2 disabled:opacity-50 flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
             >
               {isLoading ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : submitCooldown > 0 ? (
+                <span>Retry signup in {submitCooldown}s</span>
               ) : (
                 <>
                   <span>

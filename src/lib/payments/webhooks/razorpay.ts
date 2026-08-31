@@ -78,7 +78,7 @@ export class RazorpayWebhookHandler {
       // 4. Handle Event by Purpose
       if (eventType.startsWith('subscription.')) {
         await this.processSubscriptionEvent(eventType, payloadData, eventId);
-      } else if (eventType.startsWith('payment.')) {
+      } else if (eventType.startsWith('payment.') || eventType.startsWith('order.')) {
         await this.processPaymentEvent(eventType, payloadData, eventId);
       }
 
@@ -128,7 +128,7 @@ export class RazorpayWebhookHandler {
           business_id: businessId,
           plan: planKey as any,
           status: 'active',
-          billing_cycle: 'monthly',
+          billing_cycle: (subEntity.notes?.interval || 'monthly') as any,
           provider: 'razorpay',
           provider_subscription_id: subEntity.id,
           provider_customer_id: subEntity.customer_id || null,
@@ -140,31 +140,44 @@ export class RazorpayWebhookHandler {
         { onConflict: 'business_id' }
       );
 
-      await this.client.from('subscription_events').insert({
-        business_id: businessId,
-        event_type: 'SUBSCRIPTION_ACTIVATED',
-        to_plan: planKey,
-        metadata: { provider: 'razorpay', eventId, subscriptionId: subEntity.id },
-      });
+      try {
+        await this.client.from('subscription_events').insert({
+          business_id: businessId,
+          event_type: 'SUBSCRIPTION_ACTIVATED',
+          to_plan: planKey,
+          metadata: { provider: 'razorpay', eventId, subscriptionId: subEntity.id },
+        });
+      } catch {
+        // Non-blocking
+      }
     } else if (eventType === 'subscription.cancelled') {
       await this.client
         .from('subscriptions')
         .update({ status: 'cancelled', updated_at: new Date().toISOString() })
         .eq('business_id', businessId);
 
-      await this.client.from('subscription_events').insert({
-        business_id: businessId,
-        event_type: 'SUBSCRIPTION_CANCELLED',
-        metadata: { provider: 'razorpay', eventId, subscriptionId: subEntity.id },
-      });
+      try {
+        await this.client.from('subscription_events').insert({
+          business_id: businessId,
+          event_type: 'SUBSCRIPTION_CANCELLED',
+          metadata: { provider: 'razorpay', eventId, subscriptionId: subEntity.id },
+        });
+      } catch {
+        // Non-blocking
+      }
     }
   }
 
   private async processPaymentEvent(eventType: string, data: any, eventId: string) {
     const payEntity = data.payment?.entity || data.entity || {};
-    const invoiceId = payEntity.notes?.invoice_id || payEntity.notes?.invoiceId;
-    const businessId = payEntity.notes?.business_id || payEntity.notes?.businessId;
+    const orderEntity = data.order?.entity || {};
+    const notes = payEntity.notes || orderEntity.notes || data.notes || {};
+    const invoiceId = notes.invoice_id || notes.invoiceId;
+    const businessId = notes.business_id || notes.businessId;
+    const planKey = notes.plan;
+    const billingCycle = notes.interval || 'monthly';
 
+    // A) Invoice Payment Handler
     if (eventType === 'payment.captured' && invoiceId && businessId) {
       const amount = Number(payEntity.amount) / 100;
 
@@ -210,6 +223,91 @@ export class RazorpayWebhookHandler {
               updated_at: new Date().toISOString(),
             })
             .eq('id', invoiceId);
+        }
+      }
+      return;
+    }
+
+    // B) SaaS Subscription Payment Handler (payment.captured or order.paid)
+    if ((eventType === 'payment.captured' || eventType === 'order.paid') && businessId && !invoiceId) {
+      const finalPlan = planKey || 'Starter';
+      const paymentId = payEntity.id || orderEntity.id || eventId;
+      const amountUSD = Number(payEntity.amount || orderEntity.amount || 0) / 100;
+      const now = new Date();
+      const periodEnd = new Date(now);
+      if (billingCycle === 'annual') {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      } else {
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      }
+
+      await this.client.from('subscriptions').upsert(
+        {
+          business_id: businessId,
+          plan: finalPlan as any,
+          billing_cycle: billingCycle as any,
+          status: 'active',
+          selected_plan: finalPlan as any,
+          selected_billing_cycle: billingCycle as any,
+          checkout_session_id: payEntity.order_id || orderEntity.id || undefined,
+          price_amount: amountUSD,
+          currency: 'USD',
+          provider: 'razorpay',
+          provider_subscription_id: paymentId,
+          provider_customer_id: payEntity.customer_id || null,
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          cancel_at_period_end: false,
+          updated_at: now.toISOString(),
+        },
+        { onConflict: 'business_id' }
+      );
+
+      try {
+        await this.client.from('subscription_events').insert({
+          business_id: businessId,
+          event_type: 'SUBSCRIPTION_ACTIVATED',
+          to_plan: finalPlan,
+          metadata: {
+            provider: 'razorpay',
+            eventId,
+            paymentId,
+            orderId: payEntity.order_id || orderEntity.id,
+            billingCycle,
+          },
+        });
+      } catch {
+        // Non-blocking
+      }
+      return;
+    }
+
+    // C) Payment Failed Handler
+    if (eventType === 'payment.failed' && businessId && !invoiceId) {
+      const { data: currentSub } = await this.client
+        .from('subscriptions')
+        .select('status')
+        .eq('business_id', businessId)
+        .maybeSingle();
+
+      if (currentSub && currentSub.status !== 'active') {
+        await this.client
+          .from('subscriptions')
+          .update({ status: 'past_due', updated_at: new Date().toISOString() })
+          .eq('business_id', businessId);
+
+        try {
+          await this.client.from('subscription_events').insert({
+            business_id: businessId,
+            event_type: 'PAYMENT_FAILED',
+            metadata: {
+              provider: 'razorpay',
+              eventId,
+              error: payEntity.error_description || payEntity.error_reason,
+            },
+          });
+        } catch {
+          // Non-blocking
         }
       }
     }

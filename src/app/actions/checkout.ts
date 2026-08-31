@@ -70,6 +70,8 @@ export async function createCheckoutSessionAction(
       userId: params.userId,
     });
 
+    const provider = (process.env.BILLING_PROVIDER || process.env.SAAS_PAYMENT_PROVIDER || 'razorpay').toLowerCase();
+
     // Mark subscription as checkout_started so middleware blocks workspace access
     // until webhook confirms payment
     await adminSupabase.from('subscriptions').upsert(
@@ -83,7 +85,7 @@ export async function createCheckoutSessionAction(
         checkout_session_id: result.sessionId,
         price_amount: price,
         currency: 'USD',
-        provider: (process.env.BILLING_PROVIDER || 'stripe').toLowerCase() as any,
+        provider: provider as any,
         current_period_start: new Date().toISOString(),
         current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
         updated_at: new Date().toISOString(),
@@ -106,7 +108,8 @@ export async function createCheckoutSessionAction(
       msg.includes('not configured') ||
       msg.includes('STRIPE_SECRET_KEY') ||
       msg.includes('RAZORPAY_KEY_ID') ||
-      msg.includes('BILLING_PROVIDER')
+      msg.includes('BILLING_PROVIDER') ||
+      msg.includes('SAAS_PAYMENT_PROVIDER')
     ) {
       return {
         success: false,
@@ -139,7 +142,7 @@ export async function saveSelectedPlanAction(
     }
 
     const adminSupabase = createAdminClient();
-    const provider = (process.env.BILLING_PROVIDER || 'stripe').toLowerCase();
+    const provider = (process.env.BILLING_PROVIDER || process.env.SAAS_PAYMENT_PROVIDER || 'razorpay').toLowerCase();
     const planConfig = PLANS_CONFIG[params.plan];
     const price = params.billingCycle === 'annual' ? planConfig.priceAnnual : planConfig.priceMonthly;
 

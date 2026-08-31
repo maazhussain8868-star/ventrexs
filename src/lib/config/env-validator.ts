@@ -60,35 +60,51 @@ export function validateProductionEnvironment(): EnvValidationResult {
   }
 
   // 3. SMS Provider (Twilio in Production)
-  const smsProvider = (process.env.SMS_PROVIDER || '').toLowerCase();
+  const smsProvider = (process.env.SMS_PROVIDER || 'twilio').toLowerCase();
   if (isProduction) {
     if (smsProvider !== 'twilio') {
       errors.push(`CRITICAL: SMS_PROVIDER must be configured to "twilio" in production (Currently: "${smsProvider || 'empty'}")`);
     }
     if (!process.env.TWILIO_ACCOUNT_SID) missingVariables.push('TWILIO_ACCOUNT_SID');
     if (!process.env.TWILIO_AUTH_TOKEN) missingVariables.push('TWILIO_AUTH_TOKEN');
-    if (!process.env.TWILIO_FROM_NUMBER) missingVariables.push('TWILIO_FROM_NUMBER');
+    if (!process.env.TWILIO_FROM_NUMBER && !process.env.TWILIO_PHONE_NUMBER) {
+      missingVariables.push('TWILIO_PHONE_NUMBER');
+    }
   }
 
   // 4. WhatsApp Provider (Meta Cloud API in Production)
-  const waProvider = (process.env.WHATSAPP_PROVIDER || '').toLowerCase();
+  const waProvider = (process.env.WHATSAPP_PROVIDER || 'meta').toLowerCase();
   if (isProduction) {
     if (waProvider !== 'meta') {
       errors.push(`CRITICAL: WHATSAPP_PROVIDER must be configured to "meta" in production (Currently: "${waProvider || 'empty'}")`);
     }
-    if (!process.env.WHATSAPP_API_TOKEN) missingVariables.push('WHATSAPP_API_TOKEN');
+    if (!process.env.WHATSAPP_API_TOKEN && !process.env.WHATSAPP_ACCESS_TOKEN) {
+      missingVariables.push('WHATSAPP_ACCESS_TOKEN');
+    }
     if (!process.env.WHATSAPP_PHONE_NUMBER_ID) missingVariables.push('WHATSAPP_PHONE_NUMBER_ID');
     if (!process.env.WHATSAPP_BUSINESS_ACCOUNT_ID) missingVariables.push('WHATSAPP_BUSINESS_ACCOUNT_ID');
   }
 
-  // 5. Billing Provider (Stripe in Production)
-  const billingProvider = (process.env.BILLING_PROVIDER || '').toLowerCase();
+  // 5. Billing Provider (Razorpay or Stripe in Production)
+  const billingProvider = (
+    process.env.BILLING_PROVIDER ||
+    process.env.SAAS_PAYMENT_PROVIDER ||
+    'razorpay'
+  ).toLowerCase();
+
   if (isProduction) {
-    if (billingProvider !== 'stripe') {
-      errors.push(`CRITICAL: BILLING_PROVIDER must be configured to "stripe" in production (Currently: "${billingProvider || 'empty'}")`);
+    if (billingProvider === 'razorpay') {
+      if (!process.env.RAZORPAY_KEY_ID) missingVariables.push('RAZORPAY_KEY_ID');
+      if (!process.env.RAZORPAY_KEY_SECRET) missingVariables.push('RAZORPAY_KEY_SECRET');
+      if (!process.env.RAZORPAY_WEBHOOK_SECRET) missingVariables.push('RAZORPAY_WEBHOOK_SECRET');
+    } else if (billingProvider === 'stripe') {
+      if (!process.env.STRIPE_SECRET_KEY) missingVariables.push('STRIPE_SECRET_KEY');
+      if (!process.env.STRIPE_WEBHOOK_SECRET) missingVariables.push('STRIPE_WEBHOOK_SECRET');
+    } else {
+      errors.push(
+        `CRITICAL: SAAS_PAYMENT_PROVIDER / BILLING_PROVIDER must be configured to "razorpay" or "stripe" in production (Currently: "${billingProvider || 'empty'}")`
+      );
     }
-    if (!process.env.STRIPE_SECRET_KEY) missingVariables.push('STRIPE_SECRET_KEY');
-    if (!process.env.STRIPE_WEBHOOK_SECRET) missingVariables.push('STRIPE_WEBHOOK_SECRET');
   }
 
   // 6. Gemini AI Key

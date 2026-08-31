@@ -8,6 +8,16 @@ export function formatAuthErrorMessage(error: any): string {
   const lower = (msg + ' ' + code).toLowerCase();
 
   if (
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('network request failed') ||
+    lower.includes('fetch failed') ||
+    lower.includes('load failed')
+  ) {
+    return 'Unable to reach the authentication server. Please check your internet connection and try again.';
+  }
+
+  if (
     lower.includes('rate limit') ||
     lower.includes('over_email_send_rate_limit') ||
     lower.includes('too many requests') ||
@@ -16,7 +26,7 @@ export function formatAuthErrorMessage(error: any): string {
     error.status === 429 ||
     error.statusCode === 429
   ) {
-    return 'Email rate limit exceeded. Too many signup/verification emails were requested recently. Please wait a few minutes before trying again, or try signing in if you already created an account.';
+    return 'Email verification rate limit reached. Supabase limits automated signup emails. Please wait a few minutes before trying again, or try signing in if you already created an account.';
   }
 
   if (
@@ -57,69 +67,96 @@ export class AuthService {
   }) {
     const { userId, email, name = 'Owner', businessName = 'My Business' } = params;
 
-    // 1. Create or update profile
-    const { error: profileError } = await this.client
-      .from('profiles')
-      .upsert({
-        id: userId,
-        name,
-        email,
-        role: 'owner',
-      });
+    // 1. Create or update profile (safe upsert)
+    try {
+      const { error: profileError } = await this.client
+        .from('profiles')
+        .upsert({
+          id: userId,
+          name,
+          email,
+          role: 'owner',
+        });
 
-    if (profileError) {
-      console.warn('Profile sync notice:', profileError.message);
+      if (profileError) {
+        console.warn('Profile sync notice:', profileError.message);
+      }
+    } catch (profErr: any) {
+      console.warn('Profile sync exception:', profErr?.message);
     }
 
     // 2. Check if the user already has a business workspace
-    const { data: existingMembership } = await this.client
-      .from('business_members')
-      .select('business_id, role, is_primary')
-      .eq('user_id', userId)
-      .order('is_primary', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (existingMembership) {
-      const { data: existingBusiness } = await this.client
-        .from('businesses')
-        .select('*')
-        .eq('id', existingMembership.business_id)
+    try {
+      const { data: existingMembership } = await this.client
+        .from('business_members')
+        .select('business_id, role, is_primary')
+        .eq('user_id', userId)
+        .order('is_primary', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (existingBusiness) {
-        return { business: existingBusiness, userRole: existingMembership.role };
+      if (existingMembership?.business_id) {
+        const { data: existingBusiness } = await this.client
+          .from('businesses')
+          .select('*')
+          .eq('id', existingMembership.business_id)
+          .maybeSingle();
+
+        if (existingBusiness) {
+          return { business: existingBusiness, userRole: existingMembership.role };
+        }
       }
+    } catch (membershipCheckErr: any) {
+      console.warn('Existing workspace lookup notice:', membershipCheckErr?.message);
     }
 
-    // 3. Create fresh isolated workspace with NO demo seed records
-    const { data: newBusiness, error: businessError } = await this.client
-      .from('businesses')
-      .insert({
-        name: businessName,
-        email,
-        currency: 'USD ($)',
-        payment_terms_days: 14,
-        auto_reminder_enabled: true,
-      })
-      .select()
-      .single();
+    // 3. Create fresh isolated workspace
+    try {
+      const { data: newBusiness, error: businessError } = await this.client
+        .from('businesses')
+        .insert({
+          name: businessName,
+          email,
+          currency: 'USD ($)',
+          payment_terms_days: 14,
+          auto_reminder_enabled: true,
+        })
+        .select()
+        .single();
 
-    if (businessError) {
-      console.warn('Business creation notice:', businessError.message);
+      if (businessError) {
+        console.warn('Business creation notice:', businessError.message);
+        return { business: null, userRole: 'owner' };
+      }
+
+      if (newBusiness) {
+        // Trigger handle_new_business_owner may have already created the business_members row
+        const { data: existingMember } = await this.client
+          .from('business_members')
+          .select('id')
+          .eq('business_id', newBusiness.id)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (!existingMember) {
+          try {
+            await this.client.from('business_members').insert({
+              business_id: newBusiness.id,
+              user_id: userId,
+              role: 'owner',
+              is_primary: true,
+            });
+          } catch {
+            // Non-blocking: trigger or unique constraint handled it
+          }
+        }
+      }
+
+      return { business: newBusiness, userRole: 'owner' };
+    } catch (createErr: any) {
+      console.warn('Workspace creation exception:', createErr?.message);
       return { business: null, userRole: 'owner' };
     }
-
-    if (newBusiness) {
-      await this.client.from('business_members').insert({
-        business_id: newBusiness.id,
-        user_id: userId,
-        role: 'owner',
-        is_primary: true,
-      });
-    }
-
-    return { business: newBusiness, userRole: 'owner' };
   }
 
   async signUp(params: {
@@ -159,19 +196,28 @@ export class AuthService {
       }
 
       let business = null;
-      try {
-        const result = await this.ensureUserWorkspace({
-          userId: authData.user.id,
-          email: params.email,
-          name: params.name,
-          businessName: params.businessName,
-        });
-        business = result.business;
-      } catch (dbErr: any) {
-        console.warn('Workspace initialization warning:', dbErr?.message);
+      // Only attempt client-side workspace creation if we have an active authenticated session.
+      // If email confirmation is required, session is null, and ensureUserWorkspace will run upon first login.
+      if (authData.session) {
+        try {
+          const result = await this.ensureUserWorkspace({
+            userId: authData.user.id,
+            email: params.email,
+            name: params.name,
+            businessName: params.businessName,
+          });
+          business = result.business;
+        } catch (dbErr: any) {
+          console.warn('Workspace initialization warning:', dbErr?.message);
+        }
       }
 
-      return { user: authData.user, session: authData.session, business };
+      return {
+        user: authData.user,
+        session: authData.session,
+        business,
+        needsEmailConfirmation: !authData.session,
+      };
     } catch (err: any) {
       const formatted = formatAuthErrorMessage(err);
       throw new Error(formatted);
