@@ -166,10 +166,18 @@ export class AuthService {
     businessName: string;
   }) {
     try {
-      const origin =
-        typeof window !== 'undefined'
+      const isBrowser = typeof window !== 'undefined';
+      const isLocalhost =
+        isBrowser &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (isLocalhost && process.env.NODE_ENV !== 'production'
           ? window.location.origin
-          : process.env.NEXT_PUBLIC_APP_URL || 'https://ventrexs.com';
+          : 'https://www.ventrexs.com');
+
+      const emailRedirectTo = `${appUrl}/auth/callback?next=/onboarding`;
 
       const { data: authData, error: authError } = await this.client.auth.signUp({
         email: params.email,
@@ -179,7 +187,7 @@ export class AuthService {
             name: params.name,
             business_name: params.businessName,
           },
-          emailRedirectTo: `${origin}/onboarding`,
+          emailRedirectTo,
         },
       });
 
@@ -226,9 +234,25 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     try {
+      const isBrowser = typeof window !== 'undefined';
+      const isLocalhost =
+        isBrowser &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (isLocalhost && process.env.NODE_ENV !== 'production'
+          ? window.location.origin
+          : 'https://www.ventrexs.com');
+
+      const emailRedirectTo = `${appUrl}/auth/callback?next=/onboarding`;
+
       const { data, error } = await this.client.auth.resend({
         type: 'signup',
         email,
+        options: {
+          emailRedirectTo,
+        },
       });
 
       if (error) throw error;

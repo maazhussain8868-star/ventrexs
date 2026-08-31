@@ -61,7 +61,9 @@ export async function generateDemoLinkAction(label?: string) {
       label: label || 'Production Demo Invitation',
     });
 
-    const host = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const host =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://www.ventrexs.com' : 'http://localhost:3000');
     const demoUrl = `${host}/demo/${tokenRecord.rawToken}`;
 
     revalidatePath('/admin/demo-access');
@@ -107,7 +109,9 @@ export async function regenerateDemoTokenAction(oldTokenId: string, label?: stri
       label: label || 'Rotated Demo Invitation',
     });
 
-    const host = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const host =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://www.ventrexs.com' : 'http://localhost:3000');
     const demoUrl = `${host}/demo/${tokenRecord.rawToken}`;
 
     revalidatePath('/admin/demo-access');

@@ -141,7 +141,9 @@ export class RazorpayPaymentAdapter implements PaymentProvider {
       createdAt: new Date().toISOString(),
     };
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://www.ventrexs.com' : 'http://localhost:3000');
     return {
       paymentRequest,
       paymentUrl: `${baseUrl}/pay/${secureToken}`,

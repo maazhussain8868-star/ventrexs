@@ -132,6 +132,13 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* Verified Success Alert */}
+        {searchParams.get('verified') === 'true' && !error && (
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-600 dark:text-emerald-400">
+            <p className="font-medium">Email address verified successfully! Please sign in to access your dashboard.</p>
+          </div>
+        )}
+
         {/* Resend Confirmation */}
         {resendSuccess && (
           <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-600 dark:text-emerald-400">

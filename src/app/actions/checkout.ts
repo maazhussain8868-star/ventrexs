@@ -57,7 +57,9 @@ export async function createCheckoutSessionAction(
 
     // Server-authoritative price — never trust client amounts
     const price = params.billingCycle === 'annual' ? planConfig.priceAnnual : planConfig.priceMonthly;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://www.ventrexs.com' : 'http://localhost:3000');
 
     const result = await billingService.createCheckoutSession({
       businessId: params.businessId,

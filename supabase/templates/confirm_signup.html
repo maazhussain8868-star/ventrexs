@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm your Ventrexs AI email address</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      background-color: #0f172a;
+      padding: 40px 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 40px 32px;
+      box-sizing: border-box;
+    }
+    .brand-header {
+      margin-bottom: 28px;
+    }
+    .brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .brand-tagline {
+      font-size: 13px;
+      font-weight: 600;
+      color: #38bdf8;
+      margin: 4px 0 0 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .content {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      margin-bottom: 32px;
+    }
+    .content p {
+      margin: 0 0 16px 0;
+    }
+    .btn-wrapper {
+      text-align: left;
+      margin: 32px 0;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 14px 28px;
+      border-radius: 10px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+    .fallback {
+      font-size: 12px;
+      color: #94a3b8;
+      word-break: break-all;
+      line-height: 1.5;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #334155;
+    }
+    .fallback a {
+      color: #38bdf8;
+      text-decoration: underline;
+    }
+    .footer {
+      margin-top: 32px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="brand-header">
+        <h1 class="brand-name">Ventrexs AI</h1>
+        <p class="brand-tagline">AI Operating System for Service Businesses</p>
+      </div>
+
+      <div class="content">
+        <p>Welcome to Ventrexs AI.</p>
+        <p>Please confirm your email address to finish creating your account and activate your business workspace.</p>
+        
+        <div class="btn-wrapper">
+          <a href="{{ .ConfirmationURL }}" class="btn" target="_blank" rel="noopener noreferrer">Confirm Email Address</a>
+        </div>
+
+        <div class="fallback">
+          <p>If the button above does not work, copy and paste this link into your browser:</p>
+          <p><a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener noreferrer">{{ .ConfirmationURL }}</a></p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>If you didn't create a Ventrexs AI account, you can safely ignore this email.</p>
+        <p>© Ventrexs AI. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
