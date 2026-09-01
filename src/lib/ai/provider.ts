@@ -43,7 +43,7 @@ export class LocalRuleAIProvider implements AIServiceProvider {
         reason: `Invoice ${invoiceNumber} is due on ${dueDate}. A courteous advance courtesy note ensures timely settlement.`,
         suggested_tone: 'Gentle Check-in',
         message_draft_subject: `Friendly check-in: Invoice ${invoiceNumber} (${balanceStr}) - ${businessName}`,
-        message_draft: `Hi ${customerName},\n\nI hope you are having a productive week!\n\nThis is a quick courtesy note regarding invoice ${invoiceNumber} for the original amount of ${balanceStr}, which has a due date of ${dueDate}.\n\nWhenever you have a moment, you can review line items and settle directly via our client portal:\nhttps://ventrexs.com/pay/${input.invoiceId}\n\nPlease let us know if you have any questions or require additional statements.\n\nWarm regards,\n${businessName}`,
+        message_draft: `Hi ${customerName},\n\nI hope you are having a productive week!\n\nThis is a quick courtesy note regarding invoice ${invoiceNumber} for the original amount of ${balanceStr}, which has a due date of ${dueDate}.\n\nWhenever you have a moment, you can review line items and settle directly via our client portal:\nhttps://www.ventrexs.com/pay/${input.invoiceId}\n\nPlease let us know if you have any questions or require additional statements.\n\nWarm regards,\n${businessName}`,
         confidence: 0.94,
       };
     }
@@ -56,7 +56,7 @@ export class LocalRuleAIProvider implements AIServiceProvider {
         reason: `Invoice ${invoiceNumber} is ${daysOverdue} days past due. Client typically settles within 7 days of a standard statement follow-up.`,
         suggested_tone: 'Professional Statement',
         message_draft_subject: `Payment Status Follow-up: Invoice ${invoiceNumber} (${balanceStr}) - ${customerCompany}`,
-        message_draft: `Dear ${customerName} and Accounts Payable Team,\n\nOur accounting records indicate that invoice ${invoiceNumber} for ${balanceStr} reached its due date on ${dueDate} and remains open.\n\nWe value our relationship with ${customerCompany} and kindly request that this original balance be scheduled for settlement at your earliest convenience:\nhttps://ventrexs.com/pay/${input.invoiceId}\n\nIf payment has already been initiated, please let us know so we can update our records accordingly.\n\nThank you for your prompt attention,\n${businessName}`,
+        message_draft: `Dear ${customerName} and Accounts Payable Team,\n\nOur accounting records indicate that invoice ${invoiceNumber} for ${balanceStr} reached its due date on ${dueDate} and remains open.\n\nWe value our relationship with ${customerCompany} and kindly request that this original balance be scheduled for settlement at your earliest convenience:\nhttps://www.ventrexs.com/pay/${input.invoiceId}\n\nIf payment has already been initiated, please let us know so we can update our records accordingly.\n\nThank you for your prompt attention,\n${businessName}`,
         confidence: 0.92,
       };
     }
@@ -69,7 +69,7 @@ export class LocalRuleAIProvider implements AIServiceProvider {
         reason: `Invoice ${invoiceNumber} is ${daysOverdue} days overdue. Higher priority follow-up recommended to clarify accounts payable status.`,
         suggested_tone: 'Firm Follow-up',
         message_draft_subject: `Account Statement Notice: Invoice ${invoiceNumber} (${balanceStr}) - ${customerCompany}`,
-        message_draft: `Dear ${customerName},\n\nWe are following up regarding invoice ${invoiceNumber} in the amount of ${balanceStr}, which was due on ${dueDate} (${daysOverdue} days ago).\n\nTo ensure our account records remain aligned and to support ongoing services, please review and process this original balance at your earliest opportunity:\nhttps://ventrexs.com/pay/${input.invoiceId}\n\nIf you need to discuss payment scheduling or have invoice inquiries, please reply directly to this message.\n\nThank you for your cooperation,\n${businessName}`,
+        message_draft: `Dear ${customerName},\n\nWe are following up regarding invoice ${invoiceNumber} in the amount of ${balanceStr}, which was due on ${dueDate} (${daysOverdue} days ago).\n\nTo ensure our account records remain aligned and to support ongoing services, please review and process this original balance at your earliest opportunity:\nhttps://www.ventrexs.com/pay/${input.invoiceId}\n\nIf you need to discuss payment scheduling or have invoice inquiries, please reply directly to this message.\n\nThank you for your cooperation,\n${businessName}`,
         confidence: 0.91,
       };
     }
@@ -81,7 +81,7 @@ export class LocalRuleAIProvider implements AIServiceProvider {
       reason: `Invoice ${invoiceNumber} is ${daysOverdue} days past due. Direct phone follow-up and account manager review recommended before further dispatches.`,
       suggested_tone: 'Firm Follow-up',
       message_draft_subject: `Important Account Follow-up: Invoice ${invoiceNumber} (${balanceStr}) - ${customerCompany}`,
-      message_draft: `Dear ${customerName},\n\nOur records show invoice ${invoiceNumber} for the original amount of ${balanceStr} is now ${daysOverdue} days past due (${dueDate}).\n\nWe kindly request that an authorized representative review and settle this legitimate balance:\nhttps://ventrexs.com/pay/${input.invoiceId}\n\nPlease reach out directly if we can assist in facilitating your payment.\n\nSincerely,\n${businessName}`,
+      message_draft: `Dear ${customerName},\n\nOur records show invoice ${invoiceNumber} for the original amount of ${balanceStr} is now ${daysOverdue} days past due (${dueDate}).\n\nWe kindly request that an authorized representative review and settle this legitimate balance:\nhttps://www.ventrexs.com/pay/${input.invoiceId}\n\nPlease reach out directly if we can assist in facilitating your payment.\n\nSincerely,\n${businessName}`,
       confidence: 0.88,
     };
   }
@@ -97,11 +97,11 @@ export class LocalRuleAIProvider implements AIServiceProvider {
     if (channel === 'sms' || channel === 'whatsapp') {
       let text = '';
       if (tone === 'Gentle Check-in') {
-        text = `Hi ${customerName}, friendly courtesy note from ${businessName} regarding invoice ${invoiceNumber} (${balanceStr}) due on ${dueDate}. Review & settle original balance: https://ventrexs.com/pay/${invoiceId}`;
+        text = `Hi ${customerName}, friendly courtesy note from ${businessName} regarding invoice ${invoiceNumber} (${balanceStr}) due on ${dueDate}. Review & settle original balance: https://www.ventrexs.com/pay/${invoiceId}`;
       } else if (tone === 'Firm Follow-up') {
-        text = `Payment Notice: Invoice ${invoiceNumber} (${balanceStr}) for ${customerCompany} is past due (${dueDate}). Please process the original balance at https://ventrexs.com/pay/${invoiceId}. Thank you, ${businessName}.`;
+        text = `Payment Notice: Invoice ${invoiceNumber} (${balanceStr}) for ${customerCompany} is past due (${dueDate}). Please process the original balance at https://www.ventrexs.com/pay/${invoiceId}. Thank you, ${businessName}.`;
       } else {
-        text = `Hello ${customerName}, statement update for invoice ${invoiceNumber} (${balanceStr}) due on ${dueDate}. Direct settlement link: https://ventrexs.com/pay/${invoiceId}. Thanks, ${businessName}.`;
+        text = `Hello ${customerName}, statement update for invoice ${invoiceNumber} (${balanceStr}) due on ${dueDate}. Direct settlement link: https://www.ventrexs.com/pay/${invoiceId}. Thanks, ${businessName}.`;
       }
       return {
         subject: `${channel.toUpperCase()} to ${customerPhone || customerName}`,
@@ -113,20 +113,20 @@ export class LocalRuleAIProvider implements AIServiceProvider {
     if (tone === 'Gentle Check-in') {
       return {
         subject: `Friendly check-in: Invoice ${invoiceNumber} (${balanceStr}) - ${businessName}`,
-        body: `Hi ${customerName},\n\nI hope you are having a wonderful week!\n\nThis is a quick courtesy note regarding invoice ${invoiceNumber} for the original amount of ${balanceStr}, which has a due date of ${dueDate}.\n\nWhenever you have a moment, you can review the line items and settle directly via our client portal:\nhttps://ventrexs.com/pay/${invoiceId}\n\nPlease let us know if you need any additional receipts or have any questions about this invoice.\n\nWarm regards,\n${businessName}`,
+        body: `Hi ${customerName},\n\nI hope you are having a wonderful week!\n\nThis is a quick courtesy note regarding invoice ${invoiceNumber} for the original amount of ${balanceStr}, which has a due date of ${dueDate}.\n\nWhenever you have a moment, you can review the line items and settle directly via our client portal:\nhttps://www.ventrexs.com/pay/${invoiceId}\n\nPlease let us know if you need any additional receipts or have any questions about this invoice.\n\nWarm regards,\n${businessName}`,
       };
     }
 
     if (tone === 'Firm Follow-up') {
       return {
         subject: `Account Statement Notice: Invoice ${invoiceNumber} (${balanceStr}) - ${customerCompany}`,
-        body: `Dear ${customerName},\n\nWe are following up regarding invoice ${invoiceNumber} in the amount of ${balanceStr}, which was due on ${dueDate}.\n\nTo ensure our records remain aligned and to support ongoing services, please review and process this original balance at your earliest opportunity:\nhttps://ventrexs.com/pay/${invoiceId}\n\nIf you have any questions regarding this invoice or wish to review settlement options, please reply to this email.\n\nThank you for your cooperation,\n${businessName}`,
+        body: `Dear ${customerName},\n\nWe are following up regarding invoice ${invoiceNumber} in the amount of ${balanceStr}, which was due on ${dueDate}.\n\nTo ensure our records remain aligned and to support ongoing services, please review and process this original balance at your earliest opportunity:\nhttps://www.ventrexs.com/pay/${invoiceId}\n\nIf you have any questions regarding this invoice or wish to review settlement options, please reply to this email.\n\nThank you for your cooperation,\n${businessName}`,
       };
     }
 
     return {
       subject: `Payment Status Follow-up: Invoice ${invoiceNumber} (${balanceStr}) - ${customerCompany}`,
-      body: `Dear ${customerName} and Accounts Payable Team,\n\nOur accounting records show that invoice ${invoiceNumber} for ${balanceStr} reached its due date on ${dueDate} and remains open.\n\nWe value our relationship with ${customerCompany} and kindly request that this original balance be scheduled for settlement at your earliest convenience:\nhttps://ventrexs.com/pay/${invoiceId}\n\nIf payment has already been initiated, please let us know so we can update our records accordingly.\n\nThank you for your prompt attention,\n${businessName}`,
+      body: `Dear ${customerName} and Accounts Payable Team,\n\nOur accounting records show that invoice ${invoiceNumber} for ${balanceStr} reached its due date on ${dueDate} and remains open.\n\nWe value our relationship with ${customerCompany} and kindly request that this original balance be scheduled for settlement at your earliest convenience:\nhttps://www.ventrexs.com/pay/${invoiceId}\n\nIf payment has already been initiated, please let us know so we can update our records accordingly.\n\nThank you for your prompt attention,\n${businessName}`,
     };
   }
 }

@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   authors: [{ name: BRAND.name }],
   metadataBase: new URL(BRAND.domain),
   alternates: {
-    canonical: BRAND.domain,
+    canonical: `${BRAND.domain}/`,
   },
   openGraph: {
     title: `${BRAND.name} — ${BRAND.tagline}`,

@@ -141,7 +141,7 @@ export async function createReviewRequestAction(params: {
     }
 
     const settings = await services.reputation.getSettings(params.businessId);
-    const feedbackBaseUrl = settings?.direct_feedback_url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://ventrexs.com'}/feedback`;
+    const feedbackBaseUrl = settings?.direct_feedback_url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.ventrexs.com'}/feedback`;
     const tempId = `req-${Date.now()}`;
     const feedbackUrl = `${feedbackBaseUrl}/${tempId}`;
 
@@ -192,7 +192,7 @@ export async function sendReviewRequestAction(params: {
     const business = await services.business.getBusiness(params.businessId);
     const businessName = business?.name || 'Ventrexs Service';
 
-    const feedbackUrl = req.feedback_url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://ventrexs.com'}/feedback/${req.id}`;
+    const feedbackUrl = req.feedback_url || `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.ventrexs.com'}/feedback/${req.id}`;
 
     // Format message
     let messageText = `Hi ${req.customer_name}, thank you for choosing ${businessName}! How was your service with ${req.technician_name || 'our team'}? Please let us know: ${feedbackUrl}`;

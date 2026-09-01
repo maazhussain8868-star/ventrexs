@@ -178,7 +178,7 @@ export function RequestPaymentModal({
           <div className="p-3 bg-surface-container-high rounded-xl border border-outline-variant/60 text-xs text-on-surface font-mono whitespace-pre-wrap leading-relaxed">
             {customNote || defaultMessage}
             <span className="text-primary block mt-1 underline">
-              {generatedLink || 'https://ventrexs.com/pay/pay_tok_secure_xxxxxx'}
+              {generatedLink || 'https://www.ventrexs.com/pay/pay_tok_secure_xxxxxx'}
             </span>
           </div>
         </div>

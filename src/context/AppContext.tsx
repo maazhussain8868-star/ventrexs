@@ -2755,7 +2755,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return {
       subject: `Service Statement — ${amountStr} Outstanding`,
-      body: `Dear ${customer},\n\nPlease find your service statement for the balance of ${amountStr}.\n\nYou can review details and settle securely online:\nhttps://ventrexs.com/pay/${inv?.id || 'demo'}\n\nThank you,\n${profile.businessName}`
+      body: `Dear ${customer},\n\nPlease find your service statement for the balance of ${amountStr}.\n\nYou can review details and settle securely online:\nhttps://www.ventrexs.com/pay/${inv?.id || 'demo'}\n\nThank you,\n${profile.businessName}`
     };
   };
 

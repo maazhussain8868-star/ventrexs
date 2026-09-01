@@ -219,7 +219,7 @@ export const initialInvoices: Invoice[] = [
       insight: 'Acme Corp Accounts Payable approves payment batches on Thursdays. Sending a clear, professional payment confirmation request today has an 88% probability of inclusion in this week’s disbursement.',
       confidence: 88,
       recommendedSubject: 'Payment Status Inquiry: Invoice INV-2023-089 ($4,800.00) - Acme Corp',
-      recommendedBody: 'Dear Michael and the Accounts Payable Team,\n\nWe are following up regarding invoice INV-2023-089 for $4,800.00, which was due on Aug 15, 2026 for the Annual Summit catering.\n\nCould you please let us know if this invoice is scheduled in your upcoming Thursday disbursement run? You can easily review and settle the original balance directly online:\nhttps://ventrexs.com/pay/inv-1\n\nThank you for your partnership and prompt attention.\n\nWarm regards,\nJane Doe\nMain Street Bakery & Cafe'
+      recommendedBody: 'Dear Michael and the Accounts Payable Team,\n\nWe are following up regarding invoice INV-2023-089 for $4,800.00, which was due on Aug 15, 2026 for the Annual Summit catering.\n\nCould you please let us know if this invoice is scheduled in your upcoming Thursday disbursement run? You can easily review and settle the original balance directly online:\nhttps://www.ventrexs.com/pay/inv-1\n\nThank you for your partnership and prompt attention.\n\nWarm regards,\nJane Doe\nMain Street Bakery & Cafe'
     }
   },
   {
@@ -257,7 +257,7 @@ export const initialInvoices: Invoice[] = [
       insight: 'Global Tech has a 95% on-time payment track record. A courteous check-in usually results in immediate ACH settlement within 24 hours.',
       confidence: 95,
       recommendedSubject: 'Friendly Reminder: Invoice INV-2023-090 ($1,200.00) - Global Tech',
-      recommendedBody: 'Hi Sarah,\n\nI hope your week is off to a wonderful start!\n\nThis is a quick courtesy note regarding invoice INV-2023-090 for $1,200.00 for the executive breakfast board, which was due on Aug 19.\n\nWhenever you have a moment, you can review the invoice and complete settlement securely here:\nhttps://ventrexs.com/pay/inv-2\n\nThank you as always for your business!\n\nBest regards,\nJane Doe'
+      recommendedBody: 'Hi Sarah,\n\nI hope your week is off to a wonderful start!\n\nThis is a quick courtesy note regarding invoice INV-2023-090 for $1,200.00 for the executive breakfast board, which was due on Aug 19.\n\nWhenever you have a moment, you can review the invoice and complete settlement securely here:\nhttps://www.ventrexs.com/pay/inv-2\n\nThank you as always for your business!\n\nBest regards,\nJane Doe'
     }
   },
   {
@@ -294,7 +294,7 @@ export const initialInvoices: Invoice[] = [
       insight: 'Invoice passed due date yesterday. Send a clear, concise statement to ensure accounting has all documentation required for prompt payment.',
       confidence: 86,
       recommendedSubject: 'Invoice INV-2023-091 Statement ($6,400.00) - Stellar Solutions',
-      recommendedBody: 'Dear Arthur,\n\nWe wanted to share an update regarding invoice INV-2023-091 in the amount of $6,400.00 for August lunch buffet services, which reached its due date on Aug 22.\n\nPlease find the direct payment and statement link below:\nhttps://ventrexs.com/pay/inv-3\n\nIf you have any questions or require any adjustments, please let us know right away.\n\nThank you,\nJane Doe'
+      recommendedBody: 'Dear Arthur,\n\nWe wanted to share an update regarding invoice INV-2023-091 in the amount of $6,400.00 for August lunch buffet services, which reached its due date on Aug 22.\n\nPlease find the direct payment and statement link below:\nhttps://www.ventrexs.com/pay/inv-3\n\nIf you have any questions or require any adjustments, please let us know right away.\n\nThank you,\nJane Doe'
     }
   },
   {
@@ -468,7 +468,7 @@ export const initialRecommendations: CopilotRecommendation[] = [
     confidence: 88,
     tone: 'firm',
     draftSubject: 'Payment Status Inquiry: Invoice INV-2023-089 ($4,800.00) - Acme Corp',
-    draftBody: 'Dear Michael and the Accounts Payable Team,\n\nWe are checking in regarding invoice INV-2023-089 in the amount of $4,800.00 for the Annual Summit catering, which had a due date of Aug 15, 2026.\n\nCould you please let us know if this invoice is scheduled in your upcoming Thursday disbursement run? You can view invoice details and complete payment directly via our client portal:\nhttps://ventrexs.com/pay/inv-1\n\nThank you for your prompt attention and continued partnership.\n\nWarm regards,\nJane Doe\nMain Street Bakery & Cafe',
+    draftBody: 'Dear Michael and the Accounts Payable Team,\n\nWe are checking in regarding invoice INV-2023-089 in the amount of $4,800.00 for the Annual Summit catering, which had a due date of Aug 15, 2026.\n\nCould you please let us know if this invoice is scheduled in your upcoming Thursday disbursement run? You can view invoice details and complete payment directly via our client portal:\nhttps://www.ventrexs.com/pay/inv-1\n\nThank you for your prompt attention and continued partnership.\n\nWarm regards,\nJane Doe\nMain Street Bakery & Cafe',
     status: 'pending'
   },
   {
@@ -484,7 +484,7 @@ export const initialRecommendations: CopilotRecommendation[] = [
     confidence: 95,
     tone: 'gentle',
     draftSubject: 'Friendly Reminder: Invoice INV-2023-090 ($1,200.00) - Global Tech',
-    draftBody: 'Hi Sarah,\n\nI hope you are having a wonderful week!\n\nThis is a quick reminder regarding invoice INV-2023-090 for $1,200.00 for the executive breakfast board, which reached its due date on Aug 19.\n\nWhenever you have a moment, you can review and settle the invoice securely online:\nhttps://ventrexs.com/pay/inv-2\n\nThank you for your business!\n\nWarm regards,\nJane Doe',
+    draftBody: 'Hi Sarah,\n\nI hope you are having a wonderful week!\n\nThis is a quick reminder regarding invoice INV-2023-090 for $1,200.00 for the executive breakfast board, which reached its due date on Aug 19.\n\nWhenever you have a moment, you can review and settle the invoice securely online:\nhttps://www.ventrexs.com/pay/inv-2\n\nThank you for your business!\n\nWarm regards,\nJane Doe',
     status: 'pending'
   },
   {
@@ -500,7 +500,7 @@ export const initialRecommendations: CopilotRecommendation[] = [
     confidence: 86,
     tone: 'professional',
     draftSubject: 'Invoice INV-2023-091 Statement ($6,400.00) - Stellar Solutions',
-    draftBody: 'Dear Arthur,\n\nWe wanted to share an update regarding invoice INV-2023-091 in the amount of $6,400.00 for August lunch buffet services, which reached its due date on Aug 22.\n\nPlease find the direct payment and statement link below:\nhttps://ventrexs.com/pay/inv-3\n\nIf you have any questions or require any adjustments, please let us know right away.\n\nThank you,\nJane Doe',
+    draftBody: 'Dear Arthur,\n\nWe wanted to share an update regarding invoice INV-2023-091 in the amount of $6,400.00 for August lunch buffet services, which reached its due date on Aug 22.\n\nPlease find the direct payment and statement link below:\nhttps://www.ventrexs.com/pay/inv-3\n\nIf you have any questions or require any adjustments, please let us know right away.\n\nThank you,\nJane Doe',
     status: 'pending'
   }
 ];
@@ -1642,7 +1642,7 @@ export const initialReviewSettings: ReviewSettings = {
   requestDelayHours: 24,
   primaryPlatform: 'google',
   googleReviewUrl: 'https://g.page/r/apex-comfort-hvac/review',
-  directFeedbackUrl: 'https://ventrexs.com/feedback',
+  directFeedbackUrl: 'https://www.ventrexs.com/feedback',
   defaultChannel: 'sms',
   maxRequestsPerJob: 2,
   positiveThreshold: 4,
