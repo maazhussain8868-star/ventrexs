@@ -64,9 +64,9 @@ async function runTests() {
   assert(BRAND.attribution === 'Powered by Desynthic', 'BRAND.attribution is "Powered by Desynthic"');
   assert(BRAND.tagline === 'The AI Operating System for Modern Businesses', 'BRAND.tagline matches specification');
   assert(BRAND.positioning === 'AI-Powered Business Operations Platform', 'BRAND.positioning is "AI-Powered Business Operations Platform"');
-  assert(BRAND.domain === 'https://ventrexs.com', 'BRAND.domain is "https://ventrexs.com"');
-  assert(BRAND.rawDomain === 'ventrexs.com', 'BRAND.rawDomain is "ventrexs.com"');
-  assert(BRAND.appDomain === 'https://ventrexs.com', 'BRAND.appDomain is "https://ventrexs.com"');
+  assert(BRAND.domain === 'https://www.ventrexs.com', 'BRAND.domain is "https://www.ventrexs.com"');
+  assert(BRAND.rawDomain === 'www.ventrexs.com', 'BRAND.rawDomain is "www.ventrexs.com"');
+  assert(BRAND.appDomain === 'https://www.ventrexs.com', 'BRAND.appDomain is "https://www.ventrexs.com"');
   assert(BRAND.agencyDomain === 'https://agency.ventrexs.com', 'BRAND.agencyDomain is "https://agency.ventrexs.com"');
   assert(BRAND.adminDomain === 'https://admin.ventrexs.com', 'BRAND.adminDomain is "https://admin.ventrexs.com"');
   assert(BRAND.supportEmail === 'support@ventrexs.com', 'BRAND.supportEmail is "support@ventrexs.com"');
@@ -266,7 +266,7 @@ async function runTests() {
   assert(BRAND.companyName === 'Desynthic', 'Company is Desynthic');
   assert(BRAND.name === 'Ventrexs AI', 'Product brand is Ventrexs AI');
   assert(BRAND.attribution.includes('Desynthic'), 'Attribution includes Desynthic');
-  assert(BRAND.domain === 'https://ventrexs.com', 'Public domain points to https://ventrexs.com');
+  assert(BRAND.domain === 'https://www.ventrexs.com', 'Public domain points to https://www.ventrexs.com');
 
   // ----------------------------------------------------------------
   // SUMMARY

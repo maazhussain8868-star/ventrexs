@@ -3,20 +3,28 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Database } from '@/lib/supabase/types';
 import type { EmailOtpType } from '@supabase/supabase-js';
+import { resolveAppUrl } from '@/lib/supabase/services/auth';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
-  const next = searchParams.get('next') || '/onboarding';
+  const rawNext = searchParams.get('next');
 
-  const isLocalOrigin = origin.includes('localhost') || origin.includes('127.0.0.1');
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (isLocalOrigin && process.env.NODE_ENV !== 'production' ? origin : 'https://www.ventrexs.com');
+  const appUrl = resolveAppUrl(origin);
 
-  const redirectTarget = next.startsWith('http') ? next : `${appUrl}${next.startsWith('/') ? next : `/${next}`}`;
+  // Recovery flow takes precedence
+  let next = rawNext;
+  if (type === 'recovery') {
+    next = next || '/reset-password';
+  } else if (!next) {
+    next = '/onboarding';
+  }
+
+  const redirectTarget = next.startsWith('http')
+    ? next
+    : `${appUrl}${next.startsWith('/') ? next : `/${next}`}`;
   let response = NextResponse.redirect(new URL(redirectTarget));
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -67,6 +75,11 @@ export async function GET(request: NextRequest) {
   }
 
   if (authenticatedUser) {
+    // If this was a password recovery callback, redirect straight to reset-password
+    if (type === 'recovery' || redirectTarget.includes('/reset-password')) {
+      return response;
+    }
+
     // Idempotently ensure user profile & workspace exist
     try {
       const adminSupabase = createAdminClient();
@@ -122,6 +135,18 @@ export async function GET(request: NextRequest) {
       }
     } catch (provisionErr) {
       console.warn('Auth callback workspace sync notice:', provisionErr);
+    }
+
+    // Preserve plan parameter in redirect target if configured
+    const userPlan = (authenticatedUser.user_metadata?.plan as string) || '';
+    if (userPlan && !redirectTarget.includes('plan=')) {
+      const separator = redirectTarget.includes('?') ? '&' : '?';
+      const finalTarget = `${redirectTarget}${separator}plan=${encodeURIComponent(userPlan)}`;
+      const newResponse = NextResponse.redirect(new URL(finalTarget));
+      response.cookies.getAll().forEach((c) => {
+        newResponse.cookies.set(c);
+      });
+      return newResponse;
     }
 
     return response;

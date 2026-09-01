@@ -1,23 +1,27 @@
 'use server';
 
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { BillingService } from '@/lib/billing/billing-service';
 import { PlanKey, BillingInterval, PLANS_CONFIG } from '@/lib/billing/types';
 import { ProductionLogger } from '@/lib/monitoring/logger';
+import { resolveAuthenticatedBusinessUser } from './billing';
+import { resolveAppUrl } from '@/lib/supabase/services/auth';
 
 export interface CreateCheckoutSessionActionParams {
-  businessId: string;
-  userId: string;
+  businessId?: string;
+  userId?: string;
   plan: PlanKey;
   billingCycle: BillingInterval;
-  customerEmail: string;
+  customerEmail?: string;
   customerName?: string;
-  successUrl: string;
-  cancelUrl: string;
+  successUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface CreateCheckoutSessionActionResult {
   success: boolean;
+  businessId?: string;
   /** Full redirect URL to the payment provider's checkout page */
   checkoutUrl?: string;
   sessionId?: string;
@@ -36,16 +40,18 @@ export interface CreateCheckoutSessionActionResult {
  * SERVER-SIDE CHECKOUT SESSION CREATION
  *
  * Uses service-role admin client so no secret keys ever reach the browser.
- * Marks subscription as 'checkout_started' in DB to prevent workspace access
+ * Marks subscription as 'checkout_started' in DB to prevent unauthorized workspace access
  * before payment is confirmed.
  *
- * Supports both Razorpay (primary, India/UPI) and Stripe (international).
- * Provider is selected from BILLING_PROVIDER env var.
+ * Supports both Razorpay (primary) and Stripe.
  */
 export async function createCheckoutSessionAction(
   params: CreateCheckoutSessionActionParams
 ): Promise<CreateCheckoutSessionActionResult> {
   try {
+    const supabase = await createServerSupabaseClient();
+    const { user, businessId } = await resolveAuthenticatedBusinessUser(supabase, params.businessId);
+
     // Validate plan server-side — clients cannot manipulate the plan key
     const planConfig = PLANS_CONFIG[params.plan];
     if (!planConfig) {
@@ -57,28 +63,37 @@ export async function createCheckoutSessionAction(
 
     // Server-authoritative price — never trust client amounts
     const price = params.billingCycle === 'annual' ? planConfig.priceAnnual : planConfig.priceMonthly;
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.NODE_ENV === 'production' ? 'https://www.ventrexs.com' : 'http://localhost:3000');
+    const appUrl = resolveAppUrl();
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const { data: existingSub } = await adminSupabase
+      .from('subscriptions')
+      .select('status, plan')
+      .eq('business_id', businessId)
+      .maybeSingle();
 
     const result = await billingService.createCheckoutSession({
-      businessId: params.businessId,
+      businessId,
       plan: params.plan,
       interval: params.billingCycle,
-      customerEmail: params.customerEmail,
-      customerName: params.customerName,
+      customerEmail: params.customerEmail || profile?.email || user.email || 'billing@ventrexs.com',
+      customerName: params.customerName || profile?.name || 'Business Owner',
       successUrl: params.successUrl || `${appUrl}/billing/success?plan=${params.plan}&session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: params.cancelUrl || `${appUrl}/billing?cancelled=true`,
-      userId: params.userId,
+      userId: user.id,
     });
 
     const provider = (process.env.BILLING_PROVIDER || process.env.SAAS_PAYMENT_PROVIDER || 'razorpay').toLowerCase();
 
-    // Mark subscription as checkout_started so middleware blocks workspace access
-    // until webhook confirms payment
+    // Mark subscription as checkout_started
     await adminSupabase.from('subscriptions').upsert(
       {
-        business_id: params.businessId,
+        business_id: businessId,
         plan: params.plan,
         billing_cycle: params.billingCycle,
         status: 'checkout_started',
@@ -95,16 +110,33 @@ export async function createCheckoutSessionAction(
       { onConflict: 'business_id' }
     );
 
-    ProductionLogger.info('BILLING', `Checkout session created for business ${params.businessId}: ${result.sessionId}`);
+    // Sanitized server-side audit log
+    console.log('[CHECKOUT_ACTION_SUCCESS]', {
+      userId: user.id,
+      resolvedBusinessId: businessId,
+      selectedPlan: params.plan,
+      billingInterval: params.billingCycle,
+      subscriptionStatus: existingSub?.status || 'none',
+      checkoutCreationResult: result.sessionId ? 'success' : 'failed',
+    });
+
+    ProductionLogger.info('BILLING', `Checkout session created for business ${businessId}: ${result.sessionId}`);
 
     return {
       success: true,
+      businessId,
       checkoutUrl: result.checkoutUrl,
       sessionId: result.sessionId,
     };
   } catch (err: any) {
     const msg = err?.message || 'Failed to create checkout session.';
     ProductionLogger.error('BILLING', 'Checkout session creation failed', err);
+
+    console.error('[CHECKOUT_ACTION_ERROR]', {
+      selectedPlan: params.plan,
+      billingInterval: params.billingCycle,
+      error: msg,
+    });
 
     if (
       msg.includes('not configured') ||
@@ -123,21 +155,23 @@ export async function createCheckoutSessionAction(
 }
 
 export interface SaveSelectedPlanActionParams {
-  businessId: string;
+  businessId?: string;
   plan: PlanKey;
   billingCycle: BillingInterval;
 }
 
 /**
  * Saves plan selection to DB with status=pending before initiating checkout.
- * 'pending' = plan chosen, user has not yet been redirected to payment.
+ * 'pending' = plan chosen, user has not yet completed payment.
  * Prevents workspace access until payment webhook confirms activation.
- * Safe to call multiple times (upsert idempotent).
  */
 export async function saveSelectedPlanAction(
   params: SaveSelectedPlanActionParams
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; businessId?: string; error?: string }> {
   try {
+    const supabase = await createServerSupabaseClient();
+    const { user, businessId } = await resolveAuthenticatedBusinessUser(supabase, params.businessId);
+
     // Server-side plan validation
     if (!PLANS_CONFIG[params.plan]) {
       return { success: false, error: `Invalid plan: ${params.plan}` };
@@ -150,7 +184,7 @@ export async function saveSelectedPlanAction(
 
     await adminSupabase.from('subscriptions').upsert(
       {
-        business_id: params.businessId,
+        business_id: businessId,
         plan: params.plan,
         billing_cycle: params.billingCycle,
         status: 'pending',
@@ -166,8 +200,19 @@ export async function saveSelectedPlanAction(
       { onConflict: 'business_id' }
     );
 
-    return { success: true };
+    console.log('[SAVE_SELECTED_PLAN]', {
+      userId: user.id,
+      resolvedBusinessId: businessId,
+      selectedPlan: params.plan,
+      billingInterval: params.billingCycle,
+    });
+
+    return { success: true, businessId };
   } catch (err: any) {
+    console.error('[SAVE_SELECTED_PLAN_ERROR]', {
+      selectedPlan: params.plan,
+      error: err?.message,
+    });
     return { success: false, error: err?.message || 'Failed to save plan selection.' };
   }
 }

@@ -26,6 +26,7 @@ import {
 import { IndustryType } from '@/types';
 import { PLANS_CONFIG, PlanKey } from '@/lib/billing/types';
 import { Button } from '@/components/ui/Button';
+import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
 
 const INDUSTRY_OPTIONS: { id: IndustryType; label: string; icon: string }[] = [
   { id: 'HVAC', label: 'HVAC & Heating', icon: 'hvac' },
@@ -100,6 +101,14 @@ export default function BusinessOnboardingPage() {
   const initialPlan: PlanKey = planFromUrl && (planFromUrl in PLANS_CONFIG) ? planFromUrl : 'Professional';
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>(initialPlan);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+
+  // Track email verification conversion event on reaching onboarding
+  useEffect(() => {
+    ConversionTracker.trackEmailVerified({
+      email: user?.email,
+      plan: initialPlan,
+    });
+  }, [user?.email, initialPlan]);
 
   // Update suggested services when industry changes
   const handleIndustryChange = (newInd: IndustryType) => {

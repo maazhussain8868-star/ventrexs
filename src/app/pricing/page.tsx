@@ -29,7 +29,7 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const handleSelectBusinessPlan = async (planKey: PlanKey) => {
-    if (planKey === subscription.plan) {
+    if (subscription.status === 'active' && planKey === subscription.plan) {
       showToast({
         title: 'Current Plan',
         description: `Your workspace is currently active on the ${planKey} plan.`,
@@ -153,7 +153,7 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
             {(['Starter', 'Professional', 'Enterprise'] as PlanKey[]).map((key) => {
               const plan = PLANS_CONFIG[key];
-              const isCurrent = subscription.plan === key;
+              const isCurrent = subscription.status === 'active' && subscription.plan === key;
               const price = billingInterval === 'annual' ? plan.priceAnnual : plan.priceMonthly;
 
               return (

@@ -13,18 +13,19 @@ declare global {
 
 interface GoogleAnalyticsProps {
   gaId?: string;
+  googleAdsId?: string;
 }
 
 /**
  * Inner component that listens to client-side route changes and dispatches GA page views.
  * Wrapped in <Suspense> to comply with Next.js App Router useSearchParams boundary requirements.
  */
-function GoogleAnalyticsTracker({ gaId }: { gaId: string }) {
+function GoogleAnalyticsTracker({ gaId, googleAdsId }: { gaId?: string; googleAdsId?: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!gaId || typeof window === 'undefined' || typeof window.gtag !== 'function') {
+    if (typeof window === 'undefined' || typeof window.gtag !== 'function') {
       return;
     }
 
@@ -32,22 +33,35 @@ function GoogleAnalyticsTracker({ gaId }: { gaId: string }) {
       ? `${pathname}?${searchParams.toString()}`
       : pathname;
 
-    window.gtag('config', gaId, {
-      page_path: url,
-      page_location: window.location.href,
-      page_title: document.title,
-    });
-  }, [pathname, searchParams, gaId]);
+    if (gaId) {
+      window.gtag('config', gaId, {
+        page_path: url,
+        page_location: window.location.href,
+        page_title: document.title,
+      });
+    }
+
+    if (googleAdsId) {
+      window.gtag('config', googleAdsId, {
+        page_path: url,
+      });
+    }
+  }, [pathname, searchParams, gaId, googleAdsId]);
 
   return null;
 }
 
 /**
- * Global Google Tag (gtag.js) / GA4 Analytics Provider for Ventrexs AI.
+ * Global Google Tag (gtag.js) / GA4 Analytics & Google Ads Provider for Ventrexs AI.
  * Loads the tag asynchronously via next/script and handles SPA page-view tracking seamlessly.
  */
-export function GoogleAnalytics({ gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-CSXL6SMYTC' }: GoogleAnalyticsProps) {
-  if (!gaId) {
+export function GoogleAnalytics({
+  gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-CSXL6SMYTC',
+  googleAdsId = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
+}: GoogleAnalyticsProps) {
+  const primaryId = gaId || googleAdsId;
+
+  if (!primaryId) {
     return null;
   }
 
@@ -57,7 +71,7 @@ export function GoogleAnalytics({ gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_
       <Script
         id="google-tag-manager"
         strategy="afterInteractive"
-        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${primaryId}`}
       />
 
       {/* 2. Global gtag initialization */}
@@ -69,17 +83,15 @@ export function GoogleAnalytics({ gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', '${gaId}', {
-              page_path: window.location.pathname,
-              send_page_view: true
-            });
+            ${gaId ? `gtag('config', '${gaId}', { page_path: window.location.pathname, send_page_view: true });` : ''}
+            ${googleAdsId ? `gtag('config', '${googleAdsId}');` : ''}
           `,
         }}
       />
 
       {/* 3. SPA Route change listener */}
       <Suspense fallback={null}>
-        <GoogleAnalyticsTracker gaId={gaId} />
+        <GoogleAnalyticsTracker gaId={gaId} googleAdsId={googleAdsId} />
       </Suspense>
     </>
   );

@@ -32,6 +32,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: BRAND.name }],
   metadataBase: new URL(BRAND.domain),
+  alternates: {
+    canonical: BRAND.domain,
+  },
   openGraph: {
     title: `${BRAND.name} — ${BRAND.tagline}`,
     description: BRAND.description,
@@ -58,9 +61,11 @@ const jsonLd = {
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web, Cloud',
   offers: {
-    '@type': 'Offer',
-    price: '49.00',
+    '@type': 'AggregateOffer',
     priceCurrency: 'USD',
+    lowPrice: '29.00',
+    highPrice: '249.00',
+    offerCount: '3',
   },
   description: BRAND.description,
 };

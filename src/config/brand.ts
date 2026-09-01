@@ -5,9 +5,9 @@ export const BRAND = {
   positioning: 'AI-Powered Business Operations Platform',
   description:
     'Run your service business smarter with AI-powered reception, CRM, jobs, payments, reputation management, and business intelligence.',
-  domain: 'https://ventrexs.com',
-  rawDomain: 'ventrexs.com',
-  appDomain: 'https://ventrexs.com',
+  domain: 'https://www.ventrexs.com',
+  rawDomain: 'www.ventrexs.com',
+  appDomain: 'https://www.ventrexs.com',
   agencyDomain: 'https://agency.ventrexs.com',
   adminDomain: 'https://admin.ventrexs.com',
   demoPath: '/demo',

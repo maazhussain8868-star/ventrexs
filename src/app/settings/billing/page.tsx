@@ -48,7 +48,7 @@ export default function BillingSettingsPage() {
   const currentPlanConfig = PLANS_CONFIG[subscription.plan] || PLANS_CONFIG.Professional;
 
   const handlePlanSelect = async (planKey: PlanKey) => {
-    if (planKey === subscription.plan) {
+    if (subscription.status === 'active' && planKey === subscription.plan) {
       showToast({
         title: 'Current Plan',
         description: `You are already subscribed to the ${planKey} plan.`,
@@ -370,7 +370,7 @@ export default function BillingSettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {(['Starter', 'Professional', 'Enterprise'] as PlanKey[]).map((key) => {
               const plan = PLANS_CONFIG[key];
-              const isCurrent = subscription.plan === key;
+              const isCurrent = subscription.status === 'active' && subscription.plan === key;
               const price = billingInterval === 'annual' ? plan.priceAnnual : plan.priceMonthly;
 
               return (

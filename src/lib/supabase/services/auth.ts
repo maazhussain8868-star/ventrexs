@@ -26,7 +26,7 @@ export function formatAuthErrorMessage(error: any): string {
     error.status === 429 ||
     error.statusCode === 429
   ) {
-    return 'Email verification rate limit reached. Supabase limits automated signup emails. Please wait a few minutes before trying again, or try signing in if you already created an account.';
+    return 'A verification email was recently requested for this address. Please check your inbox (and spam folder) or wait a few minutes before requesting another.';
   }
 
   if (
@@ -35,7 +35,7 @@ export function formatAuthErrorMessage(error: any): string {
     lower.includes('already exists') ||
     lower.includes('user_already_exists')
   ) {
-    return 'An account with this email already exists. Please sign in instead.';
+    return 'An account with this email already exists. Please sign in instead, or request a verification email if unconfirmed.';
   }
 
   if (lower.includes('invalid login credentials') || lower.includes('invalid_credentials') || lower.includes('invalid credentials')) {
@@ -51,6 +51,35 @@ export function formatAuthErrorMessage(error: any): string {
   }
 
   return msg || 'Authentication failed. Please try again.';
+}
+
+/**
+ * Environment-safe URL resolution for production and development.
+ * In production, this NEVER returns localhost:3000 or 127.0.0.1.
+ * Always resolves strictly to https://www.ventrexs.com (or non-local NEXT_PUBLIC_APP_URL).
+ */
+export function resolveAppUrl(origin?: string): string {
+  const isProd = process.env.NODE_ENV === 'production';
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (isProd) {
+    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+      return envUrl.replace(/\/$/, '');
+    }
+    return 'https://www.ventrexs.com';
+  }
+
+  // Non-production environment:
+  if (origin && !origin.includes('undefined')) {
+    return origin.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin.replace(/\/$/, '');
+  }
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '');
+  }
+  return 'https://www.ventrexs.com';
 }
 
 export class AuthService {
@@ -164,20 +193,12 @@ export class AuthService {
     password: string;
     name: string;
     businessName: string;
+    plan?: string;
   }) {
     try {
-      const isBrowser = typeof window !== 'undefined';
-      const isLocalhost =
-        isBrowser &&
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-      const appUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (isLocalhost && process.env.NODE_ENV !== 'production'
-          ? window.location.origin
-          : 'https://www.ventrexs.com');
-
-      const emailRedirectTo = `${appUrl}/auth/callback?next=/onboarding`;
+      const appUrl = resolveAppUrl(typeof window !== 'undefined' ? window.location.origin : undefined);
+      const planParam = params.plan ? `?plan=${encodeURIComponent(params.plan)}` : '';
+      const emailRedirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(`/onboarding${planParam}`)}`;
 
       const { data: authData, error: authError } = await this.client.auth.signUp({
         email: params.email,
@@ -186,6 +207,7 @@ export class AuthService {
           data: {
             name: params.name,
             business_name: params.businessName,
+            plan: params.plan || 'Professional',
           },
           emailRedirectTo,
         },
@@ -195,13 +217,10 @@ export class AuthService {
       if (!authData.user) throw new Error('Failed to create user account');
 
       // Supabase returns an empty identities array if the user already exists
-      if (
+      const isExistingUser =
         authData.user &&
         Array.isArray(authData.user.identities) &&
-        authData.user.identities.length === 0
-      ) {
-        throw new Error('An account with this email already exists. Please sign in instead.');
-      }
+        authData.user.identities.length === 0;
 
       let business = null;
       // Only attempt client-side workspace creation if we have an active authenticated session.
@@ -225,6 +244,7 @@ export class AuthService {
         session: authData.session,
         business,
         needsEmailConfirmation: !authData.session,
+        isExistingUser,
       };
     } catch (err: any) {
       const formatted = formatAuthErrorMessage(err);
@@ -234,17 +254,7 @@ export class AuthService {
 
   async resendVerificationEmail(email: string) {
     try {
-      const isBrowser = typeof window !== 'undefined';
-      const isLocalhost =
-        isBrowser &&
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-      const appUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (isLocalhost && process.env.NODE_ENV !== 'production'
-          ? window.location.origin
-          : 'https://www.ventrexs.com');
-
+      const appUrl = resolveAppUrl(typeof window !== 'undefined' ? window.location.origin : undefined);
       const emailRedirectTo = `${appUrl}/auth/callback?next=/onboarding`;
 
       const { data, error } = await this.client.auth.resend({
@@ -252,6 +262,61 @@ export class AuthService {
         email,
         options: {
           emailRedirectTo,
+        },
+      });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (err: any) {
+      const formatted = formatAuthErrorMessage(err);
+      throw new Error(formatted);
+    }
+  }
+
+  async resetPasswordForEmail(email: string) {
+    try {
+      const appUrl = resolveAppUrl(typeof window !== 'undefined' ? window.location.origin : undefined);
+      const redirectTo = `${appUrl}/auth/callback?next=/reset-password`;
+
+      const { data, error } = await this.client.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+      });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (err: any) {
+      const formatted = formatAuthErrorMessage(err);
+      throw new Error(formatted);
+    }
+  }
+
+  async updatePassword(password: string) {
+    try {
+      const { data, error } = await this.client.auth.updateUser({
+        password,
+      });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (err: any) {
+      const formatted = formatAuthErrorMessage(err);
+      throw new Error(formatted);
+    }
+  }
+
+  async signInWithOAuth(provider: 'google' | 'apple') {
+    try {
+      const appUrl = resolveAppUrl(typeof window !== 'undefined' ? window.location.origin : undefined);
+      const redirectTo = `${appUrl}/auth/callback?next=/dashboard`;
+
+      const { data, error } = await this.client.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          queryParams: provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : undefined,
         },
       });
 

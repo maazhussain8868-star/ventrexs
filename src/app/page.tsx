@@ -40,8 +40,13 @@ import ProductShowcase from '@/components/marketing/ProductShowcase';
 import SecurityArchitecture from '@/components/marketing/SecurityArchitecture';
 import ArchitectureDiagram from '@/components/marketing/ArchitectureDiagram';
 import InvestorInquiryForm from '@/components/marketing/InvestorInquiryForm';
+import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
 
 export default function LandingPage() {
+  React.useEffect(() => {
+    ConversionTracker.trackLandingPageView('/');
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#050812] text-slate-100 flex flex-col selection:bg-blue-600/30 selection:text-blue-200 overflow-x-hidden font-sans">
       {/* 1. Glass Sticky Navbar */}
@@ -85,6 +90,14 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto mb-6">
                 <Link
                   href="/test-receptionist"
+                  onClick={() => {
+                    ConversionTracker.trackCtaClick({
+                      cta_name: 'Test AI Receptionist',
+                      cta_location: 'hero_primary',
+                      destination_url: '/test-receptionist',
+                    });
+                    ConversionTracker.trackDemoStarted({ source: 'hero_receptionist' });
+                  }}
                   className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/40 hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 border border-blue-400/40 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-cyan-300 animate-pulse" />
@@ -94,6 +107,14 @@ export default function LandingPage() {
 
                 <Link
                   href="/demo"
+                  onClick={() => {
+                    ConversionTracker.trackCtaClick({
+                      cta_name: 'Explore Demo',
+                      cta_location: 'hero_secondary',
+                      destination_url: '/demo',
+                    });
+                    ConversionTracker.trackDemoStarted({ source: 'hero_demo' });
+                  }}
                   className="w-full sm:w-auto px-6 py-3.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-white rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Explore Demo</span>
@@ -101,6 +122,13 @@ export default function LandingPage() {
 
                 <Link
                   href="/pricing"
+                  onClick={() => {
+                    ConversionTracker.trackCtaClick({
+                      cta_name: 'View Pricing',
+                      cta_location: 'hero_tertiary',
+                      destination_url: '/pricing',
+                    });
+                  }}
                   className="w-full sm:w-auto px-5 py-3.5 bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800 text-slate-300 hover:text-white rounded-xl font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>View Pricing</span>

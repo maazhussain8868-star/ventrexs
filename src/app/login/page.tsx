@@ -9,7 +9,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, Send } from 'lucide-react';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn, resendVerificationEmail, showToast } = useApp();
+  const { signIn, resendVerificationEmail, signInWithOAuth, showToast } = useApp();
   const [email, setEmail] = useState(searchParams.get('email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -94,12 +94,17 @@ export default function LoginPage() {
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    showToast({
-      title: `${provider} sign-in unavailable`,
-      description: 'Use email and password to authenticate securely.',
-      type: 'info',
-    });
+  const handleSocialLogin = async (provider: 'Google' | 'Apple') => {
+    setError('');
+    const providerKey = provider === 'Google' ? 'google' : 'apple';
+    try {
+      const res = await signInWithOAuth(providerKey);
+      if (!res.success && res.error) {
+        setError(res.error);
+      }
+    } catch (err: any) {
+      setError(err?.message || `Failed to sign in with ${provider}.`);
+    }
   };
 
   return (

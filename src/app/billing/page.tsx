@@ -15,6 +15,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { createCheckoutSessionAction, saveSelectedPlanAction } from '@/app/actions/checkout';
+import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
 
 export default function BillingPage() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function BillingPage() {
   }, [subscription]);
 
   const handleSelectPlan = async (planKey: PlanKey) => {
-    if (!user || !businessProfile?.id) {
+    if (!user) {
       showToast({ title: 'Not logged in', description: 'Please log in first.', type: 'error' });
       router.push('/login');
       return;
@@ -73,9 +74,9 @@ export default function BillingPage() {
     setLoadingPlan(planKey);
 
     try {
-      // Step 1: Save plan selection with status='pending' so workspace is blocked until payment
+      // Step 1: Save plan selection with status='pending'
       const saveResult = await saveSelectedPlanAction({
-        businessId: businessProfile.id,
+        businessId: businessProfile?.id || undefined,
         plan: planKey,
         billingCycle,
       });
@@ -92,7 +93,7 @@ export default function BillingPage() {
       // Step 2: Create server-side checkout session (secrets never leave the server)
       const appUrl = window.location.origin;
       const result = await createCheckoutSessionAction({
-        businessId: businessProfile.id,
+        businessId: saveResult.businessId || businessProfile?.id || undefined,
         userId: user.id,
         plan: planKey,
         billingCycle,
@@ -110,6 +111,18 @@ export default function BillingPage() {
         });
         return;
       }
+
+      // Track checkout_started conversion event
+      const planPrice = billingCycle === 'annual'
+        ? PLANS_CONFIG[planKey].priceAnnual
+        : PLANS_CONFIG[planKey].priceMonthly;
+
+      ConversionTracker.trackCheckoutStarted({
+        plan: planKey,
+        billing_cycle: billingCycle,
+        value: planPrice,
+        currency: 'USD',
+      });
 
       // Step 3: Redirect to provider checkout (Razorpay or Stripe hosted page)
       // The checkoutUrl for Razorpay goes to /billing/checkout to render the modal

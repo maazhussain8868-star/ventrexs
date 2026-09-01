@@ -5,6 +5,7 @@ import { PLANS_CONFIG } from '@/lib/billing/types';
 import { ProductionLogger } from '@/lib/monitoring/logger';
 import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
+import { resolveAppUrl } from '@/lib/supabase/services/auth';
 
 /**
  * /api/billing/verify — SERVER-SIDE RAZORPAY PAYMENT VERIFICATION
@@ -21,9 +22,7 @@ import type { CookieOptions } from '@supabase/ssr';
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.NODE_ENV === 'production' ? 'https://www.ventrexs.com' : 'http://localhost:3000');
+  const appUrl = resolveAppUrl();
 
   const paymentId = searchParams.get('razorpay_payment_id') || '';
   const orderId = searchParams.get('razorpay_order_id') || '';

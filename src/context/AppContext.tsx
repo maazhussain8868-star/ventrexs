@@ -173,10 +173,11 @@ export interface ToastMessage {
   duration?: number;
 }
 
+import { resendVerificationEmailAction, resetPasswordForEmailAction } from '@/app/actions/auth';
+
 interface AppContextType {
-  // Auth & Tenant Context
-  user: User | null;
-  session: Session | null;
+  user: any | null;
+  session: any | null;
   businessId: string | null;
   isOnline: boolean;
   isLoading: boolean;
@@ -184,8 +185,11 @@ interface AppContextType {
   enterDemoMode: () => void;
   exitDemoMode: () => void;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (params: { email: string; password: string; name: string; businessName: string }) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }>;
+  signUp: (params: { email: string; password: string; name: string; businessName: string; plan?: string }) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; isExistingUser?: boolean; error?: string }>;
   resendVerificationEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
+  resetPasswordForEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithOAuth: (provider: 'google' | 'apple') => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ success: boolean; error?: string }>;
 
@@ -716,11 +720,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const signUp = async (params: { email: string; password: string; name: string; businessName: string }): Promise<{ success: boolean; needsEmailConfirmation?: boolean; error?: string }> => {
+  const signUp = async (params: {
+    email: string;
+    password: string;
+    name: string;
+    businessName: string;
+    plan?: string;
+  }): Promise<{ success: boolean; needsEmailConfirmation?: boolean; isExistingUser?: boolean; error?: string }> => {
     setIsLoading(true);
     try {
       const res = await services.auth.signUp(params);
-      const { user: authUser, session: authSession, business, needsEmailConfirmation } = res;
+      const { user: authUser, session: authSession, business, needsEmailConfirmation, isExistingUser } = res;
       setUser(authUser);
       setSession(authSession);
       setIsDemoMode(false);
@@ -745,8 +755,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (needsEmailConfirmation) {
         showToast({
-          title: 'Verification Email Sent',
-          description: `Please check ${params.email} to confirm your account and complete setup.`,
+          title: isExistingUser ? 'Account Exists — Please Confirm' : 'Verification Email Sent',
+          description: isExistingUser
+            ? `An account already exists for ${params.email}. Please check your email to activate it, or sign in.`
+            : `Please check ${params.email} to confirm your account and complete setup.`,
           type: 'info',
         });
       } else {
@@ -757,7 +769,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
       setIsLoading(false);
-      return { success: true, needsEmailConfirmation };
+      return { success: true, needsEmailConfirmation, isExistingUser };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Failed to create account.';
       setIsLoading(false);
@@ -773,19 +785,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const resendVerificationEmail = async (email: string) => {
     setIsLoading(true);
     try {
-      await services.auth.resendVerificationEmail(email);
+      const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const res = await resendVerificationEmailAction(email, origin);
       setIsLoading(false);
-      showToast({
-        title: 'Verification Email Dispatched',
-        description: `Please check your inbox at ${email}.`,
-        type: 'success',
-      });
-      return { success: true };
+
+      if (res.success) {
+        showToast({
+          title: 'Verification Email Dispatched',
+          description: res.message || `Please check your inbox at ${email}.`,
+          type: 'success',
+        });
+        return { success: true };
+      } else {
+        showToast({
+          title: 'Verification Notice',
+          description: res.error || 'Failed to dispatch verification email.',
+          type: res.alreadySent ? 'info' : 'error',
+        });
+        return { success: false, error: res.error };
+      }
     } catch (err: any) {
       setIsLoading(false);
       const errMsg = err?.message || 'Failed to resend verification email.';
       showToast({
         title: 'Resend Notice',
+        description: errMsg,
+        type: 'error',
+      });
+      return { success: false, error: errMsg };
+    }
+  };
+
+  const resetPasswordForEmail = async (email: string) => {
+    setIsLoading(true);
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const res = await resetPasswordForEmailAction(email, origin);
+      setIsLoading(false);
+
+      if (res.success) {
+        showToast({
+          title: 'Reset Link Dispatched',
+          description: res.message || `Password reset link sent to ${email}.`,
+          type: 'success',
+        });
+        return { success: true };
+      } else {
+        showToast({
+          title: 'Reset Notice',
+          description: res.error || 'Failed to dispatch password reset link.',
+          type: 'error',
+        });
+        return { success: false, error: res.error };
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      const errMsg = err?.message || 'Failed to send password reset email.';
+      showToast({
+        title: 'Reset Notice',
+        description: errMsg,
+        type: 'error',
+      });
+      return { success: false, error: errMsg };
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    setIsLoading(true);
+    try {
+      await services.auth.updatePassword(password);
+      setIsLoading(false);
+      showToast({
+        title: 'Password Updated',
+        description: 'Your password has been successfully updated.',
+        type: 'success',
+      });
+      return { success: true };
+    } catch (err: any) {
+      setIsLoading(false);
+      const errMsg = err?.message || 'Failed to update password.';
+      showToast({
+        title: 'Update Error',
+        description: errMsg,
+        type: 'error',
+      });
+      return { success: false, error: errMsg };
+    }
+  };
+
+  const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    try {
+      await services.auth.signInWithOAuth(provider);
+      return { success: true };
+    } catch (err: any) {
+      const errMsg = err?.message || `Failed to authenticate with ${provider}.`;
+      showToast({
+        title: `${provider} Sign-in Error`,
         description: errMsg,
         type: 'error',
       });
@@ -3709,6 +3804,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       signIn,
       signUp,
       resendVerificationEmail,
+      resetPasswordForEmail,
+      updatePassword,
+      signInWithOAuth,
       signOut,
       deleteAccount,
       invoices,
@@ -3830,13 +3928,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       usageRecords,
       subscriptionEvents,
       createCheckoutSession: async (plan: PlanKey, interval: BillingInterval) => {
-        if (isDemoMode || !user) {
+        if (isDemoMode) {
           setSubscription(prev => ({
             ...prev,
             plan,
             billingCycle: interval,
             status: 'active',
-            priceAmount: plan === 'Starter' ? 19 : plan === 'Professional' ? 49 : 199,
+            priceAmount: plan === 'Starter' ? 29 : plan === 'Professional' ? 79 : 249,
           }));
           setProfile(prev => ({
             ...prev,
@@ -3854,21 +3952,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         }
 
-        if (!businessId) {
-          showToast({ title: 'Business context required', type: 'error' });
-          return null;
-        }
-
         try {
           const res = await createSubscriptionCheckoutAction({
-            businessId,
+            businessId: businessId || undefined,
             plan,
             interval,
           });
 
           if (!res.success || !res.checkoutUrl) {
-            showToast({ title: 'Checkout Failed', description: res.error, type: 'error' });
+            showToast({ title: 'Checkout Failed', description: res.error || 'Failed to initiate checkout session.', type: 'error' });
             return null;
+          }
+
+          if (res.businessId && !businessId) {
+            setBusinessId(res.businessId);
           }
 
           return { sessionId: res.sessionId || '', checkoutUrl: res.checkoutUrl };
@@ -3878,7 +3975,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       },
       createCustomerPortalSession: async () => {
-        if (isDemoMode || !user) {
+        if (isDemoMode) {
           showToast({
             title: 'Stripe Customer Portal (Demo)',
             description: 'In production mode, this opens your Stripe Customer Billing Portal for invoice history and payment methods.',
@@ -3887,12 +3984,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return null;
         }
 
-        if (!businessId) return null;
-
         try {
-          const res = await createCustomerPortalSessionAction({ businessId });
+          const res = await createCustomerPortalSessionAction({ businessId: businessId || undefined });
           if (!res.success || !res.portalUrl) {
-            showToast({ title: 'Portal Error', description: res.error, type: 'error' });
+            showToast({ title: 'Portal Notice', description: res.error || 'Billing portal is not currently available.', type: 'info' });
             return null;
           }
           window.location.href = res.portalUrl;
@@ -3903,7 +3998,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       },
       cancelSubscription: async (cancelAtPeriodEnd = true) => {
-        if (isDemoMode || !user) {
+        if (isDemoMode) {
           setSubscription(prev => ({
             ...prev,
             cancelAtPeriodEnd,
@@ -3917,10 +4012,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return true;
         }
 
-        if (!businessId) return false;
-
         try {
-          const res = await cancelSubscriptionAction({ businessId, cancelAtPeriodEnd });
+          const res = await cancelSubscriptionAction({ businessId: businessId || undefined, cancelAtPeriodEnd });
           if (!res.success) {
             showToast({ title: 'Cancellation Failed', description: res.error, type: 'error' });
             return false;
@@ -3938,7 +4031,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       },
       reactivateSubscription: async () => {
-        if (isDemoMode || !user) {
+        if (isDemoMode) {
+          setSubscription(prev => ({ ...prev, cancelAtPeriodEnd: false }));
+          showToast({ title: 'Subscription Reactivated', description: 'Your plan will continue renewing as usual.', type: 'success' });
+          return true;
+        }
+
+        try {
+          const res = await reactivateSubscriptionAction({ businessId: businessId || undefined });
+          if (!res.success) {
+            showToast({ title: 'Reactivation Failed', description: res.error, type: 'error' });
+            return false;
+          }
           setSubscription(prev => ({
             ...prev,
             cancelAtPeriodEnd: false,
@@ -3949,23 +4053,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             description: 'Your plan will automatically renew on schedule.',
             type: 'success',
           });
-          return true;
-        }
-
-        if (!businessId) return false;
-
-        try {
-          const res = await reactivateSubscriptionAction({ businessId });
-          if (!res.success) {
-            showToast({ title: 'Reactivation Failed', description: res.error, type: 'error' });
-            return false;
-          }
-          setSubscription(prev => ({
-            ...prev,
-            cancelAtPeriodEnd: false,
-            status: 'active',
-          }));
-          showToast({ title: 'Subscription reactivated successfully!', type: 'success' });
           return true;
         } catch (err: any) {
           showToast({ title: 'Reactivation Error', description: err.message, type: 'error' });

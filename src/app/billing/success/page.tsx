@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, RotateCcw, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
+import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
+import { PLANS_CONFIG, PlanKey } from '@/lib/billing/types';
+
 /**
  * /billing/success
  *
@@ -13,12 +16,9 @@ import { useApp } from '@/context/AppContext';
  *
  * This page:
  * 1. Polls AppContext subscription status until it becomes 'active'
- * 2. Shows success UI
- * 3. Redirects to /dashboard once subscription is confirmed server-side
- *
- * IMPORTANT: This page does NOT activate the subscription itself.
- * Activation is done exclusively by the webhook handler or /api/billing/verify.
- * This page just waits for the DB to reflect the confirmed state.
+ * 2. Fires purchase & subscription_started conversions once confirmed
+ * 3. Shows success UI
+ * 4. Redirects to /dashboard once subscription is confirmed server-side
  */
 export default function BillingSuccessPage() {
   const router = useRouter();
@@ -27,6 +27,13 @@ export default function BillingSuccessPage() {
 
   const plan = searchParams.get('plan') || '';
   const isActivated = searchParams.get('activated') === 'true';
+  const sessionId = searchParams.get('session_id') || searchParams.get('razorpay_order_id') || subscription?.id || 'sub_success';
+  const planKey = (plan || subscription?.plan || 'Starter') as PlanKey;
+  const cycle = (subscription?.billingCycle || 'monthly') as 'monthly' | 'annual';
+  const price = cycle === 'annual'
+    ? (PLANS_CONFIG[planKey]?.priceAnnual || 290)
+    : (PLANS_CONFIG[planKey]?.priceMonthly || 29);
+
   const [status, setStatus] = useState<'verifying' | 'success' | 'timeout'>(
     isActivated ? 'success' : 'verifying'
   );
@@ -78,15 +85,28 @@ export default function BillingSuccessPage() {
     };
   }, [isActivated, refreshSubscription, subscription?.status]);
 
-  // Redirect to dashboard a moment after confirming success
+  // Track conversion and redirect to dashboard after confirming success
   useEffect(() => {
     if (status === 'success') {
+      ConversionTracker.trackPurchase({
+        transaction_id: sessionId,
+        plan: planKey,
+        billing_cycle: cycle,
+        value: price,
+        currency: 'USD',
+      });
+      ConversionTracker.trackSubscriptionStarted({
+        plan: planKey,
+        billing_cycle: cycle,
+        value: price,
+      });
+
       const timer = setTimeout(() => {
         router.replace('/dashboard');
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [status]);
+  }, [status, sessionId, planKey, cycle, price, router]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 font-sans">

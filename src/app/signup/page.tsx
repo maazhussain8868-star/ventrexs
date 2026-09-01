@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { SignupAccountType } from '@/lib/acquisition/types';
 import { captureAcquisitionAttribution, getStoredAttribution } from '@/lib/acquisition/tracker';
 import { recordAcquisitionAttributionAction } from '@/app/actions/acquisition';
+import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
 import {
   Building2,
   Globe,
@@ -47,6 +48,8 @@ export default function SignupPage() {
   const [resendSuccess, setResendSuccess] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
 
+  const [isExistingAccount, setIsExistingAccount] = useState(false);
+
   // Synchronous submission lock to block parallel / double-click requests
   const isSubmittingRef = React.useRef(false);
   const isResendingRef = React.useRef(false);
@@ -67,9 +70,10 @@ export default function SignupPage() {
     return () => clearTimeout(timer);
   }, [submitCooldown]);
 
-  // 2. Capture Attribution on Mount
+  // 2. Capture Attribution & Track Signup Started on Mount
   useEffect(() => {
     captureAcquisitionAttribution();
+    ConversionTracker.trackSignupStarted();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,6 +84,7 @@ export default function SignupPage() {
     }
 
     if (accountType === 'DEMO_GUEST') {
+      ConversionTracker.trackDemoStarted({ source: 'signup_toggle' });
       router.push('/demo');
       return;
     }
@@ -104,9 +109,16 @@ export default function SignupPage() {
         password,
         name: name.trim(),
         businessName: businessOrAgencyName.trim(),
+        plan: selectedPlan || 'Professional',
       });
 
       if (res.success) {
+        // Track signup_completed conversion
+        ConversionTracker.trackSignupCompleted({
+          account_type: accountType,
+          plan: selectedPlan || 'Professional',
+        });
+
         // Record Attribution asynchronously
         const { lastTouch, firstTouch } = getStoredAttribution();
         const attributionToSave = lastTouch || firstTouch;
@@ -117,6 +129,7 @@ export default function SignupPage() {
         }
 
         if (res.needsEmailConfirmation) {
+          setIsExistingAccount(Boolean(res.isExistingUser));
           setVerificationSent(true);
           return;
         }
@@ -298,16 +311,24 @@ export default function SignupPage() {
             <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center mx-auto">
               <Send className="w-6 h-6" />
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-extrabold text-white">Check Your Email</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                We sent a confirmation link to <strong className="text-white">{email}</strong>. Please click the link to activate your workspace and continue to setup.
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[11px] font-bold text-blue-300">
+                <Sparkles className="w-3 h-3" />
+                <span>{selectedPlan || 'Professional'} Plan Selected</span>
+              </div>
+              <h3 className="text-base font-extrabold text-white">
+                {isExistingAccount ? 'Account Already Created' : 'Check Your Email'}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
+                {isExistingAccount
+                  ? `An account already exists for ${email}. Please check your email for the confirmation link to activate your workspace, or request a fresh link below.`
+                  : `We sent a confirmation link to ${email}. Please click the link to activate your workspace and continue to setup.`}
               </p>
             </div>
 
             {resendSuccess && (
               <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400">
-                A fresh verification link was dispatched!
+                A fresh verification link was dispatched! Please check your inbox (and spam folder).
               </div>
             )}
 
@@ -323,7 +344,7 @@ export default function SignupPage() {
                 type="button"
                 onClick={handleResendVerification}
                 disabled={resendLoading || resendCooldown > 0}
-                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition-all border border-slate-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition-all border border-slate-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {resendLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 {resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : 'Resend Verification Email'}
@@ -331,7 +352,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setVerificationSent(false)}
-                className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors pt-1"
+                className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors pt-1 cursor-pointer"
               >
                 Change email or try again
               </button>
