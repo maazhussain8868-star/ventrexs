@@ -28,6 +28,7 @@ import {
   Star,
   ShieldCheck
 } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
@@ -92,15 +93,7 @@ export const Sidebar: React.FC = () => {
       {/* Brand & Workspace Switcher */}
       <div className="relative mb-1">
         <div className="flex items-center justify-between px-2 mb-3">
-          <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-xs group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-[20px] fill-icon">payments</span>
-            </div>
-            <div>
-              <span className="font-extrabold text-base text-primary tracking-tight block leading-none">Ventrexs</span>
-              <span className="text-[10px] font-semibold text-outline tracking-wider uppercase block mt-0.5">Service OS</span>
-            </div>
-          </Link>
+          <Logo href="/dashboard" variant="full" size="sm" subtitle="Service OS" />
         </div>
 
         {/* Workspace Switcher Trigger */}

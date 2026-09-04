@@ -9,6 +9,7 @@ import {
   X,
   ExternalLink,
 } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -40,20 +41,13 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         {/* Brand Logo & Wordmark */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 shadow-md shadow-blue-500/25 border border-blue-400/30 group-hover:scale-105 transition-transform">
-            <Zap className="w-5 h-5 text-white" />
-            <div className="absolute -inset-1 rounded-xl bg-blue-500/30 blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div className="flex flex-col text-left">
-            <span className="font-bold text-lg sm:text-xl tracking-tight text-white flex items-center gap-1">
-              Ventrexs <span className="text-blue-400 font-extrabold">AI</span>
-            </span>
-            <span className="text-[9px] uppercase font-mono tracking-widest text-slate-400 font-semibold hidden sm:block">
-              Business Operations Platform
-            </span>
-          </div>
-        </Link>
+        <Logo
+          href="/"
+          variant="full"
+          size="md"
+          subtitle="Business Operations Platform"
+          theme="dark"
+        />
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-1 bg-[#0A1020]/80 border border-slate-800/80 rounded-full px-4 py-1.5 backdrop-blur-md">

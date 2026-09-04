@@ -123,9 +123,22 @@ export class RazorpayWebhookHandler {
 
     if (eventType === 'subscription.activated' || eventType === 'subscription.charged') {
       const planKey = subEntity.notes?.plan || 'Starter';
+      let payingUserId = subEntity.notes?.user_id || subEntity.notes?.userId;
+      if (!payingUserId && businessId) {
+        const { data: member } = await this.client
+          .from('business_members')
+          .select('user_id')
+          .eq('business_id', businessId)
+          .order('is_primary', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        payingUserId = member?.user_id;
+      }
+
       await this.client.from('subscriptions').upsert(
         {
           business_id: businessId,
+          ...(payingUserId ? { user_id: payingUserId } : {}),
           plan: planKey as any,
           status: 'active',
           billing_cycle: (subEntity.notes?.interval || 'monthly') as any,
@@ -232,7 +245,8 @@ export class RazorpayWebhookHandler {
     if ((eventType === 'payment.captured' || eventType === 'order.paid') && businessId && !invoiceId) {
       const finalPlan = planKey || 'Starter';
       const paymentId = payEntity.id || orderEntity.id || eventId;
-      const amountUSD = Number(payEntity.amount || orderEntity.amount || 0) / 100;
+      const currency = payEntity.currency || orderEntity.currency || 'INR';
+      const amountUnit = Number(payEntity.amount || orderEntity.amount || 0) / 100;
       const now = new Date();
       const periodEnd = new Date(now);
       if (billingCycle === 'annual') {
@@ -241,17 +255,30 @@ export class RazorpayWebhookHandler {
         periodEnd.setMonth(periodEnd.getMonth() + 1);
       }
 
+      let payingUserId = notes.user_id || notes.userId;
+      if (!payingUserId && businessId) {
+        const { data: member } = await this.client
+          .from('business_members')
+          .select('user_id')
+          .eq('business_id', businessId)
+          .order('is_primary', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        payingUserId = member?.user_id;
+      }
+
       await this.client.from('subscriptions').upsert(
         {
           business_id: businessId,
+          ...(payingUserId ? { user_id: payingUserId } : {}),
           plan: finalPlan as any,
           billing_cycle: billingCycle as any,
           status: 'active',
           selected_plan: finalPlan as any,
           selected_billing_cycle: billingCycle as any,
           checkout_session_id: payEntity.order_id || orderEntity.id || undefined,
-          price_amount: amountUSD,
-          currency: 'USD',
+          price_amount: amountUnit,
+          currency,
           provider: 'razorpay',
           provider_subscription_id: paymentId,
           provider_customer_id: payEntity.customer_id || null,

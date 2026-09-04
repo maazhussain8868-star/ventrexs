@@ -124,6 +124,8 @@ function createMockSupabase() {
 
       const builder: any = {
         select: (fields: string = '*') => builder,
+        order: () => builder,
+        limit: () => builder,
         eq: (col: string, val: any) => {
           filters.push((item: any) => item[col] === val);
           return builder;

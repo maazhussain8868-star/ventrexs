@@ -83,54 +83,91 @@ export async function GET(request: NextRequest) {
     // Idempotently ensure user profile & workspace exist
     try {
       const adminSupabase = createAdminClient();
-      const { data: existingProfile } = await adminSupabase
-        .from('profiles')
-        .select('id')
-        .eq('id', authenticatedUser.id)
+      const name =
+        (authenticatedUser.user_metadata?.name as string) ||
+        (authenticatedUser.user_metadata?.full_name as string) ||
+        authenticatedUser.email?.split('@')[0] ||
+        'Business Owner';
+      const businessName =
+        (authenticatedUser.user_metadata?.business_name as string) ||
+        `${name}'s Business`;
+
+      // 1. Ensure profile exists
+      await adminSupabase.from('profiles').upsert(
+        {
+          id: authenticatedUser.id,
+          email: authenticatedUser.email || '',
+          name,
+          role: 'owner',
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+
+      // 2. Check if user already has an active workspace membership
+      const { data: member } = await adminSupabase
+        .from('business_members')
+        .select('business_id')
+        .eq('user_id', authenticatedUser.id)
+        .order('is_primary', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (!existingProfile) {
-        const name =
-          (authenticatedUser.user_metadata?.name as string) ||
-          authenticatedUser.email?.split('@')[0] ||
-          'Business Owner';
-        const businessName =
-          (authenticatedUser.user_metadata?.business_name as string) ||
-          `${name}'s Business`;
+      if (!member?.business_id) {
+        // 3. Try database RPC if available
+        let rpcResolved = false;
+        try {
+          const { data: rpcRes, error: rpcErr } = await (adminSupabase as any).rpc('ensure_user_workspace_membership', {
+            p_user_id: authenticatedUser.id,
+            p_email: authenticatedUser.email || '',
+            p_name: name,
+            p_business_name: businessName,
+          });
+          if (!rpcErr && (rpcRes as any)?.success) {
+            rpcResolved = true;
+          }
+        } catch {
+          // Non-blocking fallback
+        }
 
-        await adminSupabase.from('profiles').upsert(
-          {
-            id: authenticatedUser.id,
-            email: authenticatedUser.email || '',
-            name,
-            role: 'owner',
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        );
+        if (!rpcResolved) {
+          // 4. Fallback: check if business exists by email
+          const { data: existingBiz } = await adminSupabase
+            .from('businesses')
+            .select('id')
+            .eq('email', authenticatedUser.email || '')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        const { data: newBusiness } = await adminSupabase
-          .from('businesses')
-          .insert({
-            name: businessName,
-            email: authenticatedUser.email || '',
-            currency: 'USD ($)',
-            payment_terms_days: 14,
-            auto_reminder_enabled: true,
-          })
-          .select()
-          .single();
+          let targetBizId = existingBiz?.id;
 
-        if (newBusiness) {
-          await adminSupabase.from('business_members').upsert(
-            {
-              business_id: newBusiness.id,
-              user_id: authenticatedUser.id,
-              role: 'owner',
-              is_primary: true,
-            },
-            { onConflict: 'business_id,user_id' }
-          );
+          if (!targetBizId) {
+            const { data: newBusiness } = await adminSupabase
+              .from('businesses')
+              .insert({
+                name: businessName,
+                email: authenticatedUser.email || '',
+                currency: 'USD ($)',
+                payment_terms_days: 14,
+                auto_reminder_enabled: true,
+              })
+              .select('id')
+              .single();
+            targetBizId = newBusiness?.id;
+          }
+
+          if (targetBizId) {
+            await adminSupabase.from('business_members').upsert(
+              {
+                business_id: targetBizId,
+                user_id: authenticatedUser.id,
+                role: 'owner',
+                is_primary: true,
+              },
+              { onConflict: 'business_id,user_id' }
+            );
+          }
         }
       }
     } catch (provisionErr) {

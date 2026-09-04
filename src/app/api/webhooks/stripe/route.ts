@@ -36,17 +36,6 @@ export async function POST(req: NextRequest) {
     }
     const stripeProvider = new StripePaymentProviderAdapter(stripeKey || '', webhookSecret);
 
-    if (process.env.NODE_ENV !== 'production' && process.env.VENTREXS_TEST_MODE === 'true') {
-      const verification = await stripeProvider.verifyWebhookSignature(rawBody, signature, webhookSecret);
-      if (!verification.isValid) {
-        return NextResponse.json(
-          { error: verification.error || 'Invalid webhook signature or payload' },
-          { status: 400 }
-        );
-      }
-      return NextResponse.json({ received: true, eventId: verification.event?.id }, { status: 200 });
-    }
-
     if (!stripeKey) {
       ProductionLogger.error('WEBHOOK', 'Stripe webhook rejected: Stripe API credentials are not configured');
       return NextResponse.json(

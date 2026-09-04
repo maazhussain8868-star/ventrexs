@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { startFreeTrialAction } from '@/app/actions/billing';
 import {
   ArrowRight,
   ArrowLeft,
@@ -60,7 +61,7 @@ const DEFAULT_SERVICES_BY_INDUSTRY: Record<string, string[]> = {
 export default function BusinessOnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, profile, businessProfile, completeOnboarding, showToast } = useApp();
+  const { user, profile, businessProfile, completeOnboarding, showToast, refreshSubscription } = useApp();
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -166,6 +167,21 @@ export default function BusinessOnboardingPage() {
         timezone: 'America/Chicago',
         about: `${businessName} provides licensed ${industry} services in ${city}.`,
       });
+
+      const isTrial = searchParams.get('trial') === 'true';
+      if (isTrial) {
+        const trialRes = await startFreeTrialAction({ plan: selectedPlan });
+        if (trialRes.success) {
+          showToast({
+            title: '7-Day Free Trial Activated!',
+            description: 'Your workspace is ready with full access.',
+            type: 'success',
+          });
+          await refreshSubscription();
+          router.push('/dashboard');
+          return;
+        }
+      }
 
       showToast({
         title: 'Workspace Initialized',
@@ -466,7 +482,7 @@ export default function BusinessOnboardingPage() {
                     Select your subscription tier
                   </h1>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Start with a 14-day free trial. No charges until your trial concludes.
+                    Choose your plan. Full payment gateway checkout or 7-day trial will activate your workspace.
                   </p>
                 </div>
 
@@ -620,7 +636,7 @@ export default function BusinessOnboardingPage() {
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold min-h-[42px] px-6 shadow-md"
               >
-                Enter Dashboard
+                Activate Plan & Enter Dashboard
               </Button>
             )}
           </div>

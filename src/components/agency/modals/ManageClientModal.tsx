@@ -32,14 +32,12 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
   onClose,
   onUpdateClient,
 }) => {
-  if (!client) return null;
-
-  const [name, setName] = useState(client.name);
-  const [ownerEmail, setOwnerEmail] = useState(client.ownerEmail);
-  const [plan, setPlan] = useState<'Starter' | 'Professional' | 'Enterprise'>(client.plan);
-  const [status, setStatus] = useState<'Active' | 'Trial' | 'Provisioning' | 'Suspended'>(client.status);
-  const [health, setHealth] = useState<'Healthy' | 'Needs Attention' | 'At Risk'>(client.health);
-  const [domain, setDomain] = useState(client.domain);
+  const [name, setName] = useState(client?.name || '');
+  const [ownerEmail, setOwnerEmail] = useState(client?.ownerEmail || '');
+  const [plan, setPlan] = useState<'Starter' | 'Professional' | 'Enterprise'>(client?.plan || 'Starter');
+  const [status, setStatus] = useState<'Active' | 'Trial' | 'Provisioning' | 'Suspended'>(client?.status || 'Active');
+  const [health, setHealth] = useState<'Healthy' | 'Needs Attention' | 'At Risk'>(client?.health || 'Healthy');
+  const [domain, setDomain] = useState(client?.domain || '');
   const [saving, setSaving] = useState(false);
 
   // Feature flags
@@ -48,8 +46,10 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
     smsDispatch: true,
     reputationReviews: true,
     invoiceAutomation: true,
-    ownerAiRadar: client.plan === 'Enterprise',
+    ownerAiRadar: client?.plan === 'Enterprise',
   });
+
+  if (!client) return null;
 
   const handleSave = () => {
     setSaving(true);

@@ -17,6 +17,7 @@ import {
   Loader2,
   Send,
 } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -140,11 +141,13 @@ export default function SignupPage() {
           type: 'success',
         });
 
+        const isTrial = searchParams.get('trial') === 'true';
         const planQuery = selectedPlan ? `?plan=${encodeURIComponent(selectedPlan)}` : '';
+        const trialQuery = isTrial ? (planQuery ? '&trial=true' : '?trial=true') : '';
         if (accountType === 'AGENCY_OWNER') {
-          router.push(`/agency/onboarding${planQuery}`);
+          router.push(`/agency/onboarding${planQuery}${trialQuery}`);
         } else {
-          router.push(`/onboarding${planQuery}`);
+          router.push(`/onboarding${planQuery}${trialQuery}`);
         }
       } else {
         const errorMsg = res.error || 'Failed to create account. Please try again.';
@@ -212,12 +215,7 @@ export default function SignupPage() {
       <div className="w-full max-w-lg mx-auto flex flex-col gap-6 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
         {/* Header */}
         <div className="text-center flex flex-col items-center gap-2">
-          <Link
-            href="/"
-            className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/25 mb-1 active:scale-95 transition-transform"
-          >
-            <Sparkles className="w-6 h-6" />
-          </Link>
+          <Logo href="/" variant="icon" size="lg" className="mb-1" />
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Start with Ventrexs AI
           </h1>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * VENTREXS AI — RAZORPAY BILLING PROVIDER ADAPTER
  * Handles SaaS subscription checkout sessions via Razorpay Orders API.
  * All API calls are server-side only. RAZORPAY_KEY_SECRET never reaches the browser.
@@ -89,21 +89,31 @@ export class RazorpayBillingProviderAdapter implements PaymentProvider {
       },
     };
 
-    const response = await fetch('https://api.razorpay.com/v1/orders', {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(orderPayload),
-    });
+    let order: any;
+    if (this.keyId === 'rzp_test_paypilot_local' || this.keyId.startsWith('rzp_test_mock')) {
+      order = {
+        id: `order_rzp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        amount: amountInCents,
+        currency: 'USD',
+        status: 'created',
+      };
+    } else {
+      const response = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderPayload),
+      });
 
-    const order = await response.json();
+      order = await response.json();
 
-    if (!response.ok) {
-      throw new Error(
-        `Razorpay Order Creation Error: ${order?.error?.description || order?.error?.reason || response.statusText}`
-      );
+      if (!response.ok) {
+        throw new Error(
+          `Razorpay Order Creation Error: ${order?.error?.description || order?.error?.reason || response.statusText}`
+        );
+      }
     }
 
     // The checkoutUrl encodes all params so the billing page can render the Razorpay modal

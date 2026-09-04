@@ -343,6 +343,7 @@ export interface WebhookEvent {
   type: string;
   businessId?: string;
   agencyId?: string;
+  userId?: string;
   plan?: AnyPlanKey;
   interval?: BillingInterval;
   status?: SubscriptionStatus;

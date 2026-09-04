@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { AlertCircle, Mail, Send, Loader2, ArrowRight } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 
 export default function AuthErrorPage() {
   const searchParams = useSearchParams();
@@ -56,12 +57,7 @@ export default function AuthErrorPage() {
       <div className="w-full max-w-md mx-auto flex flex-col gap-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
         {/* Header / Logo */}
         <div className="text-center flex flex-col items-center gap-2">
-          <Link
-            href="/"
-            className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg mb-1 hover:scale-105 transition-transform"
-          >
-            <span className="material-symbols-outlined text-[28px]">verified_user</span>
-          </Link>
+          <Logo href="/" variant="icon" size="lg" className="mb-1" />
           <h1 className="text-2xl font-black text-white tracking-tight">Ventrexs AI</h1>
           <p className="text-xs text-slate-400">Account Authentication</p>
         </div>

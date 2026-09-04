@@ -185,12 +185,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 5. SUBSCRIPTION GATE — Authenticated users must have an active subscription
-  //    to access protected customer routes.
-  //    This is checked server-side using the subscriptions table.
-  //    Demo mode bypasses this gate.
-  //    Admin and agency routes are NOT gated here.
-  if (isCustomerProtectedRoute && user && !isDemoMode && supabaseUrl && supabaseAnonKey) {
+  // 5. SUBSCRIPTION PAYWALL GATE — Authenticated users must have an active subscription
+  //    to access protected customer routes (/dashboard, /invoices, /leads, etc.).
+  //    - Enabled by default in production.
+  //    - Can be easily toggled off for local testing with NEXT_PUBLIC_ENABLE_PAYWALL=false.
+  //    - Demo mode also bypasses this gate.
+  //    - Unpaid users are redirected to /pricing to complete checkout.
+  const isPaywallEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_PAYWALL !== 'false' &&
+    process.env.ENABLE_PAYWALL !== 'false';
+
+  if (isCustomerProtectedRoute && user && !isDemoMode && isPaywallEnabled && supabaseUrl && supabaseAnonKey) {
     try {
       const supabaseForSub = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
         cookies: {
@@ -202,39 +207,51 @@ export async function middleware(req: NextRequest) {
         },
       });
 
-      // Find the business this user belongs to
-      const { data: membership } = await supabaseForSub
-        .from('business_members')
-        .select('business_id')
+      // 1. Direct user subscription check
+      const { data: userSub } = await supabaseForSub
+        .from('subscriptions')
+        .select('status, current_period_end')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (membership?.business_id) {
-        // Check subscription status from DB (source of truth — not localStorage/cookies)
-        const { data: sub } = await supabaseForSub
-          .from('subscriptions')
-          .select('status')
-          .eq('business_id', membership.business_id)
+      let activeSub = userSub;
+
+      // 2. Fallback to business membership subscription check
+      if (!activeSub) {
+        const { data: membership } = await supabaseForSub
+          .from('business_members')
+          .select('business_id')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
           .maybeSingle();
 
-        const status = sub?.status;
-        const hasActiveSubscription =
-          status === 'active' || status === 'trialing';
-
-        if (!hasActiveSubscription) {
-          const redirectUrl = req.nextUrl.clone();
-          redirectUrl.pathname = '/billing';
-          // Preserve where they wanted to go so we can redirect after payment
-          redirectUrl.searchParams.set('from', pathname);
-          return NextResponse.redirect(redirectUrl);
+        if (membership?.business_id) {
+          const { data: bizSub } = await supabaseForSub
+            .from('subscriptions')
+            .select('status, current_period_end')
+            .eq('business_id', membership.business_id)
+            .maybeSingle();
+          activeSub = bizSub;
         }
       }
-      // If no membership found, let the dashboard handle the redirect to onboarding
+
+      const status = activeSub?.status;
+      const periodEnd = activeSub?.current_period_end ? new Date(activeSub.current_period_end).getTime() : 0;
+      const isTrialValid = status === 'trialing' && periodEnd > Date.now();
+      const hasActiveSubscription = status === 'active' || isTrialValid;
+
+      if (!hasActiveSubscription) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/pricing';
+        redirectUrl.searchParams.set('reason', status === 'trialing' ? 'trial_expired' : 'paywall');
+        redirectUrl.searchParams.set('from', pathname);
+        return NextResponse.redirect(redirectUrl);
+      }
     } catch {
-      // If subscription check fails (e.g. DB unreachable), fail open to avoid locking out users
-      // The dashboard will re-check and redirect if needed
+      // If subscription check fails (e.g. temporary network error), fail open
     }
   }
 

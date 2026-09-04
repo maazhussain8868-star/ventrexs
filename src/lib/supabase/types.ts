@@ -649,6 +649,7 @@ export interface Database {
       subscriptions: {
         Row: {
           id: string;
+          user_id?: string | null;
           business_id: string;
           plan: SubscriptionPlan;
           billing_cycle: BillingCycle;
@@ -672,6 +673,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          user_id?: string | null;
           business_id: string;
           plan?: SubscriptionPlan;
           billing_cycle?: BillingCycle;
@@ -695,6 +697,7 @@ export interface Database {
         };
         Update: {
           id?: string;
+          user_id?: string | null;
           business_id?: string;
           plan?: SubscriptionPlan;
           billing_cycle?: BillingCycle;

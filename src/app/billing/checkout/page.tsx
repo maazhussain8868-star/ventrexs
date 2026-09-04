@@ -121,7 +121,7 @@ export default function BillingCheckoutPage() {
     };
 
     try {
-      // @ts-ignore — Razorpay is loaded from external script
+      // @ts-expect-error — Razorpay is loaded from external script
       rzpRef.current = new window.Razorpay(options);
       rzpRef.current.on('payment.failed', (response: any) => {
         setStatus('error');

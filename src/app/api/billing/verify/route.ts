@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const signature = searchParams.get('razorpay_signature') || '';
   const plan = searchParams.get('plan') || '';
   const billingCycle = searchParams.get('billing_cycle') || 'monthly';
-  const businessId = searchParams.get('business_id') || '';
+  let businessId = searchParams.get('business_id') || '';
   const successUrl = searchParams.get('success_url') || `${appUrl}/billing/success`;
   const failUrl = `${appUrl}/billing?failed=true`;
 
@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  let authenticatedUserId: string | null = null;
   if (supabaseUrl && supabaseAnonKey) {
     let response = NextResponse.next();
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -99,6 +100,7 @@ export async function GET(req: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      authenticatedUserId = user.id;
       const adminSupabase = createAdminClient();
       const { data: membership } = await adminSupabase
         .from('business_members')
@@ -108,11 +110,51 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
 
       if (!membership) {
-        ProductionLogger.warn('BILLING', 'User does not belong to this business', {
-          userId: user.id,
-          businessId,
-        });
-        return NextResponse.redirect(new URL(failUrl, appUrl));
+        const { data: userBiz } = await adminSupabase
+          .from('business_members')
+          .select('business_id')
+          .eq('user_id', user.id)
+          .order('is_primary', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (userBiz?.business_id) {
+          businessId = userBiz.business_id;
+        } else if (user.email) {
+          // Fallback: check businesses table by user email
+          const { data: bizByEmail } = await adminSupabase
+            .from('businesses')
+            .select('id')
+            .eq('email', user.email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (bizByEmail?.id) {
+            businessId = bizByEmail.id;
+            await adminSupabase.from('business_members').upsert(
+              {
+                business_id: bizByEmail.id,
+                user_id: user.id,
+                role: 'owner',
+                is_primary: true,
+              },
+              { onConflict: 'business_id,user_id' }
+            );
+          } else {
+            ProductionLogger.warn('BILLING', 'User does not belong to this business', {
+              userId: user.id,
+              businessId,
+            });
+            return NextResponse.redirect(new URL(failUrl, appUrl));
+          }
+        } else {
+          ProductionLogger.warn('BILLING', 'User does not belong to this business', {
+            userId: user.id,
+            businessId,
+          });
+          return NextResponse.redirect(new URL(failUrl, appUrl));
+        }
       }
     }
   }
@@ -149,6 +191,7 @@ export async function GET(req: NextRequest) {
     const { error: subError } = await adminSupabase.from('subscriptions').upsert(
       {
         business_id: businessId,
+        ...(authenticatedUserId ? { user_id: authenticatedUserId } : {}),
         plan: plan as any,
         billing_cycle: billingCycle as any,
         status: 'active',
@@ -156,7 +199,7 @@ export async function GET(req: NextRequest) {
         selected_billing_cycle: billingCycle as any,
         checkout_session_id: orderId,
         price_amount: price,
-        currency: 'USD',
+        currency: 'INR',
         provider: 'razorpay' as any,
         provider_subscription_id: paymentId,
         provider_customer_id: null,

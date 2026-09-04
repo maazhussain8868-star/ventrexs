@@ -187,16 +187,30 @@ export class BillingService {
 
         const isUpgrade = currentSub && currentSub.plan !== planKey;
 
+        // Resolve paying user_id if not directly present in event metadata
+        let payingUserId = event.userId;
+        if (!payingUserId && businessId) {
+          const { data: member } = await this.client
+            .from('business_members')
+            .select('user_id')
+            .eq('business_id', businessId)
+            .order('is_primary', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          payingUserId = member?.user_id || undefined;
+        }
+
         // Upsert subscription in Supabase
         await this.client.from('subscriptions').upsert(
           {
             business_id: businessId,
+            ...(payingUserId ? { user_id: payingUserId } : {}),
             plan: planKey,
             billing_cycle: event.interval || 'monthly',
             status: (event.status as any) || 'active',
             price_amount: price,
             currency: 'USD',
-            provider: event.provider,
+            provider: 'stripe',
             provider_customer_id: event.providerCustomerId || null,
             provider_subscription_id: event.providerSubscriptionId || null,
             current_period_start: event.currentPeriodStart || new Date().toISOString(),

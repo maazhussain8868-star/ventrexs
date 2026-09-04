@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, RotateCcw, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { Logo } from '@/components/ui/Logo';
 
 import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
 import { PLANS_CONFIG, PlanKey } from '@/lib/billing/types';
@@ -42,8 +43,15 @@ export default function BillingSuccessPage() {
   const POLL_INTERVAL_MS = 2500;
 
   useEffect(() => {
+    const isTrialValid =
+      subscription?.status === 'trialing' &&
+      Boolean(
+        subscription?.currentPeriodEnd &&
+        new Date(subscription.currentPeriodEnd).getTime() > Date.now()
+      );
+
     // If subscription is already active on mount or arrived from verified route, go straight to success
-    if (isActivated || subscription?.status === 'active' || subscription?.status === 'trialing') {
+    if (isActivated || subscription?.status === 'active' || isTrialValid) {
       setStatus('success');
       return;
     }
@@ -65,7 +73,14 @@ export default function BillingSuccessPage() {
       }
 
       const currentStatus = subscription?.status;
-      if (currentStatus === 'active' || currentStatus === 'trialing') {
+      const isNowTrialValid =
+        currentStatus === 'trialing' &&
+        Boolean(
+          subscription?.currentPeriodEnd &&
+          new Date(subscription.currentPeriodEnd).getTime() > Date.now()
+        );
+
+      if (currentStatus === 'active' || isNowTrialValid) {
         setStatus('success');
         return;
       }
@@ -111,11 +126,8 @@ export default function BillingSuccessPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 font-sans">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 mb-8">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white">
-          <Sparkles className="w-4 h-4" />
-        </div>
-        <span className="font-extrabold text-lg text-slate-900">Ventrexs AI</span>
+      <div className="mb-8">
+        <Logo href="/" variant="full" size="md" theme="light" />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 max-w-sm w-full text-center">

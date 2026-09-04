@@ -1,0 +1,20 @@
+{
+  "name": "TRS Connect - Citizen & Youth Engagement",
+  "short_name": "TRS Connect",
+  "description": "Officially authorized political organization engagement platform for membership, youth activities, volunteering, community events, and citizen issue reporting.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D7A3E",
+  "theme_color": "#0D7A3E",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["government", "social", "community", "news"],
+  "lang": "en-IN"
+}

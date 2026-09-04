@@ -194,6 +194,7 @@ export class StripePaymentProviderAdapter implements PaymentProvider {
         provider: this.name,
         type: parsed.type,
         businessId: metadata.business_id || metadata.businessId || dataObj.client_reference_id,
+        userId: metadata.user_id || metadata.userId,
         plan: metadata.plan,
         interval: metadata.interval,
         providerCustomerId: dataObj.customer,

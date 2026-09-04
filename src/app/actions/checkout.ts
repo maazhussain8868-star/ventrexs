@@ -94,6 +94,7 @@ export async function createCheckoutSessionAction(
     await adminSupabase.from('subscriptions').upsert(
       {
         business_id: businessId,
+        user_id: user.id,
         plan: params.plan,
         billing_cycle: params.billingCycle,
         status: 'checkout_started',
@@ -185,6 +186,7 @@ export async function saveSelectedPlanAction(
     await adminSupabase.from('subscriptions').upsert(
       {
         business_id: businessId,
+        user_id: user.id,
         plan: params.plan,
         billing_cycle: params.billingCycle,
         status: 'pending',

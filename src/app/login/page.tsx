@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Mail, Lock, Eye, EyeOff, Loader2, Send } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -112,9 +113,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm mx-auto flex flex-col gap-6 bg-surface rounded-2xl border border-outline-variant p-6 sm:p-8 shadow-sm">
         {/* Header / Logo */}
         <div className="text-center flex flex-col items-center gap-2">
-          <Link href="/" className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-xs mb-1 hover:scale-105 transition-transform">
-            <span className="material-symbols-outlined text-[28px] fill-icon">payments</span>
-          </Link>
+          <Logo href="/" variant="icon" size="lg" className="mb-1" />
           <h1 className="text-2xl font-bold text-primary tracking-tight">Ventrexs AI</h1>
           <p className="text-xs sm:text-sm text-on-surface-variant">Sign in to your account</p>
         </div>

@@ -24,6 +24,7 @@ import {
   User, 
   ArrowLeft 
 } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -84,12 +85,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         }`}
       >
         <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined text-[18px] fill-icon">payments</span>
-            </div>
-            <span className="font-bold text-base text-primary">Ventrexs Service OS</span>
-          </div>
+          <Logo href="/dashboard" variant="full" size="sm" subtitle="Service OS" />
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(false)}

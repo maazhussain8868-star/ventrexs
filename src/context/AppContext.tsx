@@ -3964,8 +3964,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return null;
           }
 
-          if (res.businessId && !businessId) {
+          if (res.businessId) {
             setBusinessId(res.businessId);
+            setSubscription(prev => ({
+              ...prev,
+              businessId: res.businessId,
+              plan,
+              billingCycle: interval,
+              status: 'checkout_started',
+            }));
           }
 
           return { sessionId: res.sessionId || '', checkoutUrl: res.checkoutUrl };

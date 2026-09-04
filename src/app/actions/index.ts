@@ -611,6 +611,11 @@ export async function saveSelectedPlanAction(params: any) {
   return fn(params);
 }
 
+export async function startFreeTrialAction(params: any) {
+  const { startFreeTrialAction: fn } = await import('./billing');
+  return fn(params);
+}
+
 export async function getSubscriptionEntitlementsAction(businessId: string) {
   return getBusinessSubscriptionAction(businessId);
 }

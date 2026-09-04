@@ -2,33 +2,157 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { PLANS_CONFIG, AGENCY_PLANS_CONFIG, PlanKey, AgencyPlanKey, BillingInterval } from '@/lib/billing/types';
+import { startFreeTrialAction } from '@/app/actions/billing';
 import { 
   CheckCircle2, 
   Sparkles, 
   ShieldCheck, 
   ArrowRight, 
   HelpCircle,
-  Zap,
-  Bot,
-  Users,
   Building2,
   Globe,
-  Layers,
-  Award
+  CreditCard,
+  Clock
 } from 'lucide-react';
 
+export const PLAN_PRICING = {
+  INR: {
+    Starter: { monthly: 2499, annual: 24990 },
+    Professional: { monthly: 6499, annual: 64990 },
+    Enterprise: { monthly: 19999, annual: 199990 },
+  },
+  USD: {
+    Starter: { monthly: 29, annual: 290 },
+    Professional: { monthly: 79, annual: 790 },
+    Enterprise: { monthly: 249, annual: 2490 },
+  },
+};
+
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill: {
+    name: string;
+    email: string;
+  };
+  theme: { color: string };
+  handler: (response: RazorpayResponse) => Promise<void> | void;
+  modal?: {
+    ondismiss?: () => void;
+  };
+}
+
+interface RazorpayInstance {
+  open: () => void;
+}
+
+function detectUserPaymentRegion(): { gateway: 'razorpay' | 'stripe'; currency: 'INR' | 'USD' } {
+  if (typeof window === 'undefined') {
+    return { gateway: 'stripe', currency: 'USD' };
+  }
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const lang = (navigator.language || '').toLowerCase();
+    const isIndia =
+      tz.includes('Calcutta') ||
+      tz.includes('Kolkata') ||
+      lang === 'en-in' ||
+      lang === 'hi' ||
+      lang.endsWith('-in');
+
+    if (isIndia) {
+      return { gateway: 'razorpay', currency: 'INR' };
+    }
+  } catch {
+    // default to stripe / USD
+  }
+  return { gateway: 'stripe', currency: 'USD' };
+}
+
 export default function PricingPage() {
-  const { subscription, createCheckoutSession, showToast, profile } = useApp();
+  const router = useRouter();
+  const { subscription, showToast, profile, user, refreshSubscription } = useApp();
   const [planCategory, setPlanCategory] = useState<'business' | 'agency'>('business');
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
+  const [gateway, setGateway] = useState<'razorpay' | 'stripe'>(() => detectUserPaymentRegion().gateway);
+  const [currency, setCurrency] = useState<'INR' | 'USD'>(() => detectUserPaymentRegion().currency);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [isStartingTrial, setIsStartingTrial] = useState(false);
 
-  const handleSelectBusinessPlan = async (planKey: PlanKey) => {
+  const handleStartFreeTrial = async (planKey: PlanKey = 'Professional') => {
+    if (!user && !profile?.email) {
+      router.push(`/signup?type=business&plan=${planKey}&trial=true`);
+      return;
+    }
+
+    setIsStartingTrial(true);
+    try {
+      const res = await startFreeTrialAction({ plan: planKey });
+      if (!res.success) {
+        showToast({
+          title: 'Trial Unavailable',
+          description: res.error || 'Could not start free trial.',
+          type: 'error',
+        });
+        return;
+      }
+
+      showToast({
+        title: '7-Day Free Trial Started!',
+        description: 'Welcome to Ventrexs AI. Your workspace is now active.',
+        type: 'success',
+      });
+
+      await refreshSubscription();
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      showToast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to start free trial.',
+        type: 'error',
+      });
+    } finally {
+      setIsStartingTrial(false);
+    }
+  };
+
+  const handleGatewayChange = (newGateway: 'razorpay' | 'stripe') => {
+    setGateway(newGateway);
+    setCurrency(newGateway === 'razorpay' ? 'INR' : 'USD');
+  };
+
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && (window as unknown as { Razorpay?: unknown }).Razorpay) {
+        return resolve(true);
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleCheckout = async (planKey: PlanKey, gatewayOverride?: 'razorpay' | 'stripe') => {
+    const selectedGateway = gatewayOverride || gateway;
+
     if (subscription.status === 'active' && planKey === subscription.plan) {
       showToast({
         title: 'Current Plan',
@@ -38,13 +162,104 @@ export default function PricingPage() {
       return;
     }
 
+    // If not logged in, route to signup with plan and gateway params
+    if (!user && !profile?.email) {
+      router.push(`/signup?type=business&plan=${planKey}&gateway=${selectedGateway}&cycle=${billingInterval}`);
+      return;
+    }
+
     setLoadingPlan(planKey);
+
     try {
-      const res = await createCheckoutSession(planKey, billingInterval);
-      if (res?.checkoutUrl && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-        window.location.href = res.checkoutUrl;
+      if (selectedGateway === 'stripe') {
+        // Stripe Checkout hosted session
+        const res = await fetch('/api/checkout/stripe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan: planKey,
+            billingCycle: billingInterval,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.url) {
+          throw new Error(data.error || 'Failed to initialize Stripe hosted checkout session.');
+        }
+
+        window.location.assign(data.url);
+      } else {
+        // Razorpay checkout modal
+        const res = await fetch('/api/checkout/razorpay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan: planKey,
+            billingCycle: billingInterval,
+            currency: 'INR',
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.orderId) {
+          throw new Error(data.error || 'Failed to initialize Razorpay checkout order.');
+        }
+
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          throw new Error('Could not load Razorpay checkout script. Please check your internet connection.');
+        }
+
+        const options: RazorpayOptions = {
+          key: data.keyId,
+          amount: data.amount,
+          currency: data.currency,
+          name: 'Ventrexs AI',
+          description: `${planKey} Plan (${billingInterval})`,
+          order_id: data.orderId,
+          prefill: {
+            name: data.customer?.name || '',
+            email: data.customer?.email || '',
+          },
+          theme: { color: '#0284c7' },
+          handler: function (response: RazorpayResponse) {
+            showToast({
+              title: 'Payment Successful',
+              description: 'Verifying payment server-side and activating workspace...',
+              type: 'success',
+            });
+
+            // Redirect to internal server verification endpoint
+            router.push(
+              `/api/billing/verify?razorpay_payment_id=${encodeURIComponent(
+                response.razorpay_payment_id
+              )}&razorpay_order_id=${encodeURIComponent(
+                response.razorpay_order_id
+              )}&razorpay_signature=${encodeURIComponent(
+                response.razorpay_signature
+              )}&plan=${encodeURIComponent(planKey)}&billing_cycle=${billingInterval}&business_id=${encodeURIComponent(
+                data.businessId || data.customer?.id || ''
+              )}`
+            );
+          },
+          modal: {
+            ondismiss: function () {
+              setLoadingPlan(null);
+            },
+          },
+        };
+
+        const RazorpayConstructor = (window as unknown as { Razorpay: new (opts: RazorpayOptions) => RazorpayInstance }).Razorpay;
+        const rzp = new RazorpayConstructor(options);
+        rzp.open();
       }
-    } finally {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to proceed with checkout. Please try again.';
+      showToast({
+        title: 'Checkout Error',
+        description: errorMsg,
+        type: 'error',
+      });
       setLoadingPlan(null);
     }
   };
@@ -55,8 +270,16 @@ export default function PricingPage() {
       a: 'Ventrexs operates on strict non-compounding, zero-interest calculations. We never charge punitive late fees or predatory interest on overdue balances.',
     },
     {
+      q: 'Which payment methods are supported for Indian businesses?',
+      a: 'We support all Indian payment options via Razorpay including UPI (Google Pay, PhonePe, Paytm), RuPay, Visa, Mastercard credit/debit cards, and NetBanking across all major banks.',
+    },
+    {
+      q: 'Which payment methods are supported for international users?',
+      a: 'International subscribers are processed securely via Stripe Checkout supporting Visa, Mastercard, American Express, Apple Pay, and Google Pay in USD.',
+    },
+    {
       q: 'What is the difference between Business and Agency plans?',
-      a: 'Business plans are designed for individual contractor and trade companies managing their own jobs, dispatch, and AI reception. Agency plans are multi-tenant reseller tiers for marketing agencies managing fleets of 10 to 100+ contractor clients under custom white-label branding.',
+      a: 'Business plans are designed for individual trade contractors managing their own jobs, dispatch, and AI reception. Agency plans are multi-tenant reseller tiers for marketing agencies managing fleets of 10 to 100+ contractor clients under custom white-label branding.',
     },
     {
       q: 'Can I upgrade, downgrade, or cancel at any time?',
@@ -65,10 +288,6 @@ export default function PricingPage() {
     {
       q: 'Are all 8 service industries supported across all plans?',
       a: 'Yes. HVAC, Roofing, Plumbing, Electrical, General Contracting, Landscaping, Garage Door, Pest Control, and Cleaning businesses have full access to our industry-tuned workflows.',
-    },
-    {
-      q: 'What payment methods do you support for SaaS subscriptions?',
-      a: 'We accept all major credit cards, debit cards, UPI, net banking, and international wire transfers securely processed via Razorpay (India) and Stripe (International).',
     },
   ];
 
@@ -86,6 +305,70 @@ export default function PricingPage() {
           </h1>
           <p className="text-sm sm:text-base text-on-surface-variant leading-relaxed">
             Choose between standalone contractor operating software and multi-tenant white-label agency reseller tiers.
+          </p>
+        </div>
+
+        {/* 7-Day Free Trial Banner (No Credit Card Required) */}
+        {subscription?.status !== 'active' && subscription?.status !== 'trialing' && (
+          <div className="rounded-2xl p-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-teal-500/10 border border-primary/30 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+            <div className="space-y-1 text-center md:text-left">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/20 text-primary text-[11px] font-black uppercase tracking-wider mb-1">
+                <Clock className="w-3.5 h-3.5" />
+                7-Day Free Trial
+              </div>
+              <h3 className="text-lg font-extrabold text-on-surface">
+                Want to experience Ventrexs AI first?
+              </h3>
+              <p className="text-xs text-on-surface-variant max-w-xl">
+                Start an intentional 7-day free trial with full access to the AI Receptionist, job dispatch, estimates, and invoice workflows. No credit card required.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => handleStartFreeTrial('Professional')}
+              isLoading={isStartingTrial}
+              className="shrink-0 font-bold text-xs gap-2 px-6 shadow-md"
+            >
+              <span>Start 7-Day Free Trial</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
+
+        {/* Currency / Payment Gateway Selector */}
+        <div className="flex flex-col items-center gap-3">
+          <span className="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5">
+            <CreditCard className="w-3.5 h-3.5" /> Select Payment Region & Gateway:
+          </span>
+          <div className="bg-surface-container-high rounded-2xl p-1.5 flex flex-wrap gap-2 border border-outline-variant/80 shadow-xs max-w-lg w-full">
+            <button
+              type="button"
+              onClick={() => handleGatewayChange('razorpay')}
+              className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+                gateway === 'razorpay'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span>🇮🇳 Razorpay (INR • UPI & Cards)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleGatewayChange('stripe')}
+              className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+                gateway === 'stripe'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span>🌐 Stripe (USD • Global Cards)</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-on-surface-variant">
+            {gateway === 'razorpay'
+              ? '✨ Recommended for India: Instant UPI, QR Code, NetBanking, & RuPay/Visa/Mastercard.'
+              : '✨ Recommended for International: Hosted Stripe Checkout in USD with instant card processing.'}
           </p>
         </div>
 
@@ -154,7 +437,10 @@ export default function PricingPage() {
             {(['Starter', 'Professional', 'Enterprise'] as PlanKey[]).map((key) => {
               const plan = PLANS_CONFIG[key];
               const isCurrent = subscription.status === 'active' && subscription.plan === key;
-              const price = billingInterval === 'annual' ? plan.priceAnnual : plan.priceMonthly;
+
+              const priceObj = PLAN_PRICING[currency][key];
+              const price = billingInterval === 'annual' ? priceObj.annual : priceObj.monthly;
+              const currencySymbol = currency === 'INR' ? '₹' : '$';
 
               return (
                 <div
@@ -185,7 +471,7 @@ export default function PricingPage() {
                     <div className="mb-6">
                       <div className="flex items-baseline gap-1">
                         <span className="text-4xl font-extrabold text-on-surface font-mono">
-                          ${price}
+                          {currencySymbol}{price.toLocaleString()}
                         </span>
                         <span className="text-xs text-on-surface-variant font-medium">
                           /{billingInterval === 'annual' ? 'year' : 'month'}
@@ -193,7 +479,7 @@ export default function PricingPage() {
                       </div>
                       {billingInterval === 'annual' && (
                         <p className="text-[11px] text-tertiary font-semibold mt-1">
-                          Billed annually (${plan.priceAnnual}/yr • Includes 2 months free)
+                          Billed annually ({currencySymbol}{price.toLocaleString()}/yr • 2 months free included)
                         </p>
                       )}
                     </div>
@@ -213,37 +499,48 @@ export default function PricingPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2">
-                    {profile.email ? (
-                      <Button
-                        variant={isCurrent ? 'outline' : plan.popular ? 'primary' : 'outline'}
-                        size="md"
-                        onClick={() => handleSelectBusinessPlan(key)}
-                        disabled={isCurrent || loadingPlan === key}
-                        className="w-full font-bold text-xs gap-1.5 shadow-xs"
-                      >
-                        {isCurrent ? (
-                          'Active Plan'
-                        ) : loadingPlan === key ? (
-                          'Preparing Checkout...'
-                        ) : (
-                          <>
-                            <span>Get Started with {plan.name}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <Link href={`/signup?type=business&plan=${key}`} className="w-full block">
-                        <Button
-                          variant={plan.popular ? 'primary' : 'outline'}
-                          size="md"
-                          className="w-full font-bold text-xs gap-1.5 shadow-xs"
-                        >
-                          <span>Get Started with {plan.name}</span>
+                  <div className="pt-2 flex flex-col gap-2">
+                    <Button
+                      variant={isCurrent ? 'outline' : plan.popular ? 'primary' : 'outline'}
+                      size="md"
+                      onClick={() => handleCheckout(key)}
+                      disabled={isCurrent || loadingPlan === key}
+                      className="w-full font-bold text-xs gap-1.5 shadow-xs"
+                    >
+                      {isCurrent ? (
+                        'Active Plan'
+                      ) : loadingPlan === key ? (
+                        'Connecting Gateway...'
+                      ) : (
+                        <>
+                          <span>
+                            Pay with {gateway === 'razorpay' ? 'Razorpay (UPI/INR)' : 'Stripe (USD)'}
+                          </span>
                           <ArrowRight className="w-3.5 h-3.5" />
-                        </Button>
-                      </Link>
+                        </>
+                      )}
+                    </Button>
+
+                    {!isCurrent && (
+                      <button
+                        type="button"
+                        onClick={() => handleCheckout(key, gateway === 'razorpay' ? 'stripe' : 'razorpay')}
+                        disabled={loadingPlan === key}
+                        className="text-[11px] text-center text-on-surface-variant hover:text-primary transition-colors py-1 underline underline-offset-2"
+                      >
+                        Or pay with {gateway === 'razorpay' ? 'Stripe (USD / Cards)' : 'Razorpay (INR / UPI)'}
+                      </button>
+                    )}
+
+                    {!isCurrent && subscription?.status !== 'active' && subscription?.status !== 'trialing' && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartFreeTrial(key)}
+                        disabled={isStartingTrial || loadingPlan === key}
+                        className="text-[11px] font-bold text-center text-primary hover:underline transition-colors py-0.5"
+                      >
+                        ⚡ Start 7-day free trial ({plan.name})
+                      </button>
                     )}
                   </div>
                 </div>
@@ -334,22 +631,22 @@ export default function PricingPage() {
           </div>
         )}
 
-        {/* Feature Matrix / Comparison Callout */}
+        {/* Feature Matrix / Security Callout */}
         <div className="rounded-2xl p-6 bg-surface-container-high/60 border border-outline-variant/60 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-tertiary" />
               <h3 className="text-base font-bold text-on-surface">
-                Need customized team training or multi-location fleet dispatch?
+                Bank-Grade 256-Bit SSL Encryption & Idempotent Verification
               </h3>
             </div>
             <p className="text-xs text-on-surface-variant">
-              Enterprise subscribers get a dedicated account specialist, customized AI receptionist tuning, and bespoke webhook integrations.
+              Every checkout is cryptographically signed and confirmed server-side via official Razorpay and Stripe webhooks.
             </p>
           </div>
           <Link href="/settings/billing" className="shrink-0">
             <Button variant="outline" className="gap-2 text-xs">
-              View Detailed Quotas
+              View Current Usage
               <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </Link>

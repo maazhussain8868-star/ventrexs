@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import crypto from 'crypto';
 import { StripePaymentProviderAdapter } from '../src/lib/billing/providers/stripe-adapter';
 import { BillingService } from '../src/lib/billing/billing-service';
