@@ -76,47 +76,71 @@ ALTER TABLE demo_access_approvals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE demo_sessions ENABLE ROW LEVEL SECURITY;
 
 -- 7. RLS Policies: Platform Administrators & Owners can manage demo tokens
+DROP POLICY IF EXISTS "platform_admins_manage_demo_tokens" ON demo_access_tokens;
 CREATE POLICY "platform_admins_manage_demo_tokens" ON demo_access_tokens
     FOR ALL
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles
-            WHERE user_roles.user_id = auth.uid()
-            AND user_roles.role IN ('OWNER', 'PLATFORM_ADMIN')
+            SELECT 1 FROM public.business_members bm
+            WHERE bm.user_id = auth.uid()
+            AND bm.role IN ('owner', 'admin')
+        )
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid()
+            AND p.role IN ('owner', 'admin')
         )
     );
 
+DROP POLICY IF EXISTS "platform_admins_manage_demo_requests" ON demo_access_requests;
 CREATE POLICY "platform_admins_manage_demo_requests" ON demo_access_requests
     FOR ALL
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles
-            WHERE user_roles.user_id = auth.uid()
-            AND user_roles.role IN ('OWNER', 'PLATFORM_ADMIN')
+            SELECT 1 FROM public.business_members bm
+            WHERE bm.user_id = auth.uid()
+            AND bm.role IN ('owner', 'admin')
+        )
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid()
+            AND p.role IN ('owner', 'admin')
         )
     );
 
+DROP POLICY IF EXISTS "platform_admins_manage_demo_approvals" ON demo_access_approvals;
 CREATE POLICY "platform_admins_manage_demo_approvals" ON demo_access_approvals
     FOR ALL
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles
-            WHERE user_roles.user_id = auth.uid()
-            AND user_roles.role IN ('OWNER', 'PLATFORM_ADMIN')
+            SELECT 1 FROM public.business_members bm
+            WHERE bm.user_id = auth.uid()
+            AND bm.role IN ('owner', 'admin')
+        )
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid()
+            AND p.role IN ('owner', 'admin')
         )
     );
 
+DROP POLICY IF EXISTS "platform_admins_manage_demo_sessions" ON demo_sessions;
 CREATE POLICY "platform_admins_manage_demo_sessions" ON demo_sessions
     FOR ALL
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles
-            WHERE user_roles.user_id = auth.uid()
-            AND user_roles.role IN ('OWNER', 'PLATFORM_ADMIN')
+            SELECT 1 FROM public.business_members bm
+            WHERE bm.user_id = auth.uid()
+            AND bm.role IN ('owner', 'admin')
+        )
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid()
+            AND p.role IN ('owner', 'admin')
         )
     );
 

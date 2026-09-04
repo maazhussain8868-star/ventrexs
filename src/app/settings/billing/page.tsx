@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -28,8 +29,45 @@ import {
   Info
 } from 'lucide-react';
 
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayOptions {
+  key?: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+  notes?: Record<string, string>;
+  theme?: {
+    color?: string;
+  };
+  handler?: (response: RazorpayResponse) => void;
+  modal?: {
+    ondismiss?: () => void;
+  };
+}
+
+interface RazorpayInstance {
+  open: () => void;
+  on: (event: string, handler: (response: any) => void) => void;
+  close?: () => void;
+}
+
 export default function BillingSettingsPage() {
   const { 
+    user,
+    profile,
+    businessId,
     subscription, 
     usageRecords, 
     subscriptionEvents, 
@@ -47,6 +85,33 @@ export default function BillingSettingsPage() {
 
   const currentPlanConfig = PLANS_CONFIG[subscription.plan] || PLANS_CONFIG.Professional;
 
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && (window as unknown as { Razorpay?: unknown }).Razorpay) {
+        return resolve(true);
+      }
+      const existing = document.getElementById('razorpay-checkout-js');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(true));
+        existing.addEventListener('error', () => resolve(false));
+        return;
+      }
+      const script = document.createElement('script');
+      script.id = 'razorpay-checkout-js';
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => {
+        console.log('[RAZORPAY_SCRIPT_LOADED] Successfully loaded Razorpay checkout.js');
+        resolve(true);
+      };
+      script.onerror = (e) => {
+        console.error('[RAZORPAY_SCRIPT_ERROR] Failed to load checkout.js:', e);
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePlanSelect = async (planKey: PlanKey) => {
     if (subscription.status === 'active' && planKey === subscription.plan) {
       showToast({
@@ -57,16 +122,179 @@ export default function BillingSettingsPage() {
       return;
     }
 
+    console.log('[CHECKOUT_INIT] User clicked checkout for plan:', { planKey, billingInterval });
     setIsUpgrading(true);
+    setSelectedUpgradePlan(planKey);
+
     try {
-      const res = await createCheckoutSession(planKey, billingInterval);
-      if (res?.checkoutUrl) {
-        if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-          window.location.href = res.checkoutUrl;
-        }
+      // 1. Ensure Razorpay script is loaded before opening modal
+      console.log('[CHECKOUT_SCRIPT_CHECK] Verifying Razorpay checkout.js availability...');
+      const scriptReady = await loadRazorpayScript();
+      if (!scriptReady) {
+        const scriptErr = 'Could not load Razorpay payment module. Please check your internet connection.';
+        console.error('[RAZORPAY_SCRIPT_MISSING]', scriptErr);
+        showToast({
+          title: 'Payment Gateway Error',
+          description: scriptErr,
+          type: 'error',
+        });
+        setIsUpgrading(false);
+        setSelectedUpgradePlan(null);
+        return;
       }
-    } finally {
+
+      // 2. Call backend Razorpay order creation endpoint
+      console.log('[CHECKOUT_ORDER_REQUEST] Calling /api/checkout/razorpay...');
+      const response = await fetch('/api/checkout/razorpay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: planKey,
+          billingCycle: billingInterval,
+          currency: 'INR',
+          businessId: businessId || undefined,
+        }),
+      });
+
+      const orderData = await response.json().catch(() => ({}));
+      console.log('[CHECKOUT_ORDER_RESPONSE]', {
+        status: response.status,
+        ok: response.ok,
+        orderId: orderData?.orderId,
+        keyIdPresent: Boolean(orderData?.keyId),
+        amount: orderData?.amount,
+        currency: orderData?.currency,
+      });
+
+      if (!response.ok || !orderData.orderId) {
+        const errMsg = orderData.error || `Order creation failed (HTTP ${response.status}).`;
+        console.error('[CHECKOUT_ORDER_CREATION_FAILED]', errMsg);
+        showToast({
+          title: 'Checkout Initialization Failed',
+          description: errMsg,
+          type: 'error',
+        });
+        setIsUpgrading(false);
+        setSelectedUpgradePlan(null);
+        return;
+      }
+
+      // 3. Resolve keyId: server returned keyId || NEXT_PUBLIC_RAZORPAY_KEY_ID
+      const resolvedKeyId = orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      console.log('[CHECKOUT_KEY_RESOLUTION]', {
+        serverKeyId: orderData.keyId ? `${orderData.keyId.substring(0, 8)}...` : 'undefined',
+        envKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ? `${process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID.substring(0, 8)}...` : 'undefined',
+        finalKeyId: resolvedKeyId ? `${resolvedKeyId.substring(0, 8)}...` : 'MISSING',
+      });
+
+      if (!resolvedKeyId) {
+        const configError = 'Razorpay Key ID is undefined. Set RAZORPAY_KEY_ID on server or NEXT_PUBLIC_RAZORPAY_KEY_ID in environment variables.';
+        console.error('[RAZORPAY_CONFIG_ERROR]', configError);
+        showToast({
+          title: 'Gateway Configuration Error',
+          description: configError,
+          type: 'error',
+        });
+        setIsUpgrading(false);
+        setSelectedUpgradePlan(null);
+        return;
+      }
+
+      const RazorpayConstructor = (window as unknown as { Razorpay?: new (opts: RazorpayOptions) => RazorpayInstance }).Razorpay;
+      if (!RazorpayConstructor) {
+        const constructorError = 'window.Razorpay constructor is undefined. The checkout script failed to initialize properly.';
+        console.error('[RAZORPAY_CONSTRUCTOR_MISSING]', constructorError);
+        showToast({
+          title: 'Payment Modal Error',
+          description: constructorError,
+          type: 'error',
+        });
+        setIsUpgrading(false);
+        setSelectedUpgradePlan(null);
+        return;
+      }
+
+      // 4. Construct Razorpay modal options
+      const options: RazorpayOptions = {
+        key: resolvedKeyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'Ventrexs AI',
+        description: `${planKey} Plan (${billingInterval})`,
+        order_id: orderData.orderId,
+        prefill: {
+          name: orderData.customer?.name || profile?.name || '',
+          email: orderData.customer?.email || profile?.email || user?.email || '',
+        },
+        theme: {
+          color: '#2563eb',
+        },
+        modal: {
+          ondismiss: () => {
+            console.log('[RAZORPAY_MODAL_DISMISSED] User closed the Razorpay popup.');
+            showToast({
+              title: 'Checkout Cancelled',
+              description: 'Payment was cancelled. You can resume at any time.',
+              type: 'info',
+            });
+            setIsUpgrading(false);
+            setSelectedUpgradePlan(null);
+          },
+        },
+        handler: (paymentResponse: RazorpayResponse) => {
+          console.log('[RAZORPAY_PAYMENT_SUCCESS] Payment completed, forwarding to signature verification:', paymentResponse);
+          showToast({
+            title: 'Payment Received',
+            description: 'Verifying payment server-side and activating workspace...',
+            type: 'success',
+          });
+
+          const verifyUrl = `/api/billing/verify?` + new URLSearchParams({
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+            razorpay_signature: paymentResponse.razorpay_signature,
+            plan: planKey,
+            billing_cycle: billingInterval,
+            business_id: orderData.businessId || businessId || '',
+            success_url: '/settings/billing?status=success',
+          }).toString();
+
+          console.log('[RAZORPAY_VERIFY_REDIRECT] Redirecting to verification route:', verifyUrl);
+          window.location.href = verifyUrl;
+        },
+      };
+
+      console.log('[RAZORPAY_OPENING_MODAL] Instantiating Razorpay modal with options:', {
+        key: options.key,
+        amount: options.amount,
+        currency: options.currency,
+        order_id: options.order_id,
+      });
+
+      const rzp = new RazorpayConstructor(options);
+      rzp.on('payment.failed', (failResp: any) => {
+        console.error('[RAZORPAY_PAYMENT_FAILED_EVENT]', failResp);
+        showToast({
+          title: 'Payment Failed',
+          description: failResp?.error?.description || failResp?.error?.reason || 'Payment transaction failed.',
+          type: 'error',
+        });
+        setIsUpgrading(false);
+        setSelectedUpgradePlan(null);
+      });
+
+      rzp.open();
+      console.log('[RAZORPAY_MODAL_OPENED] rzp.open() called successfully.');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'An unexpected error occurred during checkout.';
+      console.error('[RAZORPAY_UNHANDLED_CHECKOUT_ERROR]', err);
+      showToast({
+        title: 'Checkout Error',
+        description: errorMsg,
+        type: 'error',
+      });
       setIsUpgrading(false);
+      setSelectedUpgradePlan(null);
     }
   };
 
@@ -102,6 +330,11 @@ export default function BillingSettingsPage() {
       showBack
       backUrl="/settings"
     >
+      <Script
+        id="razorpay-checkout-js"
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="afterInteractive"
+      />
       <div className="max-w-6xl mx-auto space-y-8 pb-12">
         {/* Header Title Section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/60 pb-6">
@@ -212,11 +445,20 @@ export default function BillingSettingsPage() {
                   const target = subscription.plan === 'Starter' ? 'Professional' : 'Enterprise';
                   handlePlanSelect(target);
                 }}
-                className="w-full gap-2 text-xs"
+                className="w-full gap-2 text-xs font-bold"
                 disabled={isUpgrading}
               >
-                <Sparkles className="w-4 h-4" />
-                {subscription.plan === 'Enterprise' ? 'Manage Custom Limits' : 'Upgrade Plan'}
+                {isUpgrading && selectedUpgradePlan ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    <span>Opening Checkout...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>{subscription.plan === 'Enterprise' ? 'Manage Custom Limits' : 'Upgrade Plan'}</span>
+                  </>
+                )}
               </Button>
 
               {!subscription.cancelAtPeriodEnd ? (
@@ -428,6 +670,11 @@ export default function BillingSettingsPage() {
                   >
                     {isCurrent ? (
                       'Active Plan'
+                    ) : isUpgrading && selectedUpgradePlan === key ? (
+                      <span className="flex items-center gap-1.5">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        Opening Checkout...
+                      </span>
                     ) : (
                       <>
                         <span>Select {plan.name}</span>

@@ -34,17 +34,19 @@ ALTER TABLE public.google_play_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- 2. RLS Policies for Google Play Subscriptions
 -- Business members can view their own subscription
+DROP POLICY IF EXISTS "Business members can view own google play subscription" ON public.google_play_subscriptions;
 CREATE POLICY "Business members can view own google play subscription"
     ON public.google_play_subscriptions
     FOR SELECT
     USING (
         business_id IN (
-            SELECT business_id FROM public.business_memberships
+            SELECT business_id FROM public.business_members
             WHERE user_id = auth.uid()
         )
     );
 
 -- Platform Admins can view and manage all subscriptions
+DROP POLICY IF EXISTS "Platform admins can manage all google play subscriptions" ON public.google_play_subscriptions;
 CREATE POLICY "Platform admins can manage all google play subscriptions"
     ON public.google_play_subscriptions
     FOR ALL

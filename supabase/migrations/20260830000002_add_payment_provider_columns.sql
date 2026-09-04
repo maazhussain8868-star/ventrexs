@@ -92,7 +92,8 @@ ALTER TABLE public.subscription_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.idempotency_keys ENABLE ROW LEVEL SECURITY;
 
 -- Webhook events: only service_role can access (webhooks use admin client)
-CREATE POLICY IF NOT EXISTS "service_role_full_access_webhook_events"
+DROP POLICY IF EXISTS "service_role_full_access_webhook_events" ON public.payment_webhook_events;
+CREATE POLICY "service_role_full_access_webhook_events"
     ON public.payment_webhook_events
     FOR ALL
     TO service_role
@@ -100,7 +101,8 @@ CREATE POLICY IF NOT EXISTS "service_role_full_access_webhook_events"
     WITH CHECK (true);
 
 -- Subscription events: business members can read their own
-CREATE POLICY IF NOT EXISTS "business_members_read_subscription_events"
+DROP POLICY IF EXISTS "business_members_read_subscription_events" ON public.subscription_events;
+CREATE POLICY "business_members_read_subscription_events"
     ON public.subscription_events
     FOR SELECT
     TO authenticated
@@ -110,7 +112,8 @@ CREATE POLICY IF NOT EXISTS "business_members_read_subscription_events"
         )
     );
 
-CREATE POLICY IF NOT EXISTS "service_role_full_access_subscription_events"
+DROP POLICY IF EXISTS "service_role_full_access_subscription_events" ON public.subscription_events;
+CREATE POLICY "service_role_full_access_subscription_events"
     ON public.subscription_events
     FOR ALL
     TO service_role
@@ -118,7 +121,8 @@ CREATE POLICY IF NOT EXISTS "service_role_full_access_subscription_events"
     WITH CHECK (true);
 
 -- Idempotency keys: service_role only
-CREATE POLICY IF NOT EXISTS "service_role_full_access_idempotency"
+DROP POLICY IF EXISTS "service_role_full_access_idempotency" ON public.idempotency_keys;
+CREATE POLICY "service_role_full_access_idempotency"
     ON public.idempotency_keys
     FOR ALL
     TO service_role

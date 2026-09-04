@@ -117,121 +117,46 @@ ALTER TABLE public.review_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.review_templates ENABLE ROW LEVEL SECURITY;
 
 -- 1. RLS for review_settings
+DROP POLICY IF EXISTS "Tenants can manage their own review settings" ON public.review_settings;
 CREATE POLICY "Tenants can manage their own review settings"
     ON public.review_settings
     FOR ALL
     TO authenticated
-    USING (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    )
-    WITH CHECK (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    );
+    USING (public.is_business_member(business_id))
+    WITH CHECK (public.is_business_member(business_id));
 
 -- 2. RLS for review_requests
+DROP POLICY IF EXISTS "Tenants can manage their own review requests" ON public.review_requests;
 CREATE POLICY "Tenants can manage their own review requests"
     ON public.review_requests
     FOR ALL
     TO authenticated
-    USING (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    )
-    WITH CHECK (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    );
+    USING (public.is_business_member(business_id))
+    WITH CHECK (public.is_business_member(business_id));
 
 -- 3. RLS for customer_feedback
+DROP POLICY IF EXISTS "Tenants can view and manage their customer feedback" ON public.customer_feedback;
 CREATE POLICY "Tenants can view and manage their customer feedback"
     ON public.customer_feedback
     FOR ALL
     TO authenticated
-    USING (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    )
-    WITH CHECK (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    );
+    USING (public.is_business_member(business_id))
+    WITH CHECK (public.is_business_member(business_id));
 
 -- 4. RLS for review_events
+DROP POLICY IF EXISTS "Tenants can view review events" ON public.review_events;
 CREATE POLICY "Tenants can view review events"
     ON public.review_events
     FOR ALL
     TO authenticated
-    USING (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    )
-    WITH CHECK (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    );
+    USING (public.is_business_member(business_id))
+    WITH CHECK (public.is_business_member(business_id));
 
 -- 5. RLS for review_templates
+DROP POLICY IF EXISTS "Tenants can manage review templates" ON public.review_templates;
 CREATE POLICY "Tenants can manage review templates"
     ON public.review_templates
     FOR ALL
     TO authenticated
-    USING (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    )
-    WITH CHECK (
-        business_id IN (
-            SELECT b.id FROM public.businesses b
-            WHERE b.owner_id = auth.uid()
-            UNION
-            SELECT bm.business_id FROM public.business_members bm
-            WHERE bm.user_id = auth.uid()
-        )
-    );
+    USING (public.is_business_member(business_id))
+    WITH CHECK (public.is_business_member(business_id));

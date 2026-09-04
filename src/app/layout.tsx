@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -106,6 +107,11 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[#070B14] text-slate-100 antialiased min-h-screen">
+        <Script
+          id="razorpay-checkout-sdk"
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="afterInteractive"
+        />
         <GoogleAnalytics />
         <AppProvider>
           {children}

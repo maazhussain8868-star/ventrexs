@@ -60,7 +60,7 @@ export class RazorpayClient {
   private webhookSecret: string;
 
   constructor(keyId?: string, keySecret?: string, webhookSecret?: string) {
-    this.keyId = keyId || process.env.RAZORPAY_KEY_ID || '';
+    this.keyId = keyId || process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '';
     this.keySecret = keySecret || process.env.RAZORPAY_KEY_SECRET || '';
     this.webhookSecret = webhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET || '';
   }

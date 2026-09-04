@@ -76,6 +76,19 @@ CREATE TABLE IF NOT EXISTS public.payment_reconciliation_records (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
+-- Helper function to check if current user is active platform admin
+CREATE OR REPLACE FUNCTION public.is_platform_admin(p_user_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.platform_admins pa
+        WHERE pa.user_id = p_user_id
+        AND pa.is_active = true
+        AND pa.status = 'active'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
 -- 5. ROW-LEVEL SECURITY POLICIES
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_webhook_events ENABLE ROW LEVEL SECURITY;
@@ -83,32 +96,38 @@ ALTER TABLE public.payment_idempotency_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_reconciliation_records ENABLE ROW LEVEL SECURITY;
 
 -- payment_transactions policies
+DROP POLICY IF EXISTS "Tenant members can view their own payment transactions" ON public.payment_transactions;
 CREATE POLICY "Tenant members can view their own payment transactions"
     ON public.payment_transactions FOR SELECT
     USING (business_id IS NOT NULL AND public.is_business_member(business_id));
 
+DROP POLICY IF EXISTS "Tenant members can insert their own payment transactions" ON public.payment_transactions;
 CREATE POLICY "Tenant members can insert their own payment transactions"
     ON public.payment_transactions FOR INSERT
     WITH CHECK (business_id IS NOT NULL AND public.is_business_member(business_id));
 
+DROP POLICY IF EXISTS "Platform admins can view all payment transactions" ON public.payment_transactions;
 CREATE POLICY "Platform admins can view all payment transactions"
     ON public.payment_transactions FOR SELECT
     TO authenticated
     USING (public.is_platform_admin());
 
 -- payment_webhook_events policies (Internal / Admin / Service Role only)
+DROP POLICY IF EXISTS "Platform admins can view webhook events" ON public.payment_webhook_events;
 CREATE POLICY "Platform admins can view webhook events"
     ON public.payment_webhook_events FOR SELECT
     TO authenticated
     USING (public.is_platform_admin());
 
 -- payment_reconciliation_records policies (Internal / Admin / Service Role only)
+DROP POLICY IF EXISTS "Platform admins can view reconciliation records" ON public.payment_reconciliation_records;
 CREATE POLICY "Platform admins can view reconciliation records"
     ON public.payment_reconciliation_records FOR SELECT
     TO authenticated
     USING (public.is_platform_admin());
 
 -- Service role full access bypass for all tables
+DROP POLICY IF EXISTS "Service role full access on payment_transactions" ON public.payment_transactions;
 CREATE POLICY "Service role full access on payment_transactions"
     ON public.payment_transactions FOR ALL
     TO service_role
