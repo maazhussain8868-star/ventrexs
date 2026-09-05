@@ -516,6 +516,14 @@ export async function startFreeTrialAction(params: {
       throw new Error(upsertError.message);
     }
 
+    // Auto-provision dedicated OmniDimension AI Receptionist agent & phone number (tagged for trial cost tracking)
+    try {
+      const { provisionOmniDimensionAgent } = await import('@/lib/receptionist/provisioning');
+      await provisionOmniDimensionAgent({ businessId, isTrial: true });
+    } catch (provErr: any) {
+      console.warn('[RECEPTIONIST_TRIAL_PROVISIONING_WARNING]', provErr?.message);
+    }
+
     revalidatePath('/dashboard');
     revalidatePath('/pricing');
     revalidatePath('/billing');

@@ -6,20 +6,20 @@ import { resolveAuthenticatedBusinessUser } from '@/app/actions/billing';
 import { PlanKey, BillingInterval, PLANS_CONFIG } from '@/lib/billing/types';
 import { ProductionLogger } from '@/lib/monitoring/logger';
 
-// Standardized INR and USD pricing for Ventrexs SaaS tiers
+// Derived dynamically from PLANS_CONFIG single source of truth
 export const SAAS_PLAN_PRICING: Record<
   'INR' | 'USD',
   Record<PlanKey, { monthly: number; annual: number }>
 > = {
   INR: {
-    Starter: { monthly: 2499, annual: 24990 },
-    Professional: { monthly: 6499, annual: 64990 },
-    Enterprise: { monthly: 19999, annual: 199990 },
+    Starter: { monthly: PLANS_CONFIG.Starter.pricing.INR.monthly, annual: PLANS_CONFIG.Starter.pricing.INR.annualTotal },
+    Professional: { monthly: PLANS_CONFIG.Professional.pricing.INR.monthly, annual: PLANS_CONFIG.Professional.pricing.INR.annualTotal },
+    Enterprise: { monthly: PLANS_CONFIG.Enterprise.pricing.INR.monthly, annual: PLANS_CONFIG.Enterprise.pricing.INR.annualTotal },
   },
   USD: {
-    Starter: { monthly: 29, annual: 290 },
-    Professional: { monthly: 79, annual: 790 },
-    Enterprise: { monthly: 249, annual: 2490 },
+    Starter: { monthly: PLANS_CONFIG.Starter.pricing.USD.monthly, annual: PLANS_CONFIG.Starter.pricing.USD.annualTotal },
+    Professional: { monthly: PLANS_CONFIG.Professional.pricing.USD.monthly, annual: PLANS_CONFIG.Professional.pricing.USD.annualTotal },
+    Enterprise: { monthly: PLANS_CONFIG.Enterprise.pricing.USD.monthly, annual: PLANS_CONFIG.Enterprise.pricing.USD.annualTotal },
   },
 };
 

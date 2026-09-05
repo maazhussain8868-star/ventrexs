@@ -6,7 +6,6 @@ import { resolveAuthenticatedBusinessUser } from '@/app/actions/billing';
 import { PlanKey, BillingInterval, PLANS_CONFIG } from '@/lib/billing/types';
 import { resolveAppUrl } from '@/lib/supabase/services/auth';
 import { ProductionLogger } from '@/lib/monitoring/logger';
-import { SAAS_PLAN_PRICING } from '../razorpay/route';
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +51,8 @@ export async function POST(req: NextRequest) {
       `${origin}/billing/success?plan=${encodeURIComponent(plan)}&cycle=${billingCycle}&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = body.cancelUrl || `${origin}/pricing?cancelled=true`;
 
-    const price = SAAS_PLAN_PRICING.USD[plan][billingCycle];
+    const planConfig = PLANS_CONFIG[plan];
+    const price = billingCycle === 'annual' ? planConfig.pricing.USD.annualTotal : planConfig.pricing.USD.monthly;
     const priceInCents = Math.round(price * 100);
 
     // Create Stripe Hosted Checkout Session

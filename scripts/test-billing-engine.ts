@@ -168,12 +168,12 @@ async function runBillingEngineTests() {
   );
 
   // ----------------------------------------------------------------------------
-  // CASE 3: Annual Billing ($790/year for Professional)
+  // CASE 3: Annual Billing (15% discount for Professional: $805.80/yr vs $948/yr)
   // ----------------------------------------------------------------------------
   const proAnnual = PLANS_CONFIG.Professional.priceAnnual;
-  const isAnnualDiscounted = proAnnual === 790 && proAnnual < 79 * 12;
+  const isAnnualDiscounted = proAnnual === 805.80 && proAnnual < 79 * 12;
 
-  assertTest(3, 'Annual billing discount calculated accurately ($790/yr vs $948/yr monthly)',
+  assertTest(3, 'Annual billing discount calculated accurately ($805.80/yr vs $948/yr monthly)',
     isAnnualDiscounted
   );
 

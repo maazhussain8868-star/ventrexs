@@ -816,6 +816,7 @@ export type BillingInterval = 'monthly' | 'annual';
 export type SubscriptionStatus = 'pending' | 'checkout_started' | 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused' | 'expired';
 
 export type UsageMetric = 
+  | 'ai_receptionist_minutes'
   | 'ai_receptionist_chats'
   | 'sms_messages'
   | 'email_messages'

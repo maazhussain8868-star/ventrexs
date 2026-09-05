@@ -35,6 +35,7 @@ export function UsageMeter({
 }: UsageMeterProps) {
   const getMetricIcon = () => {
     switch (metric) {
+      case 'ai_receptionist_minutes':
       case 'ai_receptionist_chats':
         return <Bot className="w-4 h-4 text-primary" />;
       case 'sms_messages':

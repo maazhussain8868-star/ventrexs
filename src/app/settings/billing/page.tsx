@@ -499,14 +499,41 @@ export default function BillingSettingsPage() {
             </span>
           </div>
 
+          {/* Minutes Quota Exceeded Alert Banner */}
+          {(!usageRecords.ai_receptionist_minutes?.isUnlimited &&
+            (usageRecords.ai_receptionist_minutes?.currentUsage || usageRecords.ai_receptionist_chats?.currentUsage || 0) >=
+              (usageRecords.ai_receptionist_minutes?.limit || usageRecords.ai_receptionist_chats?.limit || (currentPlanConfig?.limits?.maxAiMinutesPerMonth ?? 60))) && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600" />
+                <div>
+                  <h4 className="text-sm font-bold">AI Receptionist Monthly Minutes Quota Reached</h4>
+                  <p className="text-xs text-on-surface-variant">
+                    Your business has consumed its monthly allotted minutes ({usageRecords.ai_receptionist_minutes?.currentUsage || usageRecords.ai_receptionist_chats?.currentUsage || 0}/
+                    {usageRecords.ai_receptionist_minutes?.limit || usageRecords.ai_receptionist_chats?.limit || (currentPlanConfig?.limits?.maxAiMinutesPerMonth ?? 60)} min). Further calls are blocked to prevent unauthorized charges.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handlePlanSelect(subscription.plan === 'Starter' ? 'Professional' : 'Enterprise')}
+                className="shrink-0 text-xs font-bold gap-1"
+              >
+                <span>Upgrade Plan</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <UsageMeter
-              metric="ai_receptionist_chats"
-              label="AI Receptionist Chats"
-              current={usageRecords.ai_receptionist_chats?.currentUsage || 0}
-              limit={usageRecords.ai_receptionist_chats?.limit || 500}
-              isUnlimited={usageRecords.ai_receptionist_chats?.isUnlimited}
-              unit="chats"
+              metric="ai_receptionist_minutes"
+              label="AI Receptionist Minutes"
+              current={usageRecords.ai_receptionist_minutes?.currentUsage || usageRecords.ai_receptionist_chats?.currentUsage || 0}
+              limit={usageRecords.ai_receptionist_minutes?.limit || usageRecords.ai_receptionist_chats?.limit || (currentPlanConfig?.limits?.maxAiMinutesPerMonth ?? 60)}
+              isUnlimited={usageRecords.ai_receptionist_minutes?.isUnlimited}
+              unit="min"
             />
             <UsageMeter
               metric="sms_messages"

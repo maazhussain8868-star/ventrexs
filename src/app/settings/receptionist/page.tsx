@@ -197,6 +197,26 @@ function ReceptionistSettingsContent() {
           }
         />
 
+        {/* Auto-Seeded Knowledge & Customization Notice */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-900 dark:text-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold">Trade-Specific Knowledge Active (100% Fully Editable)</h4>
+              <p className="text-xs text-on-surface-variant">
+                We&apos;ve auto-seeded default FAQs, services, and emergency protocols tailored for your trade. Review and customize them below to match your exact pricing and emergency dispatch rules.
+              </p>
+            </div>
+          </div>
+          <Link href="/receptionist/test" className="shrink-0">
+            <Button size="sm" variant="outline" className="text-xs font-bold gap-1.5 border-blue-500/30 text-blue-600 dark:text-blue-400">
+              <span>Test Live Simulator</span>
+            </Button>
+          </Link>
+        </div>
+
         <form onSubmit={handleSaveSettings} className="space-y-6">
           {/* Section 1: Business Identity & Tone */}
           <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-sm space-y-4">

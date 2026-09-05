@@ -10,6 +10,8 @@ export type LogCategory =
   | 'SMS'
   | 'WHATSAPP'
   | 'AI_COPILOT'
+  | 'RECEPTIONIST'
+  | 'TELEPHONY'
   | 'WEBHOOK'
   | 'SYSTEM'
   | 'SECURITY';

@@ -6,6 +6,7 @@ export type BillingInterval = 'monthly' | 'annual';
 export type SubscriptionStatus = 'pending' | 'checkout_started' | 'trialing' | 'active' | 'past_due' | 'cancelled' | 'canceled' | 'incomplete' | 'paused' | 'expired';
 
 export type UsageMetric = 
+  | 'ai_receptionist_minutes'
   | 'ai_receptionist_chats'
   | 'sms_messages'
   | 'email_messages'
@@ -21,7 +22,8 @@ export interface PlanLimits {
   maxLeads: number;
   maxJobsPerMonth: number;
   maxEstimatesPerMonth: number;
-  maxAiChatsPerMonth: number;
+  maxAiMinutesPerMonth?: number;
+  maxAiChatsPerMonth: number; // Backwards-compatible alias to minutes
   maxSmsPerMonth: number;
   maxEmailPerMonth: number;
   maxWhatsappPerMonth: number;
@@ -35,9 +37,21 @@ export interface PlanLimits {
   reputationManagement: boolean;
   advancedReports: boolean;
   apiAccess: boolean;
+  crmType?: 'Basic leads/pipeline' | 'Full leads/pipeline' | 'Full with custom pipeline stages';
+  followUpAutomation?: boolean | 'advanced';
+  reputationMode?: 'disabled' | 'auto_request' | 'auto_request_ai_suggestions';
+  whiteLabel?: boolean;
+  supportTier?: 'Email only' | 'Email + chat' | 'Dedicated support';
+  overageRatePerMinuteUsd?: number;
   maxClients?: number;
   customBranding?: boolean;
   whiteLabelSubdomain?: boolean;
+}
+
+export interface PlanPricingBreakdown {
+  monthly: number;
+  annualMonthlyEquivalent: number;
+  annualTotal: number;
 }
 
 export interface PlanConfig {
@@ -46,8 +60,32 @@ export interface PlanConfig {
   tagline: string;
   priceMonthly: number;
   priceAnnual: number;
+  annualMonthlyEquivalent: number;
+  annualDiscountPercent: number;
+  overageRatePerMinuteUsd: number;
+  pricing: {
+    USD: PlanPricingBreakdown;
+    INR: PlanPricingBreakdown;
+  };
   popular?: boolean;
   features: string[];
+  featureDetails: {
+    aiReceptionistMinutes: number;
+    outboundSms: number;
+    whatsappMessages: number;
+    emailInvoicesAlerts: number; // -1 for unlimited
+    activeWorkOrders: number; // -1 for unlimited
+    proposalsEstimates: number; // -1 for unlimited
+    googleReviewRequests: number;
+    teamUserSeats: number;
+    crm: string;
+    followUpAutomation: string;
+    reputationManagement: string;
+    whiteLabelAgency: string;
+    apiAccess: string;
+    support: string;
+    overageRateForExtraAiMinutes: string;
+  };
   limits: PlanLimits;
 }
 
@@ -65,68 +103,145 @@ export interface AgencyPlanConfig {
 export const PLANS_CONFIG: Record<PlanKey, PlanConfig> = {
   Starter: {
     key: 'Starter',
-    name: 'Starter Plan',
-    tagline: 'Essential dispatch, invoices, and CRM for solo trades.',
+    name: 'Starter',
+    tagline: 'Essential dispatch, invoices, and AI Receptionist for solo trades.',
     priceMonthly: 29,
-    priceAnnual: 290, // $290/yr (~2 months free)
+    priceAnnual: 295.80, // $24.65/mo * 12 (15% discount)
+    annualMonthlyEquivalent: 24.65,
+    annualDiscountPercent: 15,
+    overageRatePerMinuteUsd: 0.15,
+    pricing: {
+      USD: {
+        monthly: 29,
+        annualMonthlyEquivalent: 24.65,
+        annualTotal: 295.80,
+      },
+      INR: {
+        monthly: 2499,
+        annualMonthlyEquivalent: 2124.15,
+        annualTotal: 25489,
+      },
+    },
     features: [
-      'Up to 50 active invoices/month',
-      '100 CRM Leads & Contacts',
-      '25 Work Orders / month',
-      'Basic Estimates & Itemized Billing',
-      '50 AI Receptionist Chats/month',
-      '100 Email & SMS Reminders',
-      '25 Review Requests & Feedback Surveys',
+      '60 AI Receptionist Minutes/month',
+      '300 Outbound SMS Dispatches',
+      '100 WhatsApp Messages',
+      '1,000 Email Invoices & Alerts',
+      '100 Active Work Orders (Jobs)',
+      '100 Proposals & Estimates',
+      '50 Google Review Requests',
       '1 Team User Seat',
-      'Halal-First Non-Compounding Ledger',
+      'Basic Leads & Pipeline CRM',
+      'Email Only Support',
+      'Dedicated US Telephony & Agent',
     ],
+    featureDetails: {
+      aiReceptionistMinutes: 60,
+      outboundSms: 300,
+      whatsappMessages: 100,
+      emailInvoicesAlerts: 1000,
+      activeWorkOrders: 100,
+      proposalsEstimates: 100,
+      googleReviewRequests: 50,
+      teamUserSeats: 1,
+      crm: 'Basic leads/pipeline',
+      followUpAutomation: 'Disabled',
+      reputationManagement: 'Disabled',
+      whiteLabelAgency: 'Disabled',
+      apiAccess: 'Disabled',
+      support: 'Email only',
+      overageRateForExtraAiMinutes: '$0.15/minute',
+    },
     limits: {
-      maxInvoicesPerMonth: 50,
-      maxRemindersPerMonth: 200,
-      maxLeads: 100,
-      maxJobsPerMonth: 25,
-      maxEstimatesPerMonth: 25,
-      maxAiChatsPerMonth: 50,
-      maxSmsPerMonth: 100,
-      maxEmailPerMonth: 200,
-      maxWhatsappPerMonth: 0,
-      maxReviewsPerMonth: 25,
+      maxInvoicesPerMonth: 1000,
+      maxRemindersPerMonth: 500,
+      maxLeads: 200,
+      maxJobsPerMonth: 100,
+      maxEstimatesPerMonth: 100,
+      maxAiMinutesPerMonth: 60,
+      maxAiChatsPerMonth: 60,
+      maxSmsPerMonth: 300,
+      maxEmailPerMonth: 1000,
+      maxWhatsappPerMonth: 100,
+      maxReviewsPerMonth: 50,
       maxTeamSeats: 1,
       aiCopilot: true,
       aiReceptionist: true,
       multiUser: false,
       customSms: false,
       customWhatsapp: false,
-      reputationManagement: true,
+      reputationManagement: false,
       advancedReports: false,
       apiAccess: false,
+      crmType: 'Basic leads/pipeline',
+      followUpAutomation: false,
+      reputationMode: 'disabled',
+      whiteLabel: false,
+      supportTier: 'Email only',
+      overageRatePerMinuteUsd: 0.15,
     },
   },
   Professional: {
     key: 'Professional',
-    name: 'Professional Plan',
-    tagline: 'Autonomous AI triage, multi-crew dispatch, and field reputation for growing contractors.',
+    name: 'Professional',
+    tagline: 'Autonomous AI receptionist, multi-crew dispatch, and field reputation for growing contractors.',
     priceMonthly: 79,
-    priceAnnual: 790, // $790/yr
+    priceAnnual: 805.80, // $67.15/mo * 12 (15% discount)
+    annualMonthlyEquivalent: 67.15,
+    annualDiscountPercent: 15,
+    overageRatePerMinuteUsd: 0.12,
     popular: true,
+    pricing: {
+      USD: {
+        monthly: 79,
+        annualMonthlyEquivalent: 67.15,
+        annualTotal: 805.80,
+      },
+      INR: {
+        monthly: 6499,
+        annualMonthlyEquivalent: 5524.15,
+        annualTotal: 66289,
+      },
+    },
     features: [
-      'Unlimited Invoices & Payment Reminders',
-      '1,000 Active CRM Leads & Pipeline Deals',
-      '500 Work Orders & Technician Dispatching',
-      'Estimates & 1-Click Invoice Conversion',
-      '500 AI Receptionist Calls & Emergency Triage',
-      '1,000 Multi-Channel SMS & WhatsApp Messages',
-      '250 Automated Google Review Requests',
-      'Up to 5 Technician / Dispatcher Seats',
-      'Advanced Operations Analytics & Reports',
+      '250 AI Receptionist Minutes/month',
+      '1,000 Outbound SMS Dispatches',
+      '500 WhatsApp Messages',
+      '5,000 Email Invoices & Alerts',
+      '500 Active Work Orders (Jobs)',
+      '500 Proposals & Estimates',
+      '250 Google Review Requests',
+      '5 Team User Seats',
+      'Full Leads & Pipeline CRM',
+      'Automated Follow-up Sequences',
+      'Automated Reputation Management',
+      'Email + Chat Priority Support',
     ],
+    featureDetails: {
+      aiReceptionistMinutes: 250,
+      outboundSms: 1000,
+      whatsappMessages: 500,
+      emailInvoicesAlerts: 5000,
+      activeWorkOrders: 500,
+      proposalsEstimates: 500,
+      googleReviewRequests: 250,
+      teamUserSeats: 5,
+      crm: 'Full leads/pipeline',
+      followUpAutomation: 'Enabled',
+      reputationManagement: 'Auto-request enabled',
+      whiteLabelAgency: 'Disabled',
+      apiAccess: 'Disabled',
+      support: 'Email + chat',
+      overageRateForExtraAiMinutes: '$0.12/minute',
+    },
     limits: {
       maxInvoicesPerMonth: 10000,
       maxRemindersPerMonth: 5000,
-      maxLeads: 1000,
+      maxLeads: 2500,
       maxJobsPerMonth: 500,
       maxEstimatesPerMonth: 500,
-      maxAiChatsPerMonth: 500,
+      maxAiMinutesPerMonth: 250,
+      maxAiChatsPerMonth: 250,
       maxSmsPerMonth: 1000,
       maxEmailPerMonth: 5000,
       maxWhatsappPerMonth: 500,
@@ -140,36 +255,81 @@ export const PLANS_CONFIG: Record<PlanKey, PlanConfig> = {
       reputationManagement: true,
       advancedReports: true,
       apiAccess: false,
+      crmType: 'Full leads/pipeline',
+      followUpAutomation: true,
+      reputationMode: 'auto_request',
+      whiteLabel: false,
+      supportTier: 'Email + chat',
+      overageRatePerMinuteUsd: 0.12,
     },
   },
   Enterprise: {
     key: 'Enterprise',
-    name: 'Enterprise / Commercial Plan',
-    tagline: 'High-volume commercial fleet management, unlimited AI triage, and bespoke integrations.',
+    name: 'Enterprise',
+    tagline: 'High-volume commercial contractor fleets, white-label operations, and custom integrations.',
     priceMonthly: 249,
-    priceAnnual: 2490,
+    priceAnnual: 2539.80, // $211.65/mo * 12 (15% discount)
+    annualMonthlyEquivalent: 211.65,
+    annualDiscountPercent: 15,
+    overageRatePerMinuteUsd: 0.10,
+    pricing: {
+      USD: {
+        monthly: 249,
+        annualMonthlyEquivalent: 211.65,
+        annualTotal: 2539.80,
+      },
+      INR: {
+        monthly: 19999,
+        annualMonthlyEquivalent: 16999.15,
+        annualTotal: 203989,
+      },
+    },
     features: [
-      'Unlimited Invoices, Jobs, Estimates & CRM',
-      'Unlimited AI Receptionist Chats & Booking',
-      '5,000 SMS & WhatsApp Dispatches / month',
-      'Unlimited Reputation Management & Surveys',
-      'Unlimited Team Members & Multi-Branch Dispatch',
-      'Custom ERP Webhooks & Full API Access',
-      'Dedicated Account Manager & 99.9% Uptime SLA',
-      'Priority 24/7 Phone Support',
+      '900 AI Receptionist Minutes/month',
+      '5,000 Outbound SMS Dispatches',
+      '2,000 WhatsApp Messages',
+      'Unlimited Email Invoices & Alerts',
+      'Unlimited Active Work Orders (Jobs)',
+      'Unlimited Proposals & Estimates',
+      '1,000 Google Review Requests',
+      '20 Team User Seats',
+      'Custom CRM Stages & Automations',
+      'Advanced Multi-step Follow-up Sequences',
+      'Reputation Management + AI Responses',
+      'White-Label & Agency Reseller Mode',
+      'Full REST API & Custom Webhooks',
+      'Dedicated 24/7 Priority Support',
     ],
+    featureDetails: {
+      aiReceptionistMinutes: 900,
+      outboundSms: 5000,
+      whatsappMessages: 2000,
+      emailInvoicesAlerts: -1, // Unlimited
+      activeWorkOrders: -1, // Unlimited
+      proposalsEstimates: -1, // Unlimited
+      googleReviewRequests: 1000,
+      teamUserSeats: 20,
+      crm: 'Full with custom pipeline stages',
+      followUpAutomation: 'Advanced sequences enabled',
+      reputationManagement: 'Auto-request + AI response suggestions',
+      whiteLabelAgency: 'Enabled',
+      apiAccess: 'Enabled',
+      support: 'Dedicated support',
+      overageRateForExtraAiMinutes: '$0.10/minute',
+    },
     limits: {
       maxInvoicesPerMonth: 1000000,
       maxRemindersPerMonth: 1000000,
       maxLeads: 1000000,
       maxJobsPerMonth: 1000000,
       maxEstimatesPerMonth: 1000000,
-      maxAiChatsPerMonth: 5000,
+      maxAiMinutesPerMonth: 900,
+      maxAiChatsPerMonth: 900,
       maxSmsPerMonth: 5000,
-      maxEmailPerMonth: 50000,
-      maxWhatsappPerMonth: 5000,
-      maxReviewsPerMonth: 1000000,
-      maxTeamSeats: 100,
+      maxEmailPerMonth: 1000000,
+      maxWhatsappPerMonth: 2000,
+      maxReviewsPerMonth: 1000,
+      maxTeamSeats: 20,
       aiCopilot: true,
       aiReceptionist: true,
       multiUser: true,
@@ -178,6 +338,12 @@ export const PLANS_CONFIG: Record<PlanKey, PlanConfig> = {
       reputationManagement: true,
       advancedReports: true,
       apiAccess: true,
+      crmType: 'Full with custom pipeline stages',
+      followUpAutomation: 'advanced',
+      reputationMode: 'auto_request_ai_suggestions',
+      whiteLabel: true,
+      supportTier: 'Dedicated support',
+      overageRatePerMinuteUsd: 0.10,
     },
   },
 };

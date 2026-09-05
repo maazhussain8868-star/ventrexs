@@ -108,6 +108,7 @@ export class EntitlementService {
           maxLeads: 25,
           maxJobsPerMonth: 5,
           maxEstimatesPerMonth: 5,
+          maxAiMinutesPerMonth: 0,
           maxAiChatsPerMonth: 0,
           maxSmsPerMonth: 0,
           maxEmailPerMonth: 10,
@@ -122,6 +123,12 @@ export class EntitlementService {
           reputationManagement: false,
           advancedReports: false,
           apiAccess: false,
+          crmType: 'Basic leads/pipeline',
+          followUpAutomation: false,
+          reputationMode: 'disabled',
+          whiteLabel: false,
+          supportTier: 'Email only',
+          overageRatePerMinuteUsd: 0.15,
         },
         features: ['Read-only Ledger Access', 'Graceful Record Retention'],
         priceAmount: sub?.price_amount || 0,
@@ -273,7 +280,8 @@ export class EntitlementService {
     const limits = effective.limits;
 
     const metricToLimitMap: Record<UsageMetric, number> = {
-      ai_receptionist_chats: limits.maxAiChatsPerMonth,
+      ai_receptionist_minutes: limits.maxAiMinutesPerMonth ?? limits.maxAiChatsPerMonth ?? 60,
+      ai_receptionist_chats: limits.maxAiMinutesPerMonth ?? limits.maxAiChatsPerMonth ?? 60, // mapped to minutes
       sms_messages: limits.maxSmsPerMonth,
       email_messages: limits.maxEmailPerMonth,
       whatsapp_messages: limits.maxWhatsappPerMonth,
@@ -284,6 +292,7 @@ export class EntitlementService {
     };
 
     const metrics: UsageMetric[] = [
+      'ai_receptionist_minutes',
       'ai_receptionist_chats',
       'sms_messages',
       'email_messages',
@@ -297,7 +306,13 @@ export class EntitlementService {
     const result: Partial<Record<UsageMetric, UsageSummary>> = {};
 
     for (const metric of metrics) {
-      const usage = await this.getUsage(businessId, metric);
+      let usage = await this.getUsage(businessId, metric);
+      // Fallback cross-check between minutes and legacy chats
+      if (usage === 0 && metric === 'ai_receptionist_minutes') {
+        const legacyUsage = await this.getUsage(businessId, 'ai_receptionist_chats');
+        if (legacyUsage > 0) usage = legacyUsage;
+      }
+
       const limit = metricToLimitMap[metric] || 100;
       const isUnlimited = limit >= 100000;
       const remaining = isUnlimited ? 999999 : Math.max(0, limit - usage);
@@ -319,7 +334,18 @@ export class EntitlementService {
   /**
    * Strict server-side usage limit assertion
    */
-  async assertUsageLimit(businessId: string, metric: UsageMetric, increment: number = 1): Promise<{ allowed: boolean; reason?: string }> {
+  async assertUsageLimit(
+    businessId: string, 
+    metric: UsageMetric, 
+    increment: number = 1
+  ): Promise<{ 
+    allowed: boolean; 
+    reason?: string;
+    isOverage?: boolean;
+    overageRate?: number;
+    currentUsage?: number;
+    limit?: number;
+  }> {
     const effective = await this.getEffectivePlan(businessId);
     if (!effective.isActive) {
       return {
@@ -333,12 +359,20 @@ export class EntitlementService {
     const summary = summaries[metric];
 
     if (!summary.isUnlimited && (currentUsage + increment) > summary.limit) {
+      const isAiMinutes = metric === 'ai_receptionist_minutes' || metric === 'ai_receptionist_chats';
+      const overageRate = effective.limits.overageRatePerMinuteUsd || 0.15;
+      const metricLabel = isAiMinutes ? 'AI Receptionist minutes' : metric.replace(/_/g, ' ');
+
       return {
         allowed: false,
-        reason: `Monthly quota exceeded for ${metric.replace(/_/g, ' ')} (${currentUsage}/${summary.limit}). Please upgrade your plan to increase limits.`,
+        reason: `Monthly quota reached for ${metricLabel} (${currentUsage}/${summary.limit} minutes used). Call blocked to prevent unauthorized overage billing. Please upgrade your plan in /settings/billing.`,
+        isOverage: true,
+        overageRate: isAiMinutes ? overageRate : undefined,
+        currentUsage,
+        limit: summary.limit,
       };
     }
 
-    return { allowed: true };
+    return { allowed: true, currentUsage, limit: summary.limit };
   }
 }

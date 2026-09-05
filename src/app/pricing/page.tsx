@@ -21,16 +21,17 @@ import {
   Clock
 } from 'lucide-react';
 
+// Single source of truth derived from PLANS_CONFIG
 export const PLAN_PRICING = {
   INR: {
-    Starter: { monthly: 2499, annual: 24990 },
-    Professional: { monthly: 6499, annual: 64990 },
-    Enterprise: { monthly: 19999, annual: 199990 },
+    Starter: { monthly: PLANS_CONFIG.Starter.pricing.INR.monthly, annual: PLANS_CONFIG.Starter.pricing.INR.annualTotal },
+    Professional: { monthly: PLANS_CONFIG.Professional.pricing.INR.monthly, annual: PLANS_CONFIG.Professional.pricing.INR.annualTotal },
+    Enterprise: { monthly: PLANS_CONFIG.Enterprise.pricing.INR.monthly, annual: PLANS_CONFIG.Enterprise.pricing.INR.annualTotal },
   },
   USD: {
-    Starter: { monthly: 29, annual: 290 },
-    Professional: { monthly: 79, annual: 790 },
-    Enterprise: { monthly: 249, annual: 2490 },
+    Starter: { monthly: PLANS_CONFIG.Starter.pricing.USD.monthly, annual: PLANS_CONFIG.Starter.pricing.USD.annualTotal },
+    Professional: { monthly: PLANS_CONFIG.Professional.pricing.USD.monthly, annual: PLANS_CONFIG.Professional.pricing.USD.annualTotal },
+    Enterprise: { monthly: PLANS_CONFIG.Enterprise.pricing.USD.monthly, annual: PLANS_CONFIG.Enterprise.pricing.USD.annualTotal },
   },
 };
 
@@ -63,25 +64,7 @@ interface RazorpayInstance {
 }
 
 function detectUserPaymentRegion(): { gateway: 'razorpay' | 'stripe'; currency: 'INR' | 'USD' } {
-  if (typeof window === 'undefined') {
-    return { gateway: 'stripe', currency: 'USD' };
-  }
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    const lang = (navigator.language || '').toLowerCase();
-    const isIndia =
-      tz.includes('Calcutta') ||
-      tz.includes('Kolkata') ||
-      lang === 'en-in' ||
-      lang === 'hi' ||
-      lang.endsWith('-in');
-
-    if (isIndia) {
-      return { gateway: 'razorpay', currency: 'INR' };
-    }
-  } catch {
-    // default to stripe / USD
-  }
+  // Primary market is USA — Stripe USD is the primary/default option
   return { gateway: 'stripe', currency: 'USD' };
 }
 
@@ -424,8 +407,8 @@ export default function PricingPage() {
               }`}
             >
               <span>Annual Billing</span>
-              <span className="px-2 py-0.5 rounded-full bg-tertiary/20 text-tertiary text-[10px] font-extrabold">
-                2 Months Free
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold border border-emerald-500/20">
+                15% OFF
               </span>
             </button>
           </div>
@@ -438,8 +421,9 @@ export default function PricingPage() {
               const plan = PLANS_CONFIG[key];
               const isCurrent = subscription.status === 'active' && subscription.plan === key;
 
-              const priceObj = PLAN_PRICING[currency][key];
-              const price = billingInterval === 'annual' ? priceObj.annual : priceObj.monthly;
+              const priceBreakdown = plan.pricing[currency] || plan.pricing.USD;
+              const displayPerMonth = billingInterval === 'annual' ? priceBreakdown.annualMonthlyEquivalent : priceBreakdown.monthly;
+              const annualTotal = priceBreakdown.annualTotal;
               const currencySymbol = currency === 'INR' ? '₹' : '$';
 
               return (
@@ -471,15 +455,19 @@ export default function PricingPage() {
                     <div className="mb-6">
                       <div className="flex items-baseline gap-1">
                         <span className="text-4xl font-extrabold text-on-surface font-mono">
-                          {currencySymbol}{price.toLocaleString()}
+                          {currencySymbol}{displayPerMonth.toLocaleString()}
                         </span>
                         <span className="text-xs text-on-surface-variant font-medium">
-                          /{billingInterval === 'annual' ? 'year' : 'month'}
+                          /month
                         </span>
                       </div>
-                      {billingInterval === 'annual' && (
-                        <p className="text-[11px] text-tertiary font-semibold mt-1">
-                          Billed annually ({currencySymbol}{price.toLocaleString()}/yr • 2 months free included)
+                      {billingInterval === 'annual' ? (
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                          Billed annually at {currencySymbol}{annualTotal.toLocaleString()}/yr (15% discount applied)
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-on-surface-variant font-medium mt-1">
+                          Billed monthly, cancel anytime
                         </p>
                       )}
                     </div>
@@ -503,7 +491,7 @@ export default function PricingPage() {
                     <Button
                       variant={isCurrent ? 'outline' : plan.popular ? 'primary' : 'outline'}
                       size="md"
-                      onClick={() => handleCheckout(key)}
+                      onClick={() => handleCheckout(key, gateway === 'razorpay' ? 'razorpay' : 'stripe')}
                       disabled={isCurrent || loadingPlan === key}
                       className="w-full font-bold text-xs gap-1.5 shadow-xs"
                     >
@@ -514,7 +502,7 @@ export default function PricingPage() {
                       ) : (
                         <>
                           <span>
-                            Pay with {gateway === 'razorpay' ? 'Razorpay (UPI/INR)' : 'Stripe (USD)'}
+                            {gateway === 'razorpay' ? 'Pay with Razorpay (UPI & Cards)' : 'Pay with Stripe (USD • Cards/Apple Pay)'}
                           </span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </>
@@ -526,9 +514,11 @@ export default function PricingPage() {
                         type="button"
                         onClick={() => handleCheckout(key, gateway === 'razorpay' ? 'stripe' : 'razorpay')}
                         disabled={loadingPlan === key}
-                        className="text-[11px] text-center text-on-surface-variant hover:text-primary transition-colors py-1 underline underline-offset-2"
+                        className="text-[11px] text-center text-on-surface-variant hover:text-primary transition-colors py-1 underline underline-offset-2 flex items-center justify-center gap-1 font-medium"
                       >
-                        Or pay with {gateway === 'razorpay' ? 'Stripe (USD / Cards)' : 'Razorpay (INR / UPI)'}
+                        {gateway === 'razorpay'
+                          ? '🌐 Pay with Stripe (USD • Global Cards)'
+                          : '🇮🇳 Pay with Razorpay (India • UPI, NetBanking)'}
                       </button>
                     )}
 
@@ -546,6 +536,183 @@ export default function PricingPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Plan Feature Comparison Table */}
+        {planCategory === 'business' && (
+          <div className="mt-8 space-y-4">
+            <div className="text-center max-w-xl mx-auto mb-6">
+              <h2 className="text-2xl font-bold text-on-surface tracking-tight">
+                Full Plan Feature Comparison
+              </h2>
+              <p className="text-xs text-on-surface-variant mt-1">
+                Detailed feature-by-feature breakdown of all quotas, CRM capabilities, and telephony limits.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-outline-variant/80 bg-surface-container-lowest shadow-sm">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-outline-variant/80 bg-surface-container-high/50">
+                    <th className="py-4 px-5 font-bold text-on-surface text-sm">Feature / Quota</th>
+                    <th className="py-4 px-5 font-bold text-on-surface text-sm w-1/4">
+                      Starter
+                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$29/mo</div>
+                    </th>
+                    <th className="py-4 px-5 font-bold text-primary text-sm w-1/4 bg-primary/5">
+                      Professional
+                      <span className="ml-1.5 px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-extrabold uppercase">Popular</span>
+                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$79/mo</div>
+                    </th>
+                    <th className="py-4 px-5 font-bold text-on-surface text-sm w-1/4">
+                      Enterprise
+                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$249/mo</div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/50">
+                  {/* Category: Pricing */}
+                  <tr className="bg-surface-container-high/20 font-bold text-on-surface-variant uppercase text-[10px] tracking-wider">
+                    <td colSpan={4} className="py-2.5 px-5">Pricing & Billing Options</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Monthly Price</td>
+                    <td className="py-3 px-5 font-mono font-semibold">$29/mo</td>
+                    <td className="py-3 px-5 font-mono font-semibold bg-primary/5 text-primary">$79/mo</td>
+                    <td className="py-3 px-5 font-mono font-semibold">$249/mo</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Annual Price (15% Discount)</td>
+                    <td className="py-3 px-5 font-mono">$24.65/mo ($295.80/yr)</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-emerald-600 dark:text-emerald-400">$67.15/mo ($805.80/yr)</td>
+                    <td className="py-3 px-5 font-mono">$211.65/mo ($2,539.80/yr)</td>
+                  </tr>
+
+                  {/* Category: AI Receptionist & Telephony */}
+                  <tr className="bg-surface-container-high/20 font-bold text-on-surface-variant uppercase text-[10px] tracking-wider">
+                    <td colSpan={4} className="py-2.5 px-5">AI Receptionist & Voice Telephony</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Monthly AI Call Minutes</td>
+                    <td className="py-3 px-5 font-bold font-mono">60 minutes/month</td>
+                    <td className="py-3 px-5 font-bold font-mono bg-primary/5 text-primary">250 minutes/month</td>
+                    <td className="py-3 px-5 font-bold font-mono">900 minutes/month</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Extra AI Minutes Overage Rate</td>
+                    <td className="py-3 px-5 font-mono">$0.15/minute</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5">$0.12/minute</td>
+                    <td className="py-3 px-5 font-mono font-semibold text-emerald-600 dark:text-emerald-400">$0.10/minute</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Dedicated Inbound Phone Number (US DID)</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Included</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold bg-primary/5">✓ Included</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Included</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">24/7 Call Answering & Emergency Triage</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Included</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold bg-primary/5">✓ Included</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Included (Priority Escalation)</td>
+                  </tr>
+
+                  {/* Category: Communications */}
+                  <tr className="bg-surface-container-high/20 font-bold text-on-surface-variant uppercase text-[10px] tracking-wider">
+                    <td colSpan={4} className="py-2.5 px-5">Multi-Channel Communications</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Outbound SMS Dispatches</td>
+                    <td className="py-3 px-5 font-mono">300/month</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-primary">1,000/month</td>
+                    <td className="py-3 px-5 font-mono">5,000/month</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">WhatsApp Automated Messages</td>
+                    <td className="py-3 px-5 font-mono">100/month</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-primary">500/month</td>
+                    <td className="py-3 px-5 font-mono">2,000/month</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Email Invoices & Alerts</td>
+                    <td className="py-3 px-5 font-mono">1,000/month</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-primary">5,000/month</td>
+                    <td className="py-3 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Google Review Requests</td>
+                    <td className="py-3 px-5 font-mono">50/month</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-primary">250/month</td>
+                    <td className="py-3 px-5 font-mono font-semibold">1,000/month</td>
+                  </tr>
+
+                  {/* Category: Dispatch & Operations */}
+                  <tr className="bg-surface-container-high/20 font-bold text-on-surface-variant uppercase text-[10px] tracking-wider">
+                    <td colSpan={4} className="py-2.5 px-5">Operations & Field Dispatch</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Active Work Orders (Jobs)</td>
+                    <td className="py-3 px-5 font-mono">100/month</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-primary">500/month</td>
+                    <td className="py-3 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Proposals & Estimates</td>
+                    <td className="py-3 px-5 font-mono">100/month</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-primary">500/month</td>
+                    <td className="py-3 px-5 font-mono font-bold text-emerald-600 dark:text-emerald-400">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Team User Seats</td>
+                    <td className="py-3 px-5 font-mono">1 Seat</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-primary">5 Seats</td>
+                    <td className="py-3 px-5 font-mono font-semibold">20 Seats</td>
+                  </tr>
+
+                  {/* Category: CRM & Automation */}
+                  <tr className="bg-surface-container-high/20 font-bold text-on-surface-variant uppercase text-[10px] tracking-wider">
+                    <td colSpan={4} className="py-2.5 px-5">CRM, Automations & Platform Scale</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">CRM Pipeline</td>
+                    <td className="py-3 px-5">Basic leads/pipeline</td>
+                    <td className="py-3 px-5 bg-primary/5 font-medium text-primary">Full leads/pipeline</td>
+                    <td className="py-3 px-5 font-medium">Full with custom stages</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Follow-up Automation</td>
+                    <td className="py-3 px-5 text-on-surface-variant">Disabled</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold bg-primary/5">✓ Enabled</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Advanced Sequences</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Reputation Management</td>
+                    <td className="py-3 px-5 text-on-surface-variant">Disabled</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold bg-primary/5">✓ Auto-request enabled</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Auto-request + AI Suggestions</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">White-Label / Agency Mode</td>
+                    <td className="py-3 px-5 text-on-surface-variant">Disabled</td>
+                    <td className="py-3 px-5 text-on-surface-variant bg-primary/5">Disabled</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Enabled</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">REST API & Webhooks</td>
+                    <td className="py-3 px-5 text-on-surface-variant">Disabled</td>
+                    <td className="py-3 px-5 text-on-surface-variant bg-primary/5">Disabled</td>
+                    <td className="py-3 px-5 text-emerald-600 font-semibold">✓ Enabled</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-5 font-medium text-on-surface">Support Level</td>
+                    <td className="py-3 px-5">Email only</td>
+                    <td className="py-3 px-5 bg-primary/5 font-semibold text-primary">Email + Chat</td>
+                    <td className="py-3 px-5 font-semibold text-primary">Dedicated 24/7 Support</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

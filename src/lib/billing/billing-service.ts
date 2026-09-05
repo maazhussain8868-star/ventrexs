@@ -246,6 +246,14 @@ export class BillingService {
             eventId: event.id,
           },
         });
+
+        // Trigger automatic OmniDimension voice agent & telephony provisioning
+        try {
+          const { provisionOmniDimensionAgent } = await import('@/lib/receptionist/provisioning');
+          await provisionOmniDimensionAgent({ businessId, isTrial: false });
+        } catch (provErr: any) {
+          console.warn('[RECEPTIONIST_PROVISIONING_WARNING]', provErr?.message);
+        }
       }
     } else if (event.type === 'invoice.payment_failed' || event.type === 'payment_failed') {
       if (businessId) {

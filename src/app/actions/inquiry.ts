@@ -105,3 +105,74 @@ export async function submitBuyerInquiryAction(
     };
   }
 }
+
+export interface LandingTrialLeadPayload {
+  email: string;
+  phone: string;
+  honeypot?: string;
+}
+
+export interface LandingTrialLeadResult {
+  success: boolean;
+  message: string;
+  redirectUrl?: string;
+  errors?: Record<string, string>;
+}
+
+export async function submitLandingTrialLeadAction(
+  data: LandingTrialLeadPayload
+): Promise<LandingTrialLeadResult> {
+  try {
+    if (data.honeypot && data.honeypot.trim().length > 0) {
+      return {
+        success: true,
+        message: 'Your 7-day free trial has been reserved.',
+      };
+    }
+
+    const errors: Record<string, string> = {};
+
+    const email = sanitizeText(data.email).toLowerCase();
+    if (!email || !EMAIL_REGEX.test(email)) {
+      errors.email = 'Please provide a valid email address.';
+    }
+
+    const cleanPhone = (data.phone || '').replace(/[^0-9+]/g, '');
+    if (!cleanPhone || cleanPhone.replace(/[^0-9]/g, '').length < 7) {
+      errors.phone = 'Please provide a valid contact phone number (at least 7 digits).';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return {
+        success: false,
+        message: 'Please check the highlighted fields.',
+        errors,
+      };
+    }
+
+    // Log the high-intent lead
+    const logPayload = {
+      timestamp: new Date().toISOString(),
+      category: 'LANDING_PAGE_TRIAL_LEAD',
+      lead: {
+        email,
+        phone: cleanPhone,
+      },
+    };
+    console.info(JSON.stringify(logPayload));
+
+    const redirectUrl = `/signup?email=${encodeURIComponent(email)}&phone=${encodeURIComponent(cleanPhone)}&plan=Starter&trial=true`;
+
+    return {
+      success: true,
+      message: 'Your 7-day free trial is reserved! Setting up your workspace...',
+      redirectUrl,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: 'An unexpected error occurred. Please try again or head directly to signup.',
+    };
+  }
+}
+

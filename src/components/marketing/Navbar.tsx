@@ -63,25 +63,18 @@ export default function Navbar() {
         </nav>
 
         {/* Action Buttons */}
-        <div className="hidden sm:flex items-center gap-2.5">
-          <Link
-            href="/test-receptionist"
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-semibold text-cyan-300 hover:text-white bg-blue-950/60 hover:bg-blue-900/60 border border-blue-500/40 rounded-xl transition-all shadow-sm"
-          >
-            <Zap className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Test Receptionist</span>
-          </Link>
+        <div className="hidden sm:flex items-center gap-3">
           <Link
             href="/login"
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-xl transition-all shadow-sm"
+            className="inline-flex items-center gap-1 px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 rounded-xl transition-all shadow-sm"
           >
             <span>Sign In</span>
           </Link>
           <Link
-            href="/demo"
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl shadow-md shadow-blue-600/30 transition-all active:scale-95 border border-blue-400/30 cursor-pointer"
+            href="/signup?trial=true"
+            className="inline-flex items-center gap-1.5 px-4.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 rounded-xl shadow-md shadow-blue-600/30 transition-all active:scale-95 border border-blue-400/30 cursor-pointer"
           >
-            <span>Explore Demo</span>
+            <span>Start Free Trial</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -130,11 +123,11 @@ export default function Navbar() {
               <span>Sign In</span>
             </Link>
             <Link
-              href="/demo"
+              href="/signup?trial=true"
               onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold shadow-md shadow-blue-600/30"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-xs font-bold shadow-md shadow-blue-600/30"
             >
-              <span>Explore Demo</span>
+              <span>Start Free Trial</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

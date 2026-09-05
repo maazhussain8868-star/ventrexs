@@ -263,6 +263,14 @@ export async function GET(req: NextRequest) {
       paymentId,
     });
 
+    // Auto-provision dedicated OmniDimension AI Receptionist agent & telephony number
+    try {
+      const { provisionOmniDimensionAgent } = await import('@/lib/receptionist/provisioning');
+      await provisionOmniDimensionAgent({ businessId, isTrial: false });
+    } catch (provErr: any) {
+      ProductionLogger.warn('RECEPTIONIST', `Automatic provisioning deferred: ${provErr?.message}`);
+    }
+
     return NextResponse.redirect(new URL(`${successUrl}?plan=${plan}&activated=true`, appUrl));
   } catch (err: any) {
     ProductionLogger.error('BILLING', 'Exception during subscription activation', err);

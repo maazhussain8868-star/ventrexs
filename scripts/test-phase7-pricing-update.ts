@@ -56,11 +56,11 @@ async function runPhase7PricingSuite() {
   // -----------------------------------------------------------------
   console.log('[1/10] Business Subscription Pricing (USA Market Updates)...');
   assert(PLANS_CONFIG.Starter.priceMonthly === 29, 'Starter monthly price is $29');
-  assert(PLANS_CONFIG.Starter.priceAnnual === 290, 'Starter annual price is $290 (~2 months free)');
+  assert(PLANS_CONFIG.Starter.priceAnnual === 295.80, 'Starter annual price is $295.80 (15% discount)');
   assert(PLANS_CONFIG.Professional.priceMonthly === 79, 'Professional monthly price is $79');
-  assert(PLANS_CONFIG.Professional.priceAnnual === 790, 'Professional annual price is $790');
+  assert(PLANS_CONFIG.Professional.priceAnnual === 805.80, 'Professional annual price is $805.80 (15% discount)');
   assert(PLANS_CONFIG.Enterprise.priceMonthly === 249, 'Enterprise monthly price is $249');
-  assert(PLANS_CONFIG.Enterprise.priceAnnual === 2490, 'Enterprise annual price is $2,490');
+  assert(PLANS_CONFIG.Enterprise.priceAnnual === 2539.80, 'Enterprise annual price is $2,539.80 (15% discount)');
 
   // -----------------------------------------------------------------
   // 2. Agency Plan Pricing Single Source of Truth (Assertions 7 - 12)
@@ -81,7 +81,7 @@ async function runPhase7PricingSuite() {
   assert(starterMonthly.amount === 29 && starterMonthly.amountCents === 2900, 'Starter monthly resolves $29.00 (2900 cents)');
 
   const starterAnnual = SubscriptionEngine.getPlanPrice('Starter', 'annual');
-  assert(starterAnnual.amount === 290 && starterAnnual.amountCents === 29000, 'Starter annual resolves $290.00 (29000 cents)');
+  assert(starterAnnual.amount === 295.80 && starterAnnual.amountCents === 29580, 'Starter annual resolves $295.80 (29580 cents)');
 
   const proMonthly = SubscriptionEngine.getPlanPrice('Professional', 'monthly');
   assert(proMonthly.amount === 79 && proMonthly.amountCents === 7900, 'Professional monthly resolves $79.00 (7900 cents)');
