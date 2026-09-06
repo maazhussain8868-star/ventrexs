@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { createClient } from '@/lib/supabase/client';
 import { PLANS_CONFIG, PlanKey, BillingInterval } from '@/lib/billing/types';
 import {
   Check,
@@ -161,14 +162,32 @@ export default function BillingPage() {
       });
 
       // Step 3: Route directly through real checkout API
+      let accessToken: string | undefined = undefined;
+      try {
+        const supabase = createClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        accessToken = sessionData?.session?.access_token;
+      } catch {
+        // fallback
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       if (gateway === 'stripe') {
         const res = await fetch('/api/checkout/stripe', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers,
           body: JSON.stringify({
             plan: planKey,
             billingCycle,
             businessId: resolvedBusinessId,
+            accessToken: accessToken || undefined,
           }),
         });
 
@@ -181,12 +200,14 @@ export default function BillingPage() {
       } else {
         const res = await fetch('/api/checkout/razorpay', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers,
           body: JSON.stringify({
             plan: planKey,
             billingCycle,
             currency: 'INR',
             businessId: resolvedBusinessId,
+            accessToken: accessToken || undefined,
           }),
         });
 

@@ -8,6 +8,8 @@ export async function createServerSupabaseClient() {
     cookieStore = await cookies();
   } catch {
     cookieStore = {
+      getAll: () => [],
+      setAll: () => {},
       get: () => undefined,
       set: () => {},
       remove: () => {},
@@ -23,23 +25,35 @@ export async function createServerSupabaseClient() {
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll?.() ?? [];
       },
-      set(name: string, value: string, options: CookieOptions) {
+      setAll(cookiesToSet: any[]) {
         try {
-          cookieStore.set({ name, value, ...options });
+          cookiesToSet.forEach(({ name, value, options }: any) => {
+            cookieStore.set(name, value, options);
+          });
         } catch {
           // Handled when called from Server Components where cookie manipulation is read-only
         }
       },
-      remove(name: string, options: CookieOptions) {
+      get(name: string) {
+        return cookieStore.get?.(name)?.value;
+      },
+      set(name: string, value: string, options: CookieOptions) {
         try {
-          cookieStore.set({ name, value: '', ...options });
+          cookieStore.set?.({ name, value, ...options });
         } catch {
           // Handled when called from Server Components
         }
       },
-    },
+      remove(name: string, options: CookieOptions) {
+        try {
+          cookieStore.set?.({ name, value: '', ...options });
+        } catch {
+          // Handled when called from Server Components
+        }
+      },
+    } as any,
   });
 }

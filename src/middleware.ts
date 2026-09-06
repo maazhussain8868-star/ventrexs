@@ -27,45 +27,59 @@ export async function middleware(req: NextRequest) {
     }
   } else {
     const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name: string) {
-        return req.cookies.get(name)?.value;
-      },
-      set(name: string, value: string, options: CookieOptions) {
-        req.cookies.set({
-          name,
-          value,
-          ...options,
-        });
-        res = NextResponse.next({
-          request: {
-            headers: req.headers,
-          },
-        });
-        res.cookies.set({
-          name,
-          value,
-          ...options,
-        });
-      },
-      remove(name: string, options: CookieOptions) {
-        req.cookies.set({
-          name,
-          value: '',
-          ...options,
-        });
-        res = NextResponse.next({
-          request: {
-            headers: req.headers,
-          },
-        });
-        res.cookies.set({
-          name,
-          value: '',
-          ...options,
-        });
-      },
-    },
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet: any[]) {
+          cookiesToSet.forEach(({ name, value }: any) => req.cookies.set(name, value));
+          res = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          cookiesToSet.forEach(({ name, value, options }: any) =>
+            res.cookies.set({ name, value, ...options })
+          );
+        },
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          req.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          res = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          res.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          req.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+          res = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          res.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+        },
+      } as any,
     });
 
     // Refresh auth session

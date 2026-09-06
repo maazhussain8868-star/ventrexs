@@ -28,10 +28,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const requestedBusinessId = body.businessId || body.business_id;
 
+    const authHeader = req.headers.get('authorization');
+    const bearerToken = authHeader?.replace(/^Bearer\s+/i, '') || body.accessToken;
+
     const supabase = await createServerSupabaseClient();
     let authContext;
     try {
-      authContext = await resolveAuthenticatedBusinessUser(supabase, requestedBusinessId);
+      authContext = await resolveAuthenticatedBusinessUser(supabase, requestedBusinessId, bearerToken);
     } catch (authErr: unknown) {
       const msg = authErr instanceof Error ? authErr.message : 'Authentication required to initiate checkout.';
       return NextResponse.json(

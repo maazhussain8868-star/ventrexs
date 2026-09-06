@@ -22,9 +22,50 @@ import { resolveAppUrl } from '@/lib/supabase/services/auth';
  * 4. Existing subscription matching user_id or customer_email
  * 5. Idempotent workspace creation with retry
  */
-export async function resolveAuthenticatedBusinessUser(supabase: any, explicitBusinessId?: string) {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
+export async function resolveAuthenticatedBusinessUser(
+  supabase: any,
+  explicitBusinessId?: string,
+  bearerToken?: string
+) {
+  let user: any = null;
+
+  // 1. If explicit bearerToken is supplied (from Authorization header or client session)
+  if (bearerToken) {
+    try {
+      const { data, error } = await supabase.auth.getUser(bearerToken);
+      if (!error && data?.user) {
+        user = data.user;
+      }
+    } catch {
+      // Fall through to admin/cookie fallback
+    }
+
+    if (!user) {
+      try {
+        const adminClient = createAdminClient();
+        const { data, error } = await adminClient.auth.getUser(bearerToken);
+        if (!error && data?.user) {
+          user = data.user;
+        }
+      } catch {
+        // Fall through to cookie fallback
+      }
+    }
+  }
+
+  // 2. Cookie-based authentication check
+  if (!user) {
+    try {
+      const { data, error: userError } = await supabase.auth.getUser();
+      if (!userError && data?.user) {
+        user = data.user;
+      }
+    } catch {
+      // Fall through
+    }
+  }
+
+  if (!user) {
     throw new Error('Authentication required to perform billing operations. Please log in.');
   }
 

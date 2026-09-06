@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { createClient } from '@/lib/supabase/client';
 import { PLANS_CONFIG, AGENCY_PLANS_CONFIG, PlanKey, AgencyPlanKey, BillingInterval } from '@/lib/billing/types';
 import { startFreeTrialAction } from '@/app/actions/billing';
 import { 
@@ -161,6 +162,8 @@ export default function PricingPage() {
       return;
     }
 
+    if (loadingPlan) return;
+
     // If not logged in, route to signup with plan and gateway params
     if (!user && !profile?.email) {
       router.push(`/signup?type=business&plan=${planKey}&gateway=${selectedGateway}&cycle=${billingInterval}`);
@@ -170,14 +173,32 @@ export default function PricingPage() {
     setLoadingPlan(planKey);
 
     try {
+      let accessToken: string | undefined = undefined;
+      try {
+        const supabase = createClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        accessToken = sessionData?.session?.access_token;
+      } catch {
+        // fallback
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       if (selectedGateway === 'stripe') {
         // Stripe Checkout hosted session
         const res = await fetch('/api/checkout/stripe', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers,
           body: JSON.stringify({
             plan: planKey,
             billingCycle: billingInterval,
+            accessToken: accessToken || undefined,
           }),
         });
 
@@ -191,11 +212,13 @@ export default function PricingPage() {
         // Razorpay checkout modal
         const res = await fetch('/api/checkout/razorpay', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers,
           body: JSON.stringify({
             plan: planKey,
             billingCycle: billingInterval,
             currency: 'INR',
+            accessToken: accessToken || undefined,
           }),
         });
 

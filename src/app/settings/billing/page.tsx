@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { PlanBadge } from '@/components/billing/PlanBadge';
 import { UsageMeter } from '@/components/billing/UsageMeter';
 import { useApp } from '@/context/AppContext';
+import { createClient } from '@/lib/supabase/client';
 import { PLANS_CONFIG, PlanKey, BillingInterval } from '@/lib/billing/types';
 import { 
   CreditCard, 
@@ -66,6 +67,7 @@ interface RazorpayInstance {
 export default function BillingSettingsPage() {
   const { 
     user,
+    session,
     profile,
     businessId,
     subscription, 
@@ -82,8 +84,15 @@ export default function BillingSettingsPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<PlanKey | null>(null);
+  const isUpgradingRef = React.useRef(false);
 
   const currentPlanConfig = PLANS_CONFIG[subscription.plan] || PLANS_CONFIG.Professional;
+
+  const resetUpgradingState = () => {
+    isUpgradingRef.current = false;
+    setIsUpgrading(false);
+    setSelectedUpgradePlan(null);
+  };
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -123,9 +132,16 @@ export default function BillingSettingsPage() {
       return;
     }
 
-    console.log('[CHECKOUT_INIT] User clicked checkout for plan:', { planKey, billingInterval });
+    // Synchronous guard against rapid consecutive clicks / stacked toasts
+    if (isUpgradingRef.current || isUpgrading) {
+      console.log('[CHECKOUT_GUARD] Upgrade request already in flight, ignoring duplicate click.');
+      return;
+    }
+    isUpgradingRef.current = true;
     setIsUpgrading(true);
     setSelectedUpgradePlan(planKey);
+
+    console.log('[CHECKOUT_INIT] User clicked checkout for plan:', { planKey, billingInterval });
 
     try {
       // 1. Ensure Razorpay script is loaded before opening modal
@@ -139,21 +155,41 @@ export default function BillingSettingsPage() {
           description: scriptErr,
           type: 'error',
         });
-        setIsUpgrading(false);
-        setSelectedUpgradePlan(null);
+        resetUpgradingState();
         return;
       }
 
-      // 2. Call backend Razorpay order creation endpoint
-      console.log('[CHECKOUT_ORDER_REQUEST] Calling /api/checkout/razorpay...');
+      // 2. Fetch fresh Supabase session token to send alongside cookies
+      let accessToken = session?.access_token;
+      try {
+        const supabase = createClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.access_token) {
+          accessToken = sessionData.session.access_token;
+        }
+      } catch (tokenErr) {
+        console.warn('[CHECKOUT_TOKEN_RETRIEVAL_WARN]', tokenErr);
+      }
+
+      // 3. Call backend Razorpay order creation endpoint
+      console.log('[CHECKOUT_ORDER_REQUEST] Calling /api/checkout/razorpay with session credentials...');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const response = await fetch('/api/checkout/razorpay', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers,
         body: JSON.stringify({
           plan: planKey,
           billingCycle: billingInterval,
           currency: 'INR',
           businessId: businessId || undefined,
+          accessToken: accessToken || undefined,
         }),
       });
 
@@ -175,12 +211,11 @@ export default function BillingSettingsPage() {
           description: errMsg,
           type: 'error',
         });
-        setIsUpgrading(false);
-        setSelectedUpgradePlan(null);
+        resetUpgradingState();
         return;
       }
 
-      // 3. Resolve keyId: server returned keyId || NEXT_PUBLIC_RAZORPAY_KEY_ID
+      // 4. Resolve keyId: server returned keyId || NEXT_PUBLIC_RAZORPAY_KEY_ID
       const resolvedKeyId = orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       console.log('[CHECKOUT_KEY_RESOLUTION]', {
         serverKeyId: orderData.keyId ? `${orderData.keyId.substring(0, 8)}...` : 'undefined',
@@ -196,8 +231,7 @@ export default function BillingSettingsPage() {
           description: configError,
           type: 'error',
         });
-        setIsUpgrading(false);
-        setSelectedUpgradePlan(null);
+        resetUpgradingState();
         return;
       }
 
@@ -210,12 +244,11 @@ export default function BillingSettingsPage() {
           description: constructorError,
           type: 'error',
         });
-        setIsUpgrading(false);
-        setSelectedUpgradePlan(null);
+        resetUpgradingState();
         return;
       }
 
-      // 4. Construct Razorpay modal options
+      // 5. Construct Razorpay modal options
       const options: RazorpayOptions = {
         key: resolvedKeyId,
         amount: orderData.amount,
@@ -238,8 +271,7 @@ export default function BillingSettingsPage() {
               description: 'Payment was cancelled. You can resume at any time.',
               type: 'info',
             });
-            setIsUpgrading(false);
-            setSelectedUpgradePlan(null);
+            resetUpgradingState();
           },
         },
         handler: (paymentResponse: RazorpayResponse) => {
@@ -280,8 +312,7 @@ export default function BillingSettingsPage() {
           description: failResp?.error?.description || failResp?.error?.reason || 'Payment transaction failed.',
           type: 'error',
         });
-        setIsUpgrading(false);
-        setSelectedUpgradePlan(null);
+        resetUpgradingState();
       });
 
       rzp.open();
@@ -294,8 +325,7 @@ export default function BillingSettingsPage() {
         description: errorMsg,
         type: 'error',
       });
-      setIsUpgrading(false);
-      setSelectedUpgradePlan(null);
+      resetUpgradingState();
     }
   };
 
@@ -520,9 +550,19 @@ export default function BillingSettingsPage() {
                 size="sm"
                 onClick={() => handlePlanSelect(subscription.plan === 'Starter' ? 'Professional' : 'Enterprise')}
                 className="shrink-0 text-xs font-bold gap-1"
+                disabled={isUpgrading}
               >
-                <span>Upgrade Plan</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                {isUpgrading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Opening Checkout...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Upgrade Plan</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
               </Button>
             </div>
           )}
