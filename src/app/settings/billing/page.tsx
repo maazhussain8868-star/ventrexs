@@ -90,11 +90,12 @@ export default function BillingSettingsPage() {
       if (typeof window !== 'undefined' && (window as unknown as { Razorpay?: unknown }).Razorpay) {
         return resolve(true);
       }
-      const existing = document.getElementById('razorpay-checkout-js');
+      const existing = document.getElementById('razorpay-checkout-js') as HTMLScriptElement | null;
       if (existing) {
-        existing.addEventListener('load', () => resolve(true));
-        existing.addEventListener('error', () => resolve(false));
-        return;
+        if ((window as unknown as { Razorpay?: unknown }).Razorpay) {
+          return resolve(true);
+        }
+        existing.remove();
       }
       const script = document.createElement('script');
       script.id = 'razorpay-checkout-js';

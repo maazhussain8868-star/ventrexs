@@ -3,35 +3,28 @@
 import { useEffect } from 'react';
 
 /**
- * ServiceWorkerRegister
- * Automatically registers /sw.js in supported browser environments.
- * Enables PWA installation, Android TWA packaging, and offline fallback.
+ * ServiceWorkerUnregister (Rollback)
+ * Proactively unregisters any previously installed service worker
+ * and clears legacy PWA caches from users' browsers.
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      const registerSW = async () => {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/',
-          });
-          if (registration.installing) {
-            console.log('[PWA] Service worker installing');
-          } else if (registration.waiting) {
-            console.log('[PWA] Service worker installed & waiting');
-          } else if (registration.active) {
-            console.log('[PWA] Service worker active');
+    if (typeof window !== 'undefined') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister().then((ok) => {
+              console.log('[PWA-ROLLBACK] Unregistered residual service worker:', ok);
+            });
           }
-        } catch (error) {
-          console.warn('[PWA] Service worker registration notice:', error);
-        }
-      };
-
-      if (document.readyState === 'complete') {
-        registerSW();
-      } else {
-        window.addEventListener('load', registerSW);
-        return () => window.removeEventListener('load', registerSW);
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then((keys) => {
+          for (const key of keys) {
+            caches.delete(key);
+          }
+        });
       }
     }
   }, []);

@@ -5,7 +5,6 @@ import { AppProvider } from '@/context/AppContext';
 import { ToastContainer } from '@/components/ui/Toast';
 import { BRAND } from '@/config/brand';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
-import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 
 export const viewport: Viewport = {
   themeColor: '#070B14',
@@ -110,12 +109,24 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .catch(function(err) { console.warn('[PWA] SW register:', err); });
-                });
-              }
+              (function() {
+                try {
+                  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(function(regs) {
+                      for (var i = 0; i < regs.length; i++) {
+                        regs[i].unregister();
+                      }
+                    });
+                  }
+                  if (typeof window !== 'undefined' && 'caches' in window) {
+                    caches.keys().then(function(keys) {
+                      for (var j = 0; j < keys.length; j++) {
+                        caches.delete(keys[j]);
+                      }
+                    });
+                  }
+                } catch (e) {}
+              })();
             `,
           }}
         />
@@ -127,7 +138,6 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <GoogleAnalytics />
-        <ServiceWorkerRegister />
         <AppProvider>
           {children}
           <ToastContainer />

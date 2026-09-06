@@ -8,10 +8,23 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: BRAND.name,
     description: BRAND.description,
     start_url: '/dashboard',
+    scope: '/',
     display: 'standalone',
+    display_override: ['window-controls-overlay', 'standalone'],
     background_color: '#070B14',
     theme_color: '#070B14',
     orientation: 'portrait-primary',
+    lang: 'en-US',
+    dir: 'ltr',
+    categories: ['business', 'productivity'],
+    prefer_related_applications: false,
+    related_applications: [
+      {
+        platform: 'play',
+        url: 'https://play.google.com/store/apps/details?id=com.ventrexs.app',
+        id: 'com.ventrexs.app',
+      },
+    ],
     icons: [
       {
         src: '/icon-192.png',
