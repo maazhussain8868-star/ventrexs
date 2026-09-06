@@ -4,20 +4,12 @@ import { useEffect } from 'react';
 
 /**
  * ServiceWorkerRegister
- * Automatically registers /sw.js in supported browser environments
+ * Automatically registers /sw.js in supported browser environments.
  * Enables PWA installation, Android TWA packaging, and offline fallback.
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {
-    if (
-      typeof window !== 'undefined' &&
-      'serviceWorker' in navigator &&
-      (process.env.NODE_ENV === 'production' ||
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        window.location.hostname.includes('ventrexs.com') ||
-        window.location.hostname.includes('paypilot.com'))
-    ) {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js', {

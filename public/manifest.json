@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Ventrexs AI — The AI Operating System for Modern Businesses",
   "short_name": "Ventrexs AI",
   "description": "Run your service business smarter with AI-powered reception, CRM, jobs, payments, reputation management, and business intelligence.",
@@ -18,6 +19,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-dashboard.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ventrexs AI Mobile Business Operations"
+    },
+    {
+      "src": "/screenshots/mobile-crm.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ventrexs AI Smart CRM & Messaging"
+    },
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Ventrexs AI Desktop Command Center"
     }
   ]
 }

@@ -107,6 +107,18 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .catch(function(err) { console.warn('[PWA] SW register:', err); });
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body className="bg-[#070B14] text-slate-100 antialiased min-h-screen">
         <Script

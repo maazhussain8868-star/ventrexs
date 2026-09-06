@@ -38,6 +38,7 @@ const securityHeaders = [
       img-src 'self' data: blob: https: https://*.google-analytics.com https://*.googletagmanager.com https://*.google.com https://*.googleadservices.com https://*.doubleclick.net;
       font-src 'self' https://fonts.gstatic.com data:;
       connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://*.skydo.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net;
+      worker-src 'self' blob:;
       frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://js.stripe.com;
       frame-ancestors 'none';
       base-uri 'self';
@@ -55,6 +56,23 @@ const nextConfig: NextConfig = {
   ],
   async headers() {
     return [
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
       {
         source: '/(.*)',
         headers: securityHeaders,
