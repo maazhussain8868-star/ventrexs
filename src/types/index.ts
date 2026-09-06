@@ -876,6 +876,10 @@ export interface BusinessSubscription {
   trialStart?: string;
   trialEnd?: string;
   trialEndsAt?: string;
+  trialDay5ReminderSentAt?: string;
+  trialDay7ReminderSentAt?: string;
+  selectedPlan?: PlanKey;
+  selectedBillingCycle?: BillingInterval;
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;

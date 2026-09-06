@@ -692,6 +692,8 @@ export interface Database {
           trial_start: string | null;
           trial_end: string | null;
           trial_ends_at: string | null;
+          trial_day5_reminder_sent_at?: string | null;
+          trial_day7_reminder_sent_at?: string | null;
           current_period_start: string;
           current_period_end: string;
           cancel_at_period_end: boolean;
@@ -716,6 +718,8 @@ export interface Database {
           trial_start?: string | null;
           trial_end?: string | null;
           trial_ends_at?: string | null;
+          trial_day5_reminder_sent_at?: string | null;
+          trial_day7_reminder_sent_at?: string | null;
           current_period_start?: string;
           current_period_end?: string;
           cancel_at_period_end?: boolean;
@@ -740,6 +744,8 @@ export interface Database {
           trial_start?: string | null;
           trial_end?: string | null;
           trial_ends_at?: string | null;
+          trial_day5_reminder_sent_at?: string | null;
+          trial_day7_reminder_sent_at?: string | null;
           current_period_start?: string;
           current_period_end?: string;
           cancel_at_period_end?: boolean;

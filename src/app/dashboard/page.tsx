@@ -41,6 +41,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { SubscriptionGuard } from '@/components/auth/SubscriptionGuard';
+import { TrialBanner } from '@/components/billing/TrialBanner';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -148,37 +149,8 @@ export default function DashboardPage() {
     <AppShell title="Executive Business Intelligence">
       <SubscriptionGuard>
         <div className="flex flex-col gap-8 max-w-7xl mx-auto">
-          {/* 7-Day Free Trial Days Remaining Banner */}
-          {subscription?.status === 'trialing' && (
-            <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
-                      Free Trial
-                    </span>
-                    <span className="font-extrabold text-sm text-on-surface">
-                      {trialDaysRemaining === 1
-                        ? '1 day remaining in your free trial'
-                        : `${trialDaysRemaining} days remaining in your free trial`}
-                    </span>
-                  </div>
-                  <p className="text-xs text-on-surface-variant mt-0.5">
-                    Your {subscription.plan || 'Professional'} features are unlocked. Upgrade anytime to ensure uninterrupted access.
-                  </p>
-                </div>
-              </div>
-              <Link href="/pricing" className="shrink-0">
-                <Button variant="primary" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5 text-xs shadow-xs">
-                  <span>Upgrade Plan</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
-            </div>
-          )}
+          {/* 7-Day Free Trial Days Remaining & Urgent Expiry Banner */}
+          <TrialBanner />
 
           {/* Cockpit Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-outline-variant/60">

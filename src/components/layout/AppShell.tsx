@@ -25,6 +25,7 @@ import {
   ArrowLeft 
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
+import { ExpiredTrialBlocker } from '@/components/billing/ExpiredTrialBlocker';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -43,8 +44,24 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const pathname = usePathname();
-  const { user, isDemoMode, exitDemoMode, profile, businessProfile, notifications, leads } = useApp();
+  const { user, isDemoMode, exitDemoMode, profile, businessProfile, notifications, leads, subscription } = useApp();
   
+  const isPaywallEnabled = process.env.NEXT_PUBLIC_ENABLE_PAYWALL !== 'false';
+  const trialEndStr = subscription?.trialEndsAt || subscription?.currentPeriodEnd;
+  const trialEndMs = trialEndStr ? new Date(trialEndStr).getTime() : 0;
+  const isTrialExpired =
+    subscription?.status === 'expired' ||
+    (subscription?.status === 'trialing' && trialEndMs > 0 && trialEndMs <= Date.now());
+
+  const isExemptRoute =
+    pathname.startsWith('/pricing') ||
+    pathname.startsWith('/trial-expired') ||
+    pathname.startsWith('/login');
+
+  if (isTrialExpired && isPaywallEnabled && !isDemoMode && !isExemptRoute) {
+    return <ExpiredTrialBlocker />;
+  }
+
   const unreadNotifs = notifications.filter(n => !n.read).length;
   const newLeadsCount = leads?.filter(l => l.status === 'NEW').length || 0;
   const currentBusinessName = businessProfile?.name || profile.businessName || 'Ventrexs Workspace';

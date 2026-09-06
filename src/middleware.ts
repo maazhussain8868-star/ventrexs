@@ -185,17 +185,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 5. SUBSCRIPTION PAYWALL GATE — Authenticated users must have an active subscription
-  //    to access protected customer routes (/dashboard, /invoices, /leads, etc.).
-  //    - Enabled by default in production.
-  //    - Can be easily toggled off for local testing with NEXT_PUBLIC_ENABLE_PAYWALL=false.
-  //    - Demo mode also bypasses this gate.
-  //    - Unpaid users are redirected to /pricing to complete checkout.
+  const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/');
+
+  // 5. SUBSCRIPTION & TRIAL EXPIRATION GATE
+  //    - Enforces hard block for expired trials regardless of usage or onboarding status.
+  //    - Authenticated users must have an active subscription or valid active trial.
+  //    - Enabled by default in production; respects NEXT_PUBLIC_ENABLE_PAYWALL toggle for testing.
   const isPaywallEnabled =
     process.env.NEXT_PUBLIC_ENABLE_PAYWALL !== 'false' &&
     process.env.ENABLE_PAYWALL !== 'false';
 
-  if (isCustomerProtectedRoute && user && !isDemoMode && isPaywallEnabled && supabaseUrl && supabaseAnonKey) {
+  if ((isCustomerProtectedRoute || isOnboardingRoute) && user && !isDemoMode && isPaywallEnabled && supabaseUrl && supabaseAnonKey) {
     try {
       const supabaseForSub = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
         cookies: {
@@ -210,7 +210,7 @@ export async function middleware(req: NextRequest) {
       // 1. Direct user subscription check
       const { data: userSub } = await supabaseForSub
         .from('subscriptions')
-        .select('status, current_period_end')
+        .select('id, status, trial_ends_at, current_period_end, selected_plan, plan')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -231,7 +231,7 @@ export async function middleware(req: NextRequest) {
         if (membership?.business_id) {
           const { data: bizSub } = await supabaseForSub
             .from('subscriptions')
-            .select('status, current_period_end')
+            .select('id, status, trial_ends_at, current_period_end, selected_plan, plan')
             .eq('business_id', membership.business_id)
             .maybeSingle();
           activeSub = bizSub;
@@ -240,13 +240,48 @@ export async function middleware(req: NextRequest) {
 
       const status = activeSub?.status;
       const periodEnd = activeSub?.current_period_end ? new Date(activeSub.current_period_end).getTime() : 0;
-      const isTrialValid = status === 'trialing' && periodEnd > Date.now();
-      const hasActiveSubscription = status === 'active' || isTrialValid;
+      const trialEnd = activeSub?.trial_ends_at ? new Date(activeSub.trial_ends_at).getTime() : periodEnd;
+      const nowMs = Date.now();
+
+      const isTrialActive = status === 'trialing' && trialEnd > nowMs;
+      const isTrialExpired =
+        status === 'expired' ||
+        (status === 'trialing' && trialEnd > 0 && trialEnd <= nowMs);
+
+      // Lazy status synchronization: if overdue trialing record found, trigger background update to 'expired'
+      if (status === 'trialing' && trialEnd > 0 && trialEnd <= nowMs) {
+        void (async () => {
+          try {
+            await (supabaseForSub.rpc as any)('check_and_expire_subscription', { p_user_id: user.id });
+          } catch {}
+        })();
+      }
+
+      // PRIORITY 1: EXPIRED TRIAL HARD BLOCK
+      // Zero usage does NOT exempt users once trial_ends_at has passed.
+      // Takes absolute precedence over onboarding completion or any other redirect logic.
+      if (isTrialExpired) {
+        if (pathname === '/trial-expired') {
+          return res;
+        }
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/trial-expired';
+        redirectUrl.search = '';
+        return NextResponse.redirect(redirectUrl);
+      }
+
+      // If this is an onboarding route and the trial is NOT expired, allow setup to proceed
+      if (isOnboardingRoute) {
+        return res;
+      }
+
+      // PRIORITY 2: STANDARD SUBSCRIPTION GATE
+      const hasActiveSubscription = status === 'active' || isTrialActive;
 
       if (!hasActiveSubscription) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = '/pricing';
-        redirectUrl.searchParams.set('reason', status === 'trialing' ? 'trial_expired' : 'paywall');
+        redirectUrl.searchParams.set('reason', 'paywall');
         redirectUrl.searchParams.set('from', pathname);
         return NextResponse.redirect(redirectUrl);
       }
@@ -292,6 +327,8 @@ export const config = {
     '/profile/:path*',
     '/admin/:path*',
     '/agency/:path*',
+    '/trial-expired/:path*',
+    '/trial-expired',
     '/login',
     '/signup',
   ],

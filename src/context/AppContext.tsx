@@ -557,13 +557,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Load real subscription from DB — source of truth for billing gate
     if (subscriptionRow) {
+      const rawStatus = (subscriptionRow.status || 'incomplete');
+      const trialEndStr = subscriptionRow.trial_ends_at || (subscriptionRow as any).trial_end || subscriptionRow.current_period_end;
+      const isTrialPast = rawStatus === 'trialing' && trialEndStr && new Date(trialEndStr).getTime() <= Date.now();
+      const effectiveStatus = isTrialPast ? 'expired' : rawStatus;
+
       setSubscription(prev => ({
         ...prev,
         id: subscriptionRow.id,
         businessId: tenantId,
         plan: (subscriptionRow.plan || prev.plan) as any,
         billingCycle: (subscriptionRow.billing_cycle || 'monthly') as any,
-        status: (subscriptionRow.status || 'incomplete') as any,
+        status: effectiveStatus as any,
+        trialStart: subscriptionRow.trial_start || undefined,
+        trialEnd: trialEndStr || undefined,
+        trialEndsAt: subscriptionRow.trial_ends_at || trialEndStr || undefined,
+        trialDay5ReminderSentAt: (subscriptionRow as any).trial_day5_reminder_sent_at || undefined,
+        trialDay7ReminderSentAt: (subscriptionRow as any).trial_day7_reminder_sent_at || undefined,
         currentPeriodStart: subscriptionRow.current_period_start || prev.currentPeriodStart,
         currentPeriodEnd: subscriptionRow.current_period_end || prev.currentPeriodEnd,
         cancelAtPeriodEnd: subscriptionRow.cancel_at_period_end || false,
@@ -4113,13 +4123,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .maybeSingle();
 
           if (subRow) {
+            const rawStatus = (subRow.status || 'incomplete');
+            const trialEndStr = (subRow as any).trial_ends_at || (subRow as any).trial_end || subRow.current_period_end;
+            const isTrialPast = rawStatus === 'trialing' && trialEndStr && new Date(trialEndStr).getTime() <= Date.now();
+            const effectiveStatus = isTrialPast ? 'expired' : rawStatus;
+
             setSubscription(prev => ({
               ...prev,
               id: subRow.id,
               businessId: targetBusinessId!,
               plan: (subRow.plan || prev.plan) as any,
               billingCycle: (subRow.billing_cycle || 'monthly') as any,
-              status: (subRow.status || 'incomplete') as any,
+              status: effectiveStatus as any,
+              trialStart: (subRow as any).trial_start || undefined,
+              trialEnd: trialEndStr || undefined,
+              trialEndsAt: (subRow as any).trial_ends_at || trialEndStr || undefined,
+              trialDay5ReminderSentAt: (subRow as any).trial_day5_reminder_sent_at || undefined,
+              trialDay7ReminderSentAt: (subRow as any).trial_day7_reminder_sent_at || undefined,
               currentPeriodStart: subRow.current_period_start || prev.currentPeriodStart,
               currentPeriodEnd: subRow.current_period_end || prev.currentPeriodEnd,
               cancelAtPeriodEnd: subRow.cancel_at_period_end || false,

@@ -21,6 +21,7 @@ export class EntitlementService {
     status?: string | null;
     trial_ends_at?: string | null;
     trial_end?: string | null;
+    current_period_end?: string | null;
   } | null): boolean {
     if (!subscription || !subscription.status) return false;
 
@@ -31,12 +32,12 @@ export class EntitlementService {
     }
 
     if (status === 'trialing') {
-      const trialEndDate = subscription.trial_end || subscription.trial_ends_at;
-      if (!trialEndDate) return true;
+      const trialEndDate = subscription.trial_end || subscription.trial_ends_at || subscription.current_period_end;
+      if (!trialEndDate) return false;
       return new Date(trialEndDate).getTime() > Date.now();
     }
 
-    // Statuses like 'past_due', 'cancelled', 'canceled', 'incomplete', 'paused' are inactive
+    // Statuses like 'expired', 'past_due', 'cancelled', 'canceled', 'incomplete', 'paused', 'pending' are inactive
     return false;
   }
 
@@ -47,10 +48,11 @@ export class EntitlementService {
     status?: string | null;
     trial_ends_at?: string | null;
     trial_end?: string | null;
+    current_period_end?: string | null;
   } | null): number {
     if (!subscription || subscription.status !== 'trialing') return 0;
-    const endDateStr = subscription.trial_end || subscription.trial_ends_at;
-    if (!endDateStr) return 14;
+    const endDateStr = subscription.trial_end || subscription.trial_ends_at || subscription.current_period_end;
+    if (!endDateStr) return 0;
     const end = new Date(endDateStr).getTime();
     const now = Date.now();
     if (end <= now) return 0;
@@ -88,7 +90,22 @@ export class EntitlementService {
     }
 
     const isActive = EntitlementService.isSubscriptionActive(sub);
-    const isTrial = sub?.status === 'trialing';
+    const isTrialOverdue = sub?.status === 'trialing' && !isActive;
+
+    // Lazy status update to 'expired'
+    if (isTrialOverdue && this.client && sub?.id) {
+      void (async () => {
+        try {
+          await this.client!
+            .from('subscriptions')
+            .update({ status: 'expired', updated_at: new Date().toISOString() })
+            .eq('id', sub.id);
+        } catch {}
+      })();
+      sub.status = 'expired';
+    }
+
+    const isTrial = sub?.status === 'trialing' && isActive;
     const trialDaysRemaining = EntitlementService.getTrialDaysRemaining(sub);
     const planKey: PlanKey = (sub?.plan as PlanKey) || 'Starter';
     const planConfig = PLANS_CONFIG[planKey] || PLANS_CONFIG.Starter;

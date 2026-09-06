@@ -3,8 +3,9 @@
 import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { Lock, Sparkles, ArrowRight } from 'lucide-react';
+import { Lock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { ExpiredTrialBlocker } from '@/components/billing/ExpiredTrialBlocker';
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
@@ -13,8 +14,9 @@ interface SubscriptionGuardProps {
 
 /**
  * SubscriptionGuard
- * Client-side layout & route guard component that blocks access for unpaid users.
+ * Client-side layout & route guard component that blocks access for unpaid or expired users.
  * Automatically respects NEXT_PUBLIC_ENABLE_PAYWALL toggle for seamless local testing.
+ * Hard-blocks expired trials with a full-screen non-dismissible modal takeover.
  */
 export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps) {
   const router = useRouter();
@@ -24,25 +26,29 @@ export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const isPaywallEnabled = process.env.NEXT_PUBLIC_ENABLE_PAYWALL !== 'false';
 
-  const isTrialValid =
+  const trialEndStr = subscription?.trialEndsAt || subscription?.currentPeriodEnd;
+  const trialEndMs = trialEndStr ? new Date(trialEndStr).getTime() : 0;
+  const now = Date.now();
+
+  const isTrialActive =
     subscription?.status === 'trialing' &&
-    Boolean(
-      subscription?.currentPeriodEnd &&
-      new Date(subscription.currentPeriodEnd).getTime() > Date.now()
-    );
+    trialEndMs > now;
+
+  const isTrialExpired =
+    subscription?.status === 'expired' ||
+    (subscription?.status === 'trialing' && trialEndMs > 0 && trialEndMs <= now);
 
   const hasActiveSubscription =
     !isPaywallEnabled ||
     isDemoMode ||
     subscription?.status === 'active' ||
-    Boolean(isTrialValid);
+    Boolean(isTrialActive);
 
   useEffect(() => {
-    if (!isLoading && user && !hasActiveSubscription) {
-      const reason = subscription?.status === 'trialing' ? 'trial_expired' : 'paywall';
-      router.push(`/pricing?reason=${reason}&from=${encodeURIComponent(pathname)}`);
+    if (!isLoading && user && !hasActiveSubscription && !isTrialExpired) {
+      router.push(`/pricing?reason=paywall&from=${encodeURIComponent(pathname)}`);
     }
-  }, [isLoading, user, hasActiveSubscription, subscription?.status, router, pathname]);
+  }, [isLoading, user, hasActiveSubscription, isTrialExpired, router, pathname]);
 
   if (isLoading) {
     return (
@@ -52,6 +58,12 @@ export function SubscriptionGuard({ children, fallback }: SubscriptionGuardProps
     );
   }
 
+  // 1. HARD BLOCK: Expired Trial (Takes absolute precedence over everything)
+  if (isTrialExpired && isPaywallEnabled && !isDemoMode) {
+    return <ExpiredTrialBlocker />;
+  }
+
+  // 2. Standard Paywall Gate (Pending/Unpaid Accounts)
   if (!hasActiveSubscription) {
     if (fallback) return <>{fallback}</>;
 

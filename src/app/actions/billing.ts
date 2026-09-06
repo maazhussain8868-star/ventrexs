@@ -540,3 +540,91 @@ export async function startFreeTrialAction(params: {
     };
   }
 }
+
+/**
+ * 8. Fast QA Testing: Simulate Trial State Without Waiting 7 Days
+ * Allows setting a workspace's trial_ends_at to Day 5, Day 7, or Expired
+ */
+export async function simulateTrialStateAction(params: {
+  state: 'day5' | 'day7' | 'expired' | 'reset';
+  businessId?: string;
+}) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { businessId } = await resolveAuthenticatedBusinessUser(supabase, params.businessId);
+    const adminSupabase = createAdminClient();
+
+    const now = new Date();
+    const nowMs = now.getTime();
+    let trialEndsAt: string;
+    let trialStart: string;
+    let status: 'trialing' | 'expired' = 'trialing';
+    let resetDay5Reminder = false;
+    let resetDay7Reminder = false;
+
+    switch (params.state) {
+      case 'day5': // 2 days remaining (36h from now)
+        trialEndsAt = new Date(nowMs + 36 * 3600 * 1000).toISOString();
+        trialStart = new Date(nowMs - 5 * 24 * 3600 * 1000).toISOString();
+        resetDay5Reminder = true;
+        break;
+      case 'day7': // Ending today (8h from now)
+        trialEndsAt = new Date(nowMs + 8 * 3600 * 1000).toISOString();
+        trialStart = new Date(nowMs - 6.7 * 24 * 3600 * 1000).toISOString();
+        resetDay7Reminder = true;
+        break;
+      case 'expired': // Concluded (2h in past)
+        trialEndsAt = new Date(nowMs - 2 * 3600 * 1000).toISOString();
+        trialStart = new Date(nowMs - 7.1 * 24 * 3600 * 1000).toISOString();
+        status = 'trialing'; // Let lazy evaluation / cron transition it
+        break;
+      case 'reset': // Fresh 7 days
+      default:
+        trialEndsAt = new Date(nowMs + 7 * 24 * 3600 * 1000).toISOString();
+        trialStart = now.toISOString();
+        resetDay5Reminder = true;
+        resetDay7Reminder = true;
+        break;
+    }
+
+    const updates: Record<string, any> = {
+      trial_start: trialStart,
+      trial_ends_at: trialEndsAt,
+      current_period_end: trialEndsAt,
+      status,
+      updated_at: now.toISOString(),
+    };
+
+    if (resetDay5Reminder) {
+      updates.trial_day5_reminder_sent_at = null;
+    }
+    if (resetDay7Reminder) {
+      updates.trial_day7_reminder_sent_at = null;
+    }
+
+    const { error } = await adminSupabase
+      .from('subscriptions')
+      .update(updates as any)
+      .eq('business_id', businessId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/dashboard');
+    revalidatePath('/pricing');
+    revalidatePath('/billing');
+    revalidatePath('/trial-expired');
+
+    return {
+      success: true,
+      state: params.state,
+      trialEndsAt,
+      status,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Failed to simulate trial state',
+    };
+  }
+}
+

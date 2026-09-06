@@ -5,6 +5,7 @@ import { AppProvider } from '@/context/AppContext';
 import { ToastContainer } from '@/components/ui/Toast';
 import { BRAND } from '@/config/brand';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
+import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 
 export const viewport: Viewport = {
   themeColor: '#070B14',
@@ -61,6 +62,7 @@ export const metadata: Metadata = {
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
+  manifest: '/manifest.json',
   robots: {
     index: true,
     follow: true,
@@ -113,6 +115,7 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <GoogleAnalytics />
+        <ServiceWorkerRegister />
         <AppProvider>
           {children}
           <ToastContainer />

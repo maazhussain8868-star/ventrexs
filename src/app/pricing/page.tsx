@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -13,12 +13,14 @@ import {
   CheckCircle2, 
   Sparkles, 
   ShieldCheck, 
+  ShieldAlert,
   ArrowRight, 
   HelpCircle,
   Building2,
   Globe,
   CreditCard,
-  Clock
+  Clock,
+  Lock
 } from 'lucide-react';
 
 // Single source of truth derived from PLANS_CONFIG
@@ -70,7 +72,14 @@ function detectUserPaymentRegion(): { gateway: 'razorpay' | 'stripe'; currency: 
 
 export default function PricingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = searchParams.get('reason');
   const { subscription, showToast, profile, user, refreshSubscription } = useApp();
+
+  const trialEndStr = subscription?.trialEndsAt || subscription?.currentPeriodEnd;
+  const isTrialPast = subscription?.status === 'trialing' && Boolean(trialEndStr && new Date(trialEndStr).getTime() <= Date.now());
+  const isExpiredTrial = subscription?.status === 'expired' || isTrialPast || reason === 'trial_expired';
+
   const [planCategory, setPlanCategory] = useState<'business' | 'agency'>('business');
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly');
   const [gateway, setGateway] = useState<'razorpay' | 'stripe'>(() => detectUserPaymentRegion().gateway);
@@ -291,8 +300,31 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* 7-Day Free Trial Banner (No Credit Card Required) */}
-        {subscription?.status !== 'active' && subscription?.status !== 'trialing' && (
+        {/* State A: Expired Trial Notice Banner */}
+        {isExpiredTrial && (
+          <div className="rounded-2xl p-6 bg-gradient-to-r from-red-600/15 via-amber-600/10 to-red-600/10 border-2 border-red-500/40 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md">
+            <div className="space-y-1 text-center md:text-left">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600/20 text-red-500 text-[11px] font-black uppercase tracking-wider mb-1">
+                <Lock className="w-3.5 h-3.5" />
+                Trial Concluded
+              </div>
+              <h3 className="text-lg font-extrabold text-on-surface">
+                Your 7-day free trial has ended
+              </h3>
+              <p className="text-xs text-on-surface-variant max-w-xl">
+                Select a plan below to immediately restore access to your AI Receptionist phone line, customer leads, estimates, and automated CRM workflows. All workspace data is safely preserved.
+              </p>
+            </div>
+            <div className="shrink-0 text-center">
+              <span className="text-xs font-bold text-on-surface-variant">
+                Select your plan below ↓
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* State B: 7-Day Free Trial Banner for eligible new signups */}
+        {!isExpiredTrial && subscription?.status !== 'active' && subscription?.status !== 'trialing' && !subscription?.trialStart && (
           <div className="rounded-2xl p-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-teal-500/10 border border-primary/30 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
             <div className="space-y-1 text-center md:text-left">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/20 text-primary text-[11px] font-black uppercase tracking-wider mb-1">

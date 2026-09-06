@@ -28,6 +28,7 @@ import { IndustryType } from '@/types';
 import { PLANS_CONFIG, PlanKey } from '@/lib/billing/types';
 import { Button } from '@/components/ui/Button';
 import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
+import { ExpiredTrialBlocker } from '@/components/billing/ExpiredTrialBlocker';
 
 const INDUSTRY_OPTIONS: { id: IndustryType; label: string; icon: string }[] = [
   { id: 'HVAC', label: 'HVAC & Heating', icon: 'hvac' },
@@ -61,10 +62,22 @@ const DEFAULT_SERVICES_BY_INDUSTRY: Record<string, string[]> = {
 export default function BusinessOnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, profile, businessProfile, completeOnboarding, showToast, refreshSubscription } = useApp();
+  const { user, profile, businessProfile, completeOnboarding, showToast, refreshSubscription, subscription } = useApp();
+
+  const isPaywallEnabled = process.env.NEXT_PUBLIC_ENABLE_PAYWALL !== 'false';
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  const trialEndStr = subscription?.trialEndsAt || subscription?.currentPeriodEnd;
+  const trialEndMs = trialEndStr ? new Date(trialEndStr).getTime() : 0;
+  const isTrialExpired =
+    subscription?.status === 'expired' ||
+    (subscription?.status === 'trialing' && trialEndMs > 0 && trialEndMs <= Date.now());
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (isTrialExpired && isPaywallEnabled && !isDemoMode) {
+    return <ExpiredTrialBlocker />;
+  }
 
   // STEP 1 — About You
   const [ownerName, setOwnerName] = useState(profile?.name || (user?.user_metadata?.name as string) || '');

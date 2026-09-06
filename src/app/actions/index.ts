@@ -616,6 +616,11 @@ export async function startFreeTrialAction(params: any) {
   return fn(params);
 }
 
+export async function simulateTrialStateAction(params: any) {
+  const { simulateTrialStateAction: fn } = await import('./billing');
+  return fn(params);
+}
+
 export async function getSubscriptionEntitlementsAction(businessId: string) {
   return getBusinessSubscriptionAction(businessId);
 }
