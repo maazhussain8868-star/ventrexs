@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.ventrexs.app",
+    "sha256_cert_fingerprints": ["76:19:C2:E4:25:A1:CA:E4:6A:D9:8B:4C:4D:59:43:80:90:9B:69:6D:C1:53:6F:3A:69:26:57:18:94:55:7F:30"]
+  }
+}]

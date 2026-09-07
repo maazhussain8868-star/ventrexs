@@ -15,6 +15,15 @@ export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
   const hostContext = resolveHostContext(hostname);
   const { pathname } = req.nextUrl;
+  
+  // Explicitly bypass middleware for domain verification, static files, and Next.js internals
+  if (
+    pathname.startsWith('/.well-known') ||
+    pathname.startsWith('/_next') ||
+    pathname.includes('.')
+  ) {
+    return res;
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

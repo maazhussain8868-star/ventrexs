@@ -522,7 +522,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const tenantId = currentBusiness.id;
-    const [customerRows, invoiceRows, leadRows, appointmentRows, jobRows, estimateRows, subscriptionRow] = await Promise.all([
+    const [customerRows, invoiceRows, leadRows, appointmentRows, jobRows, estimateRows, subscriptionRow, profileRow] = await Promise.all([
       services.customers.getCustomers(tenantId),
       services.invoices.getInvoices(tenantId),
       services.leads.getLeads(tenantId),
@@ -535,13 +535,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .eq('business_id', tenantId)
         .maybeSingle()
         .then(r => r.data),
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authenticatedUser.id)
+        .maybeSingle()
+        .then(r => r.data),
     ]);
 
     setBusinessId(tenantId);
     setProfile(prev => ({
       ...prev,
-      name: (authenticatedUser.user_metadata?.name as string) || prev.name,
-      email: authenticatedUser.email || prev.email,
+      name: profileRow?.name || (authenticatedUser.user_metadata?.name as string) || prev.name,
+      email: profileRow?.email || authenticatedUser.email || prev.email,
+      avatarUrl: profileRow?.avatar_url || (authenticatedUser.user_metadata?.avatar_url as string) || prev.avatarUrl,
+      role: (profileRow?.role as UserRole) || prev.role,
+      phone: profileRow?.phone || prev.phone,
+      address: profileRow?.address || prev.address,
       businessName: currentBusiness.name,
     }));
     setSettings(prev => ({ ...prev, businessName: currentBusiness.name, businessEmail: currentBusiness.email || '' }));
@@ -2791,6 +2801,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ==========================================
   const updateProfile = (updates: Partial<UserProfile>) => {
     setProfile(prev => ({ ...prev, ...updates }));
+    if (user && !isDemoMode) {
+      try {
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.role !== undefined) dbUpdates.role = updates.role;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.address !== undefined) dbUpdates.address = updates.address;
+        if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+
+        if (Object.keys(dbUpdates).length > 0) {
+          dbUpdates.updated_at = new Date().toISOString();
+          supabase.from('profiles').update(dbUpdates).eq('id', user.id).then(({ error }) => {
+            if (error) console.warn('Database profile update notice:', error);
+          });
+        }
+      } catch (err) {
+        console.warn('Profile sync notice:', err);
+      }
+    }
     showToast({ title: 'Profile Updated', type: 'success' });
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { createClient } from '@/lib/supabase/client';
 import { 
   User, 
   Store, 
@@ -26,9 +27,52 @@ import {
   Phone,
   Globe,
   Mail,
-  Building2
+  Building2,
+  Camera,
+  Upload,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { IndustryType } from '@/types';
+
+// Center-crop an image file to a 512x512 square canvas
+const cropToSquare = (file: File): Promise<{ blob: Blob; dataUrl: string }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const size = Math.min(img.width, img.height);
+        const startX = (img.width - size) / 2;
+        const startY = (img.height - size) / 2;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas context unavailable'));
+          return;
+        }
+
+        ctx.drawImage(img, startX, startY, size, size, 0, 0, 512, 512);
+
+        const dataUrl = canvas.toDataURL('image/webp', 0.92);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve({ blob, dataUrl });
+          } else {
+            reject(new Error('Failed to generate cropped image'));
+          }
+        }, 'image/webp', 0.92);
+      };
+      img.onerror = () => reject(new Error('Failed to load image for cropping'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -38,12 +82,146 @@ export default function ProfilePage() {
     updateProfile, 
     updateBusinessProfile,
     showToast,
-    signOut
+    signOut,
+    session,
+    isDemoMode
   } = useApp();
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreviewSrc, setAvatarPreviewSrc] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. Validate file size (max 5MB)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      showToast({
+        title: 'File Too Large',
+        description: 'Please select an image smaller than 5MB.',
+        type: 'error',
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // 2. Validate file format
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type.toLowerCase())) {
+      showToast({
+        title: 'Invalid File Format',
+        description: 'Please select a JPG, PNG, or WebP image.',
+        type: 'error',
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      // 3. Center crop to 512x512 square
+      const { blob, dataUrl } = await cropToSquare(file);
+      const croppedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.webp', {
+        type: 'image/webp',
+      });
+
+      setAvatarPreviewSrc(dataUrl);
+      setAvatarFile(croppedFile);
+      setIsAvatarModalOpen(true);
+    } catch (err) {
+      console.error('Image crop notice:', err);
+      // Fallback to uncropped file preview
+      const preview = URL.createObjectURL(file);
+      setAvatarPreviewSrc(preview);
+      setAvatarFile(file);
+      setIsAvatarModalOpen(true);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleUploadAvatar = async () => {
+    if (!avatarFile || !avatarPreviewSrc) return;
+
+    setIsUploadingAvatar(true);
+
+    try {
+      if (isDemoMode) {
+        // In demo mode, apply preview immediately
+        updateProfile({ avatarUrl: avatarPreviewSrc });
+        setIsAvatarModalOpen(false);
+        setAvatarPreviewSrc(null);
+        setAvatarFile(null);
+        showToast({
+          title: 'Profile Picture Updated',
+          description: 'Avatar updated successfully (Demo Workspace).',
+          type: 'success',
+        });
+        return;
+      }
+
+      // Fetch current session for Bearer fallback
+      let accessToken = session?.access_token;
+      try {
+        const supabase = createClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.access_token) {
+          accessToken = sessionData.session.access_token;
+        }
+      } catch {
+        // Fallback
+      }
+
+      const formData = new FormData();
+      formData.append('file', avatarFile);
+
+      const headers: Record<string, string> = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      const res = await fetch('/api/user/avatar', {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: formData,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.avatarUrl) {
+        throw new Error(data.error || `Upload failed with HTTP ${res.status}`);
+      }
+
+      // Update global context state - immediately cascades across Navbar, AppShell, Profile
+      updateProfile({ avatarUrl: data.avatarUrl });
+      setIsAvatarModalOpen(false);
+      setAvatarPreviewSrc(null);
+      setAvatarFile(null);
+
+      showToast({
+        title: 'Profile Picture Updated',
+        description: 'Your new avatar is now live across your workspace.',
+        type: 'success',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to upload profile picture.';
+      showToast({
+        title: 'Avatar Upload Failed',
+        description: msg,
+        type: 'error',
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   // Form edit states
   const [name, setName] = useState(profile.name);
@@ -97,20 +275,71 @@ export default function ProfilePage() {
   return (
     <AppShell title="Profile & Account">
       <div className="max-w-xl mx-auto flex flex-col gap-6">
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/webp"
+          className="hidden"
+          onChange={handleAvatarFileSelect}
+          disabled={isUploadingAvatar}
+        />
+
         {/* Profile Header */}
         <section className="flex flex-col items-center text-center gap-3 pt-2 pb-6 border-b border-outline-variant">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-surface-container-highest shadow-sm relative group">
-            <img 
-              src={profile.avatarUrl} 
-              alt={profile.name} 
-              className="w-full h-full object-cover" 
-            />
-            <button
-              onClick={() => setIsEditProfileOpen(true)}
-              className="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full p-1.5 border-2 border-surface flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-              title="Edit Profile"
+          <div className="relative group">
+            <div 
+              onClick={() => !isUploadingAvatar && fileInputRef.current?.click()}
+              className="w-24 h-24 rounded-full overflow-hidden border-4 border-surface-container-highest shadow-sm relative cursor-pointer bg-surface-container-high transition-transform duration-200 group-hover:scale-105"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Change profile picture"
+              title="Click to change profile picture"
             >
-              <Edit className="w-3.5 h-3.5" />
+              <img 
+                src={profile.avatarUrl} 
+                alt={profile.name} 
+                className="w-full h-full object-cover" 
+              />
+
+              {/* Hover overlay with camera icon */}
+              <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white">
+                <Camera className="w-5 h-5 mb-0.5 drop-shadow" />
+                <span className="text-[10px] font-semibold tracking-wide uppercase drop-shadow">Change</span>
+              </div>
+
+              {/* Loading overlay */}
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center z-10 text-white">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary mb-1" />
+                  <span className="text-[10px] font-bold tracking-wider uppercase text-primary">Uploading</span>
+                </div>
+              )}
+            </div>
+
+            {/* Edit / Camera Badge Icon */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              disabled={isUploadingAvatar}
+              className="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full p-2 border-2 border-surface flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-all z-20 cursor-pointer"
+              title="Upload new profile picture"
+              aria-label="Upload new profile picture"
+            >
+              {isUploadingAvatar ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Camera className="w-3.5 h-3.5" />
+              )}
             </button>
           </div>
 
@@ -298,6 +527,31 @@ export default function ProfilePage() {
         }
       >
         <form onSubmit={handleProfileSave} className="space-y-4">
+          {/* Avatar Change Row */}
+          <div className="flex items-center gap-3.5 p-3 rounded-xl bg-surface-container-low border border-outline-variant">
+            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-surface-container-highest flex-shrink-0 relative bg-surface-container-high">
+              <img 
+                src={profile.avatarUrl} 
+                alt={profile.name} 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-on-surface">Profile Picture</p>
+              <p className="text-[11px] text-on-surface-variant truncate">JPG, PNG or WebP (max 5MB)</p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              leftIcon={<Camera className="w-3.5 h-3.5" />}
+            >
+              Change
+            </Button>
+          </div>
+
           <Input
             label="Full Name"
             value={name}
@@ -398,6 +652,83 @@ export default function ProfilePage() {
               Update Password
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Avatar Preview & Crop Modal */}
+      <Modal
+        isOpen={isAvatarModalOpen}
+        onClose={() => {
+          if (!isUploadingAvatar) {
+            setIsAvatarModalOpen(false);
+            setAvatarPreviewSrc(null);
+            setAvatarFile(null);
+          }
+        }}
+        title="Update Profile Picture"
+        footer={
+          <>
+            <Button 
+              variant="secondary" 
+              size="md" 
+              onClick={() => {
+                setIsAvatarModalOpen(false);
+                setAvatarPreviewSrc(null);
+                setAvatarFile(null);
+              }}
+              disabled={isUploadingAvatar}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              size="md" 
+              onClick={handleUploadAvatar}
+              disabled={isUploadingAvatar}
+              leftIcon={isUploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            >
+              {isUploadingAvatar ? 'Saving Avatar...' : 'Save Avatar'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center gap-4 py-2">
+          <p className="text-xs text-on-surface-variant text-center max-w-sm">
+            Here is a preview of your new profile photo. It has been automatically center-cropped to a square and optimized for fast loading.
+          </p>
+
+          <div className="relative">
+            <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-primary/30 shadow-xl relative bg-surface-container-high mx-auto ring-4 ring-surface">
+              {avatarPreviewSrc && (
+                <img 
+                  src={avatarPreviewSrc} 
+                  alt="Avatar preview" 
+                  className="w-full h-full object-cover" 
+                />
+              )}
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+                  <span className="text-xs font-semibold text-primary">Uploading...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-on-surface-variant bg-surface-container-high px-3 py-1.5 rounded-lg border border-outline-variant">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+            <span>High-resolution WebP • 512×512 square format</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingAvatar}
+            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Choose a different image
+          </button>
         </div>
       </Modal>
     </AppShell>

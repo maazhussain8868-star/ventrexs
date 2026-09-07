@@ -81,11 +81,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ----------------------------------------------------------------------------------
-  // GUARD 3: API Endpoints & Next.js Dynamic Data Routes MUST PASS THROUGH
-  // Why: Backend API routes (/api/*) and Next.js SSR server state (/_next/data/*)
-  // must always reach the live Next.js server with fresh cookies and session headers.
+  // GUARD 3: API Endpoints, Next.js Dynamic Routes, & .well-known Verification MUST PASS THROUGH
+  // Why: Backend API routes (/api/*), Next.js SSR server state (/_next/data/*),
+  // and domain verification files (/.well-known/*) must always reach the live server directly.
   // ----------------------------------------------------------------------------------
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/data/')) {
+  if (
+    url.pathname.startsWith('/api/') || 
+    url.pathname.startsWith('/_next/data/') ||
+    url.pathname.startsWith('/.well-known/')
+  ) {
     return;
   }
 
