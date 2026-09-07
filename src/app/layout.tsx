@@ -5,6 +5,7 @@ import { AppProvider } from '@/context/AppContext';
 import { ToastContainer } from '@/components/ui/Toast';
 import { BRAND } from '@/config/brand';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
+import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 
 export const viewport: Viewport = {
   themeColor: '#070B14',
@@ -106,32 +107,9 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations().then(function(regs) {
-                      for (var i = 0; i < regs.length; i++) {
-                        regs[i].unregister();
-                      }
-                    });
-                  }
-                  if (typeof window !== 'undefined' && 'caches' in window) {
-                    caches.keys().then(function(keys) {
-                      for (var j = 0; j < keys.length; j++) {
-                        caches.delete(keys[j]);
-                      }
-                    });
-                  }
-                } catch (e) {}
-              })();
-            `,
-          }}
-        />
       </head>
       <body className="bg-[#070B14] text-slate-100 antialiased min-h-screen">
+        <ServiceWorkerRegister />
         <Script
           id="razorpay-checkout-sdk"
           src="https://checkout.razorpay.com/v1/checkout.js"
