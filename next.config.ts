@@ -33,11 +33,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: `
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com https://js.stripe.com https://www.googletagmanager.com https://*.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net;
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com https://js.stripe.com https://www.googletagmanager.com https://*.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://connect.facebook.net;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      img-src 'self' data: blob: https: https://*.google-analytics.com https://*.googletagmanager.com https://*.google.com https://*.googleadservices.com https://*.doubleclick.net;
+      img-src 'self' data: blob: https: https://*.google-analytics.com https://*.googletagmanager.com https://*.google.com https://*.googleadservices.com https://*.doubleclick.net https://www.facebook.com;
       font-src 'self' https://fonts.gstatic.com data:;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://*.skydo.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://*.skydo.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.googleadservices.com https://*.google.com https://*.doubleclick.net https://www.facebook.com https://connect.facebook.net;
       worker-src 'self' blob:;
       frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://js.stripe.com;
       frame-ancestors 'none';

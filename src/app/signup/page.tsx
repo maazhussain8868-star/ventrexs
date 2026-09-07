@@ -120,6 +120,14 @@ export default function SignupPage() {
           plan: selectedPlan || 'Professional',
         });
 
+        // Meta Pixel: CompleteRegistration
+        if (typeof window !== 'undefined' && typeof (window as any).fbq === 'function') {
+          (window as any).fbq('track', 'CompleteRegistration', {
+            content_name: selectedPlan || 'Professional',
+            status: 'success',
+          });
+        }
+
         // Record Attribution asynchronously
         const { lastTouch, firstTouch } = getStoredAttribution();
         const attributionToSave = lastTouch || firstTouch;

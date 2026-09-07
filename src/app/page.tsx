@@ -527,7 +527,7 @@ export default function LandingPage() {
                   </div>
                   {billingCycle === 'annual' && (
                     <p className="text-[11px] text-emerald-400 font-mono mt-1">
-                      Billed annually ($295.80/yr) • Save 15%
+                      Billed annually ($397.80/yr) • Save 15%
                     </p>
                   )}
                 </div>
@@ -596,7 +596,7 @@ export default function LandingPage() {
                   </div>
                   {billingCycle === 'annual' && (
                     <p className="text-[11px] text-emerald-400 font-mono mt-1">
-                      Billed annually ($805.80/yr) • Save 15%
+                      Billed annually ($1,009.80/yr) • Save 15%
                     </p>
                   )}
                 </div>
@@ -665,7 +665,7 @@ export default function LandingPage() {
                   </div>
                   {billingCycle === 'annual' && (
                     <p className="text-[11px] text-emerald-400 font-mono mt-1">
-                      Billed annually ($2,539.80/yr) • Save 15%
+                      Billed annually ($3,049.80/yr) • Save 15%
                     </p>
                   )}
                 </div>

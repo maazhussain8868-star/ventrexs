@@ -620,16 +620,16 @@ export default function PricingPage() {
                     <th className="py-4 px-5 font-bold text-on-surface text-sm">Feature / Quota</th>
                     <th className="py-4 px-5 font-bold text-on-surface text-sm w-1/4">
                       Starter
-                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$29/mo</div>
+                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$39/mo</div>
                     </th>
                     <th className="py-4 px-5 font-bold text-primary text-sm w-1/4 bg-primary/5">
                       Professional
                       <span className="ml-1.5 px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-extrabold uppercase">Popular</span>
-                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$79/mo</div>
+                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$99/mo</div>
                     </th>
                     <th className="py-4 px-5 font-bold text-on-surface text-sm w-1/4">
                       Enterprise
-                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$249/mo</div>
+                      <div className="text-xs font-normal text-on-surface-variant mt-0.5">$299/mo</div>
                     </th>
                   </tr>
                 </thead>
@@ -640,15 +640,15 @@ export default function PricingPage() {
                   </tr>
                   <tr>
                     <td className="py-3 px-5 font-medium text-on-surface">Monthly Price</td>
-                    <td className="py-3 px-5 font-mono font-semibold">$29/mo</td>
-                    <td className="py-3 px-5 font-mono font-semibold bg-primary/5 text-primary">$79/mo</td>
-                    <td className="py-3 px-5 font-mono font-semibold">$249/mo</td>
+                    <td className="py-3 px-5 font-mono font-semibold">$39/mo</td>
+                    <td className="py-3 px-5 font-mono font-semibold bg-primary/5 text-primary">$99/mo</td>
+                    <td className="py-3 px-5 font-mono font-semibold">$299/mo</td>
                   </tr>
                   <tr>
                     <td className="py-3 px-5 font-medium text-on-surface">Annual Price (15% Discount)</td>
-                    <td className="py-3 px-5 font-mono">$24.65/mo ($295.80/yr)</td>
-                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-emerald-600 dark:text-emerald-400">$67.15/mo ($805.80/yr)</td>
-                    <td className="py-3 px-5 font-mono">$211.65/mo ($2,539.80/yr)</td>
+                    <td className="py-3 px-5 font-mono">$33.15/mo ($397.80/yr)</td>
+                    <td className="py-3 px-5 font-mono bg-primary/5 font-semibold text-emerald-600 dark:text-emerald-400">$84.15/mo ($1,009.80/yr)</td>
+                    <td className="py-3 px-5 font-mono">$254.15/mo ($3,049.80/yr)</td>
                   </tr>
 
                   {/* Category: AI Receptionist & Telephony */}

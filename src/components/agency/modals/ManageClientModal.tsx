@@ -149,9 +149,9 @@ export const ManageClientModal: React.FC<ManageClientModalProps> = ({
               onChange={(e) => setPlan(e.target.value as any)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs focus:outline-none focus:border-violet-500 font-medium"
             >
-              <option value="Starter">Starter ($29/mo)</option>
-              <option value="Professional">Professional ($79/mo)</option>
-              <option value="Enterprise">Enterprise ($249/mo)</option>
+              <option value="Starter">Starter ($39/mo)</option>
+              <option value="Professional">Professional ($99/mo)</option>
+              <option value="Enterprise">Enterprise ($299/mo)</option>
             </select>
           </div>
 

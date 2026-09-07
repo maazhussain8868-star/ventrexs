@@ -64,18 +64,23 @@ export class RazorpayBillingProviderAdapter implements PaymentProvider {
       throw new Error(`Invalid plan requested: ${params.plan}`);
     }
 
-    const priceUSD = isAnnual ? planConfig.priceAnnual : planConfig.priceMonthly;
-    // Razorpay accepts amount in smallest currency unit (paise for INR, cents for USD)
-    // Using USD amounts * 100 cents
-    const amountInCents = Math.round(priceUSD * 100);
+    // Razorpay accepts amounts in paise (1 INR = 100 paise)
+    let amountInPaise: number;
+    if ('pricing' in planConfig && planConfig.pricing?.INR) {
+      const priceINR = isAnnual ? planConfig.pricing.INR.annualTotal : planConfig.pricing.INR.monthly;
+      amountInPaise = Math.round(priceINR * 100);
+    } else {
+      const priceUSD = isAnnual ? planConfig.priceAnnual : planConfig.priceMonthly;
+      amountInPaise = Math.round(priceUSD * 83 * 100);
+    }
 
     // Build Razorpay order via REST API
     const credentials = Buffer.from(`${this.keyId}:${this.keySecret}`).toString('base64');
     const receiptId = `vnx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     const orderPayload = {
-      amount: amountInCents,
-      currency: 'USD',
+      amount: amountInPaise,
+      currency: 'INR',
       receipt: receiptId,
       notes: {
         business_id: params.businessId || '',
@@ -93,8 +98,8 @@ export class RazorpayBillingProviderAdapter implements PaymentProvider {
     if (this.keyId === 'rzp_test_paypilot_local' || this.keyId.startsWith('rzp_test_mock')) {
       order = {
         id: `order_rzp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-        amount: amountInCents,
-        currency: 'USD',
+        amount: amountInPaise,
+        currency: 'INR',
         status: 'created',
       };
     } else {
@@ -122,8 +127,8 @@ export class RazorpayBillingProviderAdapter implements PaymentProvider {
       `${params.successUrl.split('?')[0].replace('/billing/success', '/billing/checkout')}` +
       `?order_id=${order.id}` +
       `&key_id=${encodeURIComponent(this.keyId)}` +
-      `&amount=${amountInCents}` +
-      `&currency=USD` +
+      `&amount=${amountInPaise}` +
+      `&currency=INR` +
       `&plan=${params.plan}` +
       `&interval=${params.interval}` +
       `&email=${encodeURIComponent(params.customerEmail)}` +

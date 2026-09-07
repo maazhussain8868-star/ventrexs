@@ -138,15 +138,15 @@ export const AgencyRevenue: React.FC<AgencyRevenueProps> = ({ clients }) => {
           <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">Plan Distribution</h3>
           <div className="space-y-2.5 sm:space-y-3 text-xs">
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2">
-              <span className="font-bold text-slate-900 truncate">Starter Tier ($29/mo)</span>
+              <span className="font-bold text-slate-900 truncate">Starter Tier ($39/mo)</span>
               <span className="font-mono font-bold text-slate-900 shrink-0">{starterCount} clients</span>
             </div>
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2">
-              <span className="font-bold text-slate-900 truncate">Professional Tier ($79/mo)</span>
+              <span className="font-bold text-slate-900 truncate">Professional Tier ($99/mo)</span>
               <span className="font-mono font-bold text-slate-900 shrink-0">{proCount} clients</span>
             </div>
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2">
-              <span className="font-bold text-slate-900 truncate">Enterprise Tier ($249/mo)</span>
+              <span className="font-bold text-slate-900 truncate">Enterprise Tier ($299/mo)</span>
               <span className="font-mono font-bold text-slate-900 shrink-0">{entCount} clients</span>
             </div>
           </div>

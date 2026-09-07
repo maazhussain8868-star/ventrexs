@@ -8,9 +8,9 @@ import Link from 'next/link';
 
 export default function AdminSubscriptionsPage() {
   const plans = [
-    { name: 'Starter', price: '$29/mo', count: 184, mrr: 5336, color: 'text-blue-600', provider: 'Razorpay / Google Play' },
-    { name: 'Professional', price: '$79/mo', count: 168, mrr: 13272, color: 'text-indigo-600', provider: 'Stripe / Google Play / Razorpay' },
-    { name: 'Enterprise', price: '$249/mo', count: 32, mrr: 7968, color: 'text-purple-600', provider: 'Stripe / Wire / Razorpay' },
+    { name: 'Starter', price: '$39/mo', count: 184, mrr: 7176, color: 'text-blue-600', provider: 'Razorpay / Google Play' },
+    { name: 'Professional', price: '$99/mo', count: 168, mrr: 16632, color: 'text-indigo-600', provider: 'Stripe / Google Play / Razorpay' },
+    { name: 'Enterprise', price: '$299/mo', count: 32, mrr: 9568, color: 'text-purple-600', provider: 'Stripe / Wire / Razorpay' },
     { name: 'Agency Reseller', price: '$699/mo', count: 28, mrr: 19572, color: 'text-amber-600', provider: 'Stripe / Razorpay' },
   ];
 

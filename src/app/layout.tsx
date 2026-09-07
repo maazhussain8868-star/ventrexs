@@ -5,6 +5,7 @@ import { AppProvider } from '@/context/AppContext';
 import { ToastContainer } from '@/components/ui/Toast';
 import { BRAND } from '@/config/brand';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
+import { MetaPixel } from '@/components/analytics/MetaPixel';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 
 export const viewport: Viewport = {
@@ -78,8 +79,8 @@ const jsonLd = {
   offers: {
     '@type': 'AggregateOffer',
     priceCurrency: 'USD',
-    lowPrice: '29.00',
-    highPrice: '249.00',
+    lowPrice: '39.00',
+    highPrice: '299.00',
     offerCount: '3',
   },
   description: BRAND.description,
@@ -116,6 +117,7 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <GoogleAnalytics />
+        <MetaPixel />
         <AppProvider>
           {children}
           <ToastContainer />

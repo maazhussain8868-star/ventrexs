@@ -22,7 +22,8 @@ import {
   Bell, 
   Settings, 
   User, 
-  ArrowLeft 
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { ExpiredTrialBlocker } from '@/components/billing/ExpiredTrialBlocker';
@@ -183,11 +184,19 @@ export const AppShell: React.FC<AppShellProps> = ({
                 You&apos;re viewing the Ventrexs demo. Data shown here is fictional.
               </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Link
+                href="/signup"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-xs font-bold shadow-xs shadow-blue-500/25 active:scale-95 transition-all"
+              >
+                <span className="hidden sm:inline">Create Your Free Account</span>
+                <span className="sm:hidden">Create Account</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
               <Link
                 href="/"
                 onClick={() => exitDemoMode()}
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                className="text-xs font-semibold text-on-surface-variant hover:text-primary hover:underline flex items-center gap-1 px-1.5 py-1"
               >
                 Exit Demo
               </Link>

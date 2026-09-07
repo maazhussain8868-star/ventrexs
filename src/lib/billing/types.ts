@@ -105,21 +105,21 @@ export const PLANS_CONFIG: Record<PlanKey, PlanConfig> = {
     key: 'Starter',
     name: 'Starter',
     tagline: 'Essential dispatch, invoices, and AI Receptionist for solo trades.',
-    priceMonthly: 29,
-    priceAnnual: 295.80, // $24.65/mo * 12 (15% discount)
-    annualMonthlyEquivalent: 24.65,
+    priceMonthly: 39,
+    priceAnnual: 397.80, // $33.15/mo * 12 (15% discount)
+    annualMonthlyEquivalent: 33.15,
     annualDiscountPercent: 15,
     overageRatePerMinuteUsd: 0.15,
     pricing: {
       USD: {
-        monthly: 29,
-        annualMonthlyEquivalent: 24.65,
-        annualTotal: 295.80,
+        monthly: 39,
+        annualMonthlyEquivalent: 33.15,
+        annualTotal: 397.80,
       },
       INR: {
-        monthly: 2499,
-        annualMonthlyEquivalent: 2124.15,
-        annualTotal: 25489,
+        monthly: 3399,
+        annualMonthlyEquivalent: 2889.15,
+        annualTotal: 34669,
       },
     },
     features: [
@@ -185,22 +185,22 @@ export const PLANS_CONFIG: Record<PlanKey, PlanConfig> = {
     key: 'Professional',
     name: 'Professional',
     tagline: 'Autonomous AI receptionist, multi-crew dispatch, and field reputation for growing contractors.',
-    priceMonthly: 79,
-    priceAnnual: 805.80, // $67.15/mo * 12 (15% discount)
-    annualMonthlyEquivalent: 67.15,
+    priceMonthly: 99,
+    priceAnnual: 1009.80, // $84.15/mo * 12 (15% discount)
+    annualMonthlyEquivalent: 84.15,
     annualDiscountPercent: 15,
     overageRatePerMinuteUsd: 0.12,
     popular: true,
     pricing: {
       USD: {
-        monthly: 79,
-        annualMonthlyEquivalent: 67.15,
-        annualTotal: 805.80,
+        monthly: 99,
+        annualMonthlyEquivalent: 84.15,
+        annualTotal: 1009.80,
       },
       INR: {
-        monthly: 6499,
-        annualMonthlyEquivalent: 5524.15,
-        annualTotal: 66289,
+        monthly: 8199,
+        annualMonthlyEquivalent: 6969.15,
+        annualTotal: 83629,
       },
     },
     features: [
@@ -267,21 +267,21 @@ export const PLANS_CONFIG: Record<PlanKey, PlanConfig> = {
     key: 'Enterprise',
     name: 'Enterprise',
     tagline: 'High-volume commercial contractor fleets, white-label operations, and custom integrations.',
-    priceMonthly: 249,
-    priceAnnual: 2539.80, // $211.65/mo * 12 (15% discount)
-    annualMonthlyEquivalent: 211.65,
+    priceMonthly: 299,
+    priceAnnual: 3049.80, // $254.15/mo * 12 (15% discount)
+    annualMonthlyEquivalent: 254.15,
     annualDiscountPercent: 15,
     overageRatePerMinuteUsd: 0.10,
     pricing: {
       USD: {
-        monthly: 249,
-        annualMonthlyEquivalent: 211.65,
-        annualTotal: 2539.80,
+        monthly: 299,
+        annualMonthlyEquivalent: 254.15,
+        annualTotal: 3049.80,
       },
       INR: {
-        monthly: 19999,
-        annualMonthlyEquivalent: 16999.15,
-        annualTotal: 203989,
+        monthly: 23999,
+        annualMonthlyEquivalent: 20399.15,
+        annualTotal: 244789,
       },
     },
     features: [
