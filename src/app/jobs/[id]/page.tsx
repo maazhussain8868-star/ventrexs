@@ -50,6 +50,7 @@ export default function JobDetailPage() {
     communications,
     reviewRequests,
     customerFeedback,
+    technicians,
     createReviewRequest,
     sendReviewRequest,
     updateJobStatus,
@@ -65,7 +66,7 @@ export default function JobDetailPage() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewChannel, setReviewChannel] = useState<'sms' | 'email' | 'whatsapp'>('sms');
 
-  const [selectedTech, setSelectedTech] = useState('Leo Martinez');
+  const [selectedTechId, setSelectedTechId] = useState('');
   const [targetStatus, setTargetStatus] = useState<JobStatus>('IN_PROGRESS');
   const [statusNote, setStatusNote] = useState('');
   const [newNoteTitle, setNewNoteTitle] = useState('Field Inspection Note');
@@ -126,7 +127,9 @@ export default function JobDetailPage() {
   };
 
   const handleAssignTechnician = async () => {
-    await assignJobTechnician(job.id, selectedTech);
+    const tech = technicians.find(t => t.id === selectedTechId);
+    const techName = tech ? tech.name : (selectedTechId || 'Unassigned');
+    await assignJobTechnician(job.id, techName, tech?.id);
     setIsAssignModalOpen(false);
   };
 
@@ -698,15 +701,18 @@ export default function JobDetailPage() {
                 Select Technician
               </label>
               <select
-                value={selectedTech}
-                onChange={(e) => setSelectedTech(e.target.value)}
+                value={selectedTechId}
+                onChange={(e) => setSelectedTechId(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-surface-container rounded-lg border border-outline-variant focus:outline-none focus:border-primary text-on-surface"
               >
-                <option value="Leo Martinez">Leo Martinez (Master HVAC)</option>
-                <option value="Sam Ortiz">Sam Ortiz (Senior Tech)</option>
-                <option value="Sarah Jenkins">Sarah Jenkins (Estimator)</option>
-                <option value="Carlos Rodriguez">Carlos Rodriguez (Plumbing)</option>
-                <option value="Marcus Vance">Marcus Vance (Ops Lead)</option>
+                <option value="">Unassigned</option>
+                {technicians
+                  .filter(t => t.status !== 'deactivated')
+                  .map(tech => (
+                    <option key={tech.id} value={tech.id}>
+                      {tech.name} {tech.role ? `(${tech.role})` : ''}
+                    </option>
+                  ))}
               </select>
             </div>
 

@@ -380,23 +380,7 @@ export class PaymentService {
       );
     }
 
-    // Process via Provider Adapter
-    const provider = this.getProvider();
-    const processResult = await provider.processPayment({
-      businessId: 'public_anon',
-      invoiceId: publicView.invoiceId,
-      amount: payAmount,
-      currency: 'USD',
-      method: params.paymentMethod,
-      reference: params.reference || params.secureToken,
-      paymentToken: params.secureToken,
-    });
-
-    if (!processResult.success) {
-      throw new Error(processResult.failureReason || 'Payment authorization failed.');
-    }
-
-    // Fetch the businessId from the payment request record
+    // Fetch the businessId and customerId from payment request record
     const { data: reqRecord } = await this.client
       .from('payment_requests')
       .select('business_id, customer_id')
@@ -406,6 +390,34 @@ export class PaymentService {
     const businessId = reqRecord?.business_id;
     if (!businessId) {
       throw new Error('Business ID not found for payment request.');
+    }
+
+    // Fetch business record to retrieve connected Stripe account ID (0% platform cut)
+    const { data: businessRecord } = await this.client
+      .from('businesses')
+      .select('stripe_account_id, stripe_connected')
+      .eq('id', businessId)
+      .maybeSingle();
+
+    const connectedAccountId = businessRecord?.stripe_connected && businessRecord?.stripe_account_id
+      ? businessRecord.stripe_account_id
+      : undefined;
+
+    // Process via Provider Adapter with destination account routing
+    const provider = this.getProvider();
+    const processResult = await provider.processPayment({
+      businessId,
+      invoiceId: publicView.invoiceId,
+      amount: payAmount,
+      currency: 'USD',
+      method: params.paymentMethod,
+      reference: params.reference || params.secureToken,
+      paymentToken: params.secureToken,
+      connectedAccountId,
+    });
+
+    if (!processResult.success) {
+      throw new Error(processResult.failureReason || 'Payment authorization failed.');
     }
 
     // Record the authoritative payment

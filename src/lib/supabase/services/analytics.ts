@@ -496,8 +496,11 @@ export class AnalyticsService {
     });
   }
 
-  getConversionFunnel(): LeadFunnelStage[] {
-    return this.getDemoConversionFunnel();
+  getConversionFunnel(isDemo: boolean = false): LeadFunnelStage[] {
+    if (isDemo || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return this.getDemoConversionFunnel();
+    }
+    return [];
   }
 
   /**
@@ -554,8 +557,11 @@ export class AnalyticsService {
     ];
   }
 
-  getServicePerformance(): ServicePerformanceMetric[] {
-    return this.getDemoServicePerformance();
+  getServicePerformance(isDemo: boolean = false): ServicePerformanceMetric[] {
+    if (isDemo || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return this.getDemoServicePerformance();
+    }
+    return [];
   }
 
   /**
@@ -603,8 +609,11 @@ export class AnalyticsService {
     ];
   }
 
-  getTechnicianPerformance(): TechnicianPerformanceReport[] {
-    return this.getDemoTechnicianPerformance();
+  getTechnicianPerformance(isDemo: boolean = false): TechnicianPerformanceReport[] {
+    if (isDemo || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return this.getDemoTechnicianPerformance();
+    }
+    return [];
   }
 
   /**
@@ -652,8 +661,11 @@ export class AnalyticsService {
     ];
   }
 
-  getLeadSourceRoi(): LeadSourceRoiMetric[] {
-    return this.getDemoLeadSourceRoi();
+  getLeadSourceRoi(isDemo: boolean = false): LeadSourceRoiMetric[] {
+    if (isDemo || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return this.getDemoLeadSourceRoi();
+    }
+    return [];
   }
 
   /**
@@ -766,8 +778,11 @@ export class AnalyticsService {
     ];
   }
 
-  generateOwnerInsights(): OwnerInsight[] {
-    return this.getDemoOwnerInsights();
+  generateOwnerInsights(isDemo: boolean = false): OwnerInsight[] {
+    if (isDemo || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return this.getDemoOwnerInsights();
+    }
+    return [];
   }
 
   /**
@@ -903,8 +918,11 @@ export class AnalyticsService {
     };
   }
 
-  generateDailyBriefing(businessName: string = 'Apex Comfort'): DailyBriefing {
-    return this.getDemoDailyBriefing(businessName);
+  generateDailyBriefing(businessName: string = 'Apex Comfort', isDemo: boolean = false): DailyBriefing {
+    if (isDemo || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return this.getDemoDailyBriefing(businessName);
+    }
+    return this.generateDailyBriefingFromData({ businessName, isDemo: false });
   }
 
   /**
@@ -946,7 +964,8 @@ export class AnalyticsService {
    */
   generateCsvExport(
     reportType: 'revenue' | 'leads' | 'jobs' | 'technicians' | 'services',
-    businessName: string
+    businessName: string,
+    data?: AnalyticsWorkspaceData
   ): string {
     const timestamp = new Date().toISOString();
     let csv = `Report: Ventrexs AI ${reportType.toUpperCase()} Report\n`;
@@ -956,25 +975,52 @@ export class AnalyticsService {
 
     if (reportType === 'technicians') {
       csv += 'Technician Name,Assigned Jobs,Completed Jobs,Completion Rate (%),Attributed Revenue ($),Customer Rating,Reviews Count\n';
-      const techs = this.getTechnicianPerformance();
+      const techs = data
+        ? this.getTechnicianPerformanceFromData(data)
+        : (data as any)?.isDemo
+        ? this.getDemoTechnicianPerformance()
+        : [];
       for (const t of techs) {
         csv += `"${t.technicianName}",${t.assignedJobs},${t.completedJobs},${t.completionRate}%,${t.attributedRevenue},${t.customerRating},${t.reviewCount}\n`;
       }
     } else if (reportType === 'services') {
       csv += 'Service Category,Lead Count,Job Count,Total Revenue ($),Average Ticket ($),Approval Rate (%),Customer Rating\n';
-      const services = this.getServicePerformance();
+      const services = data
+        ? this.getServicePerformanceFromData(data)
+        : (data as any)?.isDemo
+        ? this.getDemoServicePerformance()
+        : [];
       for (const s of services) {
         csv += `"${s.service}",${s.leadCount},${s.jobCount},${s.revenue},${s.avgTicket},${s.estimateApprovalRate}%,${s.avgRating}\n`;
       }
     } else {
+      const metrics = data ? this.getExecutiveDashboardMetricsFromData(data) : null;
       csv += 'Metric Category,Current Period Value,Previous Period Value,Change (%)\n';
-      csv += '"Total Revenue ($)",48250,41600,+16.0%\n';
-      csv += '"Paid Invoice Amount ($)",35400,26200,+35.1%\n';
-      csv += '"Outstanding Balance ($)",12850,15400,-16.6%\n';
-      csv += '"New Leads Count",42,36,+16.7%\n';
-      csv += '"Completed Jobs Count",26,22,+18.2%\n';
-      csv += '"AI Receptionist Conversations",148,120,+23.3%\n';
-      csv += '"Average Google Review Rating",4.8,4.6,+4.3%\n';
+      if (metrics) {
+        csv += `"Total Revenue ($)",${metrics.revenue.totalRevenue.current},${metrics.revenue.totalRevenue.previous},${metrics.revenue.totalRevenue.changePercent}%\n`;
+        csv += `"Paid Invoice Amount ($)",${metrics.revenue.paidInvoiceAmount.current},${metrics.revenue.paidInvoiceAmount.previous},${metrics.revenue.paidInvoiceAmount.changePercent}%\n`;
+        csv += `"Outstanding Balance ($)",${metrics.revenue.outstandingBalance.current},${metrics.revenue.outstandingBalance.previous},${metrics.revenue.outstandingBalance.changePercent}%\n`;
+        csv += `"New Leads Count",${metrics.sales.newLeads.current},${metrics.sales.newLeads.previous},${metrics.sales.newLeads.changePercent}%\n`;
+        csv += `"Completed Jobs Count",${metrics.operations.completedJobs.current},${metrics.operations.completedJobs.previous},${metrics.operations.completedJobs.changePercent}%\n`;
+        csv += `"AI Receptionist Conversations",${metrics.receptionist.conversations.current},${metrics.receptionist.conversations.previous},${metrics.receptionist.conversations.changePercent}%\n`;
+        csv += `"Average Google Review Rating",${metrics.reputation.averageRating.current},${metrics.reputation.averageRating.previous},${metrics.reputation.averageRating.changePercent}%\n`;
+      } else if ((data as any)?.isDemo) {
+        csv += '"Total Revenue ($)",48250,41600,+16.0%\n';
+        csv += '"Paid Invoice Amount ($)",35400,26200,+35.1%\n';
+        csv += '"Outstanding Balance ($)",12850,15400,-16.6%\n';
+        csv += '"New Leads Count",42,36,+16.7%\n';
+        csv += '"Completed Jobs Count",26,22,+18.2%\n';
+        csv += '"AI Receptionist Conversations",148,120,+23.3%\n';
+        csv += '"Average Google Review Rating",4.8,4.6,+4.3%\n';
+      } else {
+        csv += '"Total Revenue ($)",0,0,0%\n';
+        csv += '"Paid Invoice Amount ($)",0,0,0%\n';
+        csv += '"Outstanding Balance ($)",0,0,0%\n';
+        csv += '"New Leads Count",0,0,0%\n';
+        csv += '"Completed Jobs Count",0,0,0%\n';
+        csv += '"AI Receptionist Conversations",0,0,0%\n';
+        csv += '"Average Google Review Rating",0,0,0%\n';
+      }
     }
 
     return csv;

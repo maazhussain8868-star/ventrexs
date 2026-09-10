@@ -48,6 +48,8 @@ import {
   BillingInterval,
   UsageMetric,
   IndustryType,
+  Technician,
+  TechnicianStatus,
 } from '@/types';
 import {
   initialInvoices,
@@ -76,7 +78,8 @@ import {
   initialTechnicianMetrics,
   initialSubscription,
   initialUsageRecords,
-  initialSubscriptionEvents
+  initialSubscriptionEvents,
+  initialTechnicians
 } from '@/data/mockData';
 import { createClient } from '@/lib/supabase/client';
 import { createSupabaseServices } from '@/lib/supabase/services';
@@ -130,6 +133,13 @@ import {
   updateJobStatusAction,
   addJobActivityAction,
 } from '@/app/actions/jobs';
+import {
+  getTechniciansAction,
+  createTechnicianAction,
+  updateTechnicianAction,
+  setTechnicianStatusAction,
+  deleteTechnicianAction,
+} from '@/app/actions/team';
 import {
   createEstimateAction,
   updateEstimateAction,
@@ -199,6 +209,7 @@ interface AppContextType {
   leads: Lead[];
   appointments: Appointment[];
   jobs: Job[];
+  technicians: Technician[];
   recommendations: CopilotRecommendation[];
   notifications: NotificationItem[];
   profile: UserProfile;
@@ -326,6 +337,13 @@ interface AppContextType {
   updateJobStatus: (jobId: string, status: JobStatus, notes?: string) => Promise<boolean>;
   addJobActivity: (jobId: string, title: string, description?: string, activityType?: string) => Promise<boolean>;
 
+  // Team & Technician Operations
+  addTechnician: (data: Omit<Technician, 'id' | 'createdAt' | 'updatedAt' | 'businessId'>) => Promise<Technician | null>;
+  updateTechnician: (id: string, updates: Partial<Omit<Technician, 'id' | 'businessId' | 'createdAt'>>) => Promise<boolean>;
+  setTechnicianStatus: (id: string, status: 'active' | 'inactive' | 'deactivated') => Promise<boolean>;
+  deleteTechnician: (id: string) => Promise<boolean>;
+  refreshTechnicians: () => Promise<void>;
+
   // Phase 6 — Reputation & Review Management
   reviewSettings: ReviewSettings;
   reviewRequests: ReviewRequest[];
@@ -369,6 +387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [recommendations, setRecommendations] = useState<CopilotRecommendation[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [profile, setProfile] = useState<UserProfile>({ ...initialProfile, name: '', email: '', businessName: '' });
@@ -419,6 +438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeads(initialLeads);
     setAppointments(initialAppointments);
     setJobs(initialJobs);
+    setTechnicians(initialTechnicians);
     setRecommendations(initialRecommendations);
     setNotifications(initialNotifications);
     setProfile(initialProfile);
@@ -447,6 +467,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeads([]);
     setAppointments([]);
     setJobs([]);
+    setTechnicians([]);
     setRecommendations([]);
     setNotifications([]);
     setEstimates([]);
@@ -475,6 +496,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeads([]);
     setAppointments([]);
     setJobs([]);
+    setTechnicians([]);
     setRecommendations([]);
     setNotifications([]);
     setEstimates([]);
@@ -522,13 +544,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const tenantId = currentBusiness.id;
-    const [customerRows, invoiceRows, leadRows, appointmentRows, jobRows, estimateRows, subscriptionRow, profileRow] = await Promise.all([
+    const [customerRows, invoiceRows, leadRows, appointmentRows, jobRows, estimateRows, technicianRows, subscriptionRow, profileRow] = await Promise.all([
       services.customers.getCustomers(tenantId),
       services.invoices.getInvoices(tenantId),
       services.leads.getLeads(tenantId),
       services.operations.getAppointments(tenantId),
       services.operations.getJobs(tenantId),
       services.estimates.getEstimates(tenantId),
+      services.technicians.getTechnicians(tenantId),
       supabase
         .from('subscriptions')
         .select('*')
@@ -554,7 +577,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       address: profileRow?.address || prev.address,
       businessName: currentBusiness.name,
     }));
-    setSettings(prev => ({ ...prev, businessName: currentBusiness.name, businessEmail: currentBusiness.email || '' }));
+    setSettings(prev => ({
+      ...prev,
+      businessName: currentBusiness.name,
+      businessEmail: currentBusiness.email || '',
+      stripeAccountId: (currentBusiness as any).stripe_account_id || undefined,
+      stripeConnected: Boolean((currentBusiness as any).stripe_charges_enabled || (currentBusiness as any).stripe_account_id),
+    }));
     setBusinessProfile(prev => ({
       ...prev,
       name: currentBusiness.name,
@@ -563,6 +592,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       address: currentBusiness.address || '',
       industry: (currentBusiness.industry as IndustryType) || prev.industry,
       website: currentBusiness.website || '',
+      stripeAccountId: (currentBusiness as any).stripe_account_id || undefined,
     }));
 
     // Load real subscription from DB — source of truth for billing gate
@@ -647,6 +677,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       scheduledDate: row.scheduled_date || undefined,
       estimatedTotal: Number(row.estimated_total || 0),
       actualTotal: Number(row.actual_total || 0),
+      technicianId: row.technician_id || undefined,
       technicianName: row.technician_name || 'Unassigned',
       createdAt: row.created_at,
     })) as Job[]);
@@ -661,6 +692,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       validUntil: row.valid_until || undefined,
       createdAt: row.created_at,
     })) as Estimate[]);
+    setTechnicians((technicianRows || []).map((row: any) => ({
+      ...row,
+      businessId: row.business_id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })) as Technician[]);
   }, [services, supabase]);
 
   // Load authenticated tenant from Supabase on mount.
@@ -1733,6 +1770,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const newStatus = j.status === 'NEW' && techName ? 'SCHEDULED' : j.status;
         return {
           ...j,
+          technicianId: techId || undefined,
           assignedTechId: techId,
           assignedTechName: techName,
           technicianName: techName || 'Unassigned',
@@ -1754,6 +1792,163 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     showToast({ title: techName ? `Technician Assigned: ${techName}` : 'Technician Unassigned', type: 'success' });
+    return true;
+  };
+
+  // ==========================================
+  // TECHNICIAN & TEAM OPERATIONS
+  // ==========================================
+  const refreshTechnicians = async () => {
+    if (!businessId) return;
+    try {
+      if (session && !isDemoMode) {
+        const rows = await services.technicians.getTechnicians(businessId);
+        setTechnicians((rows || []).map((row: any) => ({
+          ...row,
+          businessId: row.business_id,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        })) as Technician[]);
+      }
+    } catch (err) {
+      console.warn('Refresh technicians error:', err);
+    }
+  };
+
+  const addTechnician = async (data: Omit<Technician, 'id' | 'createdAt' | 'updatedAt' | 'businessId'>): Promise<Technician | null> => {
+    const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
+
+    if (session && businessId && !isDemoMode) {
+      try {
+        const res = await createTechnicianAction({
+          business_id: activeBusinessId,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          role: data.role,
+          status: data.status || 'active',
+        });
+        if (res.success && res.data) {
+          const newTech: Technician = {
+            id: res.data.id,
+            businessId: res.data.business_id,
+            name: res.data.name,
+            email: res.data.email,
+            phone: res.data.phone,
+            role: res.data.role,
+            status: res.data.status,
+            createdAt: res.data.created_at,
+            updatedAt: res.data.updated_at,
+          };
+          setTechnicians(prev => [newTech, ...prev]);
+          showToast({ title: `${newTech.name} added to team`, type: 'success' });
+          return newTech;
+        } else {
+          showToast({ title: res.error || 'Failed to add technician', type: 'error' });
+          return null;
+        }
+      } catch (err: any) {
+        console.warn('Add technician action error:', err);
+        showToast({ title: err?.message || 'Failed to add technician', type: 'error' });
+        return null;
+      }
+    }
+
+    const mockTech: Technician = {
+      id: 'tech-' + Date.now(),
+      businessId: activeBusinessId,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      role: data.role,
+      status: data.status || 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setTechnicians(prev => [mockTech, ...prev]);
+    showToast({ title: `${mockTech.name} added to team`, type: 'success' });
+    return mockTech;
+  };
+
+  const updateTechnician = async (id: string, updates: Partial<Omit<Technician, 'id' | 'businessId' | 'createdAt'>>): Promise<boolean> => {
+    const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
+
+    if (session && businessId && !isDemoMode) {
+      try {
+        const res = await updateTechnicianAction(id, activeBusinessId, updates);
+        if (res.success && res.data) {
+          setTechnicians(prev => prev.map(t => t.id === id ? {
+            ...t,
+            ...updates,
+            updatedAt: res.data.updated_at || new Date().toISOString(),
+          } : t));
+          showToast({ title: 'Team member updated', type: 'success' });
+          return true;
+        } else {
+          showToast({ title: res.error || 'Failed to update team member', type: 'error' });
+          return false;
+        }
+      } catch (err: any) {
+        console.warn('Update technician action error:', err);
+        showToast({ title: err?.message || 'Failed to update team member', type: 'error' });
+        return false;
+      }
+    }
+
+    setTechnicians(prev => prev.map(t => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
+    showToast({ title: 'Team member updated', type: 'success' });
+    return true;
+  };
+
+  const setTechnicianStatus = async (id: string, status: 'active' | 'inactive' | 'deactivated'): Promise<boolean> => {
+    const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
+
+    if (session && businessId && !isDemoMode) {
+      try {
+        const res = await setTechnicianStatusAction(id, activeBusinessId, status);
+        if (res.success) {
+          setTechnicians(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t));
+          showToast({ title: `Team member status set to ${status}`, type: 'info' });
+          return true;
+        } else {
+          showToast({ title: res.error || 'Failed to update status', type: 'error' });
+          return false;
+        }
+      } catch (err: any) {
+        console.warn('Set technician status error:', err);
+        showToast({ title: err?.message || 'Failed to update status', type: 'error' });
+        return false;
+      }
+    }
+
+    setTechnicians(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t));
+    showToast({ title: `Team member status set to ${status}`, type: 'info' });
+    return true;
+  };
+
+  const deleteTechnician = async (id: string): Promise<boolean> => {
+    const activeBusinessId = businessId || '11111111-1111-1111-1111-111111111111';
+
+    if (session && businessId && !isDemoMode) {
+      try {
+        const res = await deleteTechnicianAction(id, activeBusinessId);
+        if (res.success) {
+          setTechnicians(prev => prev.filter(t => t.id !== id));
+          showToast({ title: 'Team member removed', type: 'info' });
+          return true;
+        } else {
+          showToast({ title: res.error || 'Failed to remove team member', type: 'error' });
+          return false;
+        }
+      } catch (err: any) {
+        console.warn('Delete technician action error:', err);
+        showToast({ title: err?.message || 'Failed to delete team member', type: 'error' });
+        return false;
+      }
+    }
+
+    setTechnicians(prev => prev.filter(t => t.id !== id));
+    showToast({ title: 'Team member removed', type: 'info' });
     return true;
   };
 
@@ -3953,6 +4148,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       assignJobTechnician,
       updateJobStatus,
       addJobActivity,
+      technicians,
+      addTechnician,
+      updateTechnician,
+      setTechnicianStatus,
+      deleteTechnician,
+      refreshTechnicians,
       reviewSettings,
       reviewRequests,
       customerFeedback,

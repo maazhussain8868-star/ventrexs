@@ -25,12 +25,12 @@ export default function LeadSourcesReportPage() {
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    const isDemo = isDemoMode || (!user && leads.length === 0);
+    const isDemo = isDemoMode && !user;
     if (isDemo) {
       const list = analyticsService.getDemoLeadSourceRoi();
       setSources(list);
     } else {
-      const list = analyticsService.getLeadSourceRoiFromData({ leads, invoices });
+      const list = analyticsService.getLeadSourceRoiFromData({ leads, invoices, isDemo: false });
       setSources(list);
     }
   }, [user, isDemoMode, leads, invoices]);
@@ -119,7 +119,20 @@ export default function LeadSourcesReportPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/40 text-on-surface">
-                {sources.map((s) => (
+                {sources.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-10 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 text-on-surface-variant">
+                        <TrendingUp className="w-8 h-8 text-outline" />
+                        <p className="font-semibold text-sm text-on-surface">No lead source acquisition records yet</p>
+                        <p className="text-xs max-w-sm">
+                          Capture inbound leads from website forms, Google local services, and referrals to analyze conversion rates and marketing ROI.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  sources.map((s) => (
                   <tr key={s.source} className="hover:bg-surface-container-low/50 transition-colors">
                     <td className="py-3.5 font-bold">{s.source}</td>
                     <td className="py-3.5 text-right font-mono text-on-surface-variant">{s.leadsCount}</td>
@@ -161,7 +174,8 @@ export default function LeadSourcesReportPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                )))
+              }
               </tbody>
             </table>
           </div>

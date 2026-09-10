@@ -23,7 +23,7 @@ async function getServerServices() {
 async function getAuthContext() {
   const { supabase, services } = await getServerServices();
   const { data: { user }, error } = await supabase.auth.getUser();
-  return { user, supabase, services, isDemo: !user || !!error };
+  return { user, supabase, services, isDemo: false };
 }
 
 /**

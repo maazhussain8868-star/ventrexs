@@ -82,6 +82,10 @@ export interface Database {
           payment_terms_days: number;
           default_notes: string | null;
           stripe_connected: boolean;
+          stripe_account_id?: string | null;
+          stripe_details_submitted?: boolean;
+          stripe_charges_enabled?: boolean;
+          stripe_payouts_enabled?: boolean;
           ach_connected: boolean;
           auto_reminder_enabled: boolean;
           omnidimension_agent_id?: string | null;
@@ -116,6 +120,10 @@ export interface Database {
           payment_terms_days?: number;
           default_notes?: string | null;
           stripe_connected?: boolean;
+          stripe_account_id?: string | null;
+          stripe_details_submitted?: boolean;
+          stripe_charges_enabled?: boolean;
+          stripe_payouts_enabled?: boolean;
           ach_connected?: boolean;
           auto_reminder_enabled?: boolean;
           omnidimension_agent_id?: string | null;
@@ -150,6 +158,10 @@ export interface Database {
           payment_terms_days?: number;
           default_notes?: string | null;
           stripe_connected?: boolean;
+          stripe_account_id?: string | null;
+          stripe_details_submitted?: boolean;
+          stripe_charges_enabled?: boolean;
+          stripe_payouts_enabled?: boolean;
           ach_connected?: boolean;
           auto_reminder_enabled?: boolean;
           omnidimension_agent_id?: string | null;
@@ -1041,6 +1053,7 @@ export interface Database {
           actual_total: number;
           assigned_tech_id: string | null;
           assigned_tech_name: string | null;
+          technician_id: string | null;
           technician_name: string | null;
           notes: string | null;
           internal_notes: string | null;
@@ -1072,6 +1085,7 @@ export interface Database {
           actual_total?: number;
           assigned_tech_id?: string | null;
           assigned_tech_name?: string | null;
+          technician_id?: string | null;
           technician_name?: string | null;
           notes?: string | null;
           internal_notes?: string | null;
@@ -1103,6 +1117,7 @@ export interface Database {
           actual_total?: number;
           assigned_tech_id?: string | null;
           assigned_tech_name?: string | null;
+          technician_id?: string | null;
           technician_name?: string | null;
           notes?: string | null;
           internal_notes?: string | null;
@@ -1936,6 +1951,42 @@ export interface Database {
           provider_refund_id?: string | null;
           metadata?: Json;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      technicians: {
+        Row: {
+          id: string;
+          business_id: string;
+          name: string;
+          email: string | null;
+          phone: string | null;
+          role: string;
+          status: 'active' | 'inactive' | 'deactivated';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          name: string;
+          email?: string | null;
+          phone?: string | null;
+          role?: string;
+          status?: 'active' | 'inactive' | 'deactivated';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          name?: string;
+          email?: string | null;
+          phone?: string | null;
+          role?: string;
+          status?: 'active' | 'inactive' | 'deactivated';
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

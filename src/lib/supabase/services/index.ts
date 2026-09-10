@@ -16,6 +16,7 @@ import { ReceptionistBackendService } from './receptionist';
 import { EstimatesService } from './estimates';
 import { ReputationService } from './reputation';
 import { AnalyticsService } from './analytics';
+import { TechniciansService } from './technicians';
 
 export * from './auth';
 export * from './business';
@@ -33,6 +34,7 @@ export * from './receptionist';
 export * from './estimates';
 export * from './reputation';
 export * from './analytics';
+export * from './technicians';
 
 export function createSupabaseServices(client: SupabaseClient<Database>) {
   return {
@@ -52,5 +54,6 @@ export function createSupabaseServices(client: SupabaseClient<Database>) {
     estimates: new EstimatesService(client),
     reputation: new ReputationService(client),
     analytics: new AnalyticsService(client),
+    technicians: new TechniciansService(client),
   };
 }

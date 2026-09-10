@@ -64,7 +64,7 @@ export default function ReportsPage() {
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    const isDemo = isDemoMode || (!user && !businessId);
+    const isDemo = Boolean(isDemoMode && !user);
 
     if (isDemo) {
       const execMetrics = analyticsService.getDemoExecutiveDashboardMetrics(dateRange);
@@ -82,6 +82,7 @@ export default function ReportsPage() {
           appointments,
           jobs,
           receptionistConversations,
+          isDemo: false,
         },
         dateRange
       );
@@ -90,10 +91,12 @@ export default function ReportsPage() {
         appointments,
         jobs,
         invoices,
+        isDemo: false,
       });
       const serviceList = analyticsService.getServicePerformanceFromData({
         jobs,
         invoices,
+        isDemo: false,
       });
 
       Promise.resolve(execMetrics).then(setMetrics);
@@ -113,7 +116,7 @@ export default function ReportsPage() {
   ]);
 
   const handleExportCsv = async () => {
-    const isDemo = isDemoMode || !user;
+    const isDemo = Boolean(isDemoMode && !user);
     if (isDemo) {
       const csv = analyticsService.generateCsvExport(
         activeTab === 'services' ? 'services' : 'revenue',

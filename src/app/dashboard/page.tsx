@@ -52,6 +52,7 @@ export default function DashboardPage() {
     leads,
     appointments,
     jobs,
+    estimates,
     receptionistConversations,
     businessProfile,
     profile,
@@ -69,7 +70,7 @@ export default function DashboardPage() {
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    const isDemo = isDemoMode || (!user && !businessId);
+    const isDemo = Boolean(isDemoMode && !user);
 
     if (isDemo) {
       const execMetrics = analyticsService.getDemoExecutiveDashboardMetrics(dateRange);
@@ -89,6 +90,7 @@ export default function DashboardPage() {
           appointments,
           jobs,
           receptionistConversations,
+          isDemo: false,
         },
         dateRange
       );
@@ -97,18 +99,22 @@ export default function DashboardPage() {
         appointments,
         jobs,
         invoices,
+        isDemo: false,
       });
       const ownerInsights = analyticsService.generateOwnerInsightsFromData({
         leads,
         appointments,
         jobs,
         invoices,
+        isDemo: false,
       });
       const dailyBrief = analyticsService.generateDailyBriefingFromData({
         businessName: businessProfile?.name || profile.businessName || 'My Workspace',
         appointments,
         invoices,
         leads,
+        estimates,
+        isDemo: false,
       });
 
       Promise.resolve(execMetrics).then(setMetrics);

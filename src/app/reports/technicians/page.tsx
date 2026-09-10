@@ -25,20 +25,22 @@ export default function TechnicianReportsPage() {
   const analyticsService = new AnalyticsService();
 
   useEffect(() => {
-    const isDemo = isDemoMode || (!user && jobs.length === 0);
+    const isDemo = isDemoMode && !user;
     if (isDemo) {
       const list = analyticsService.getDemoTechnicianPerformance();
       setTechnicians(list);
     } else {
-      const list = analyticsService.getTechnicianPerformanceFromData({ jobs, invoices });
+      const list = analyticsService.getTechnicianPerformanceFromData({ jobs, invoices, isDemo: false });
       setTechnicians(list);
     }
   }, [user, isDemoMode, jobs, invoices]);
 
   const handleExportCsv = () => {
+    const isDemo = isDemoMode && !user;
     const csv = analyticsService.generateCsvExport(
       'technicians',
-      businessProfile?.name || profile.businessName
+      businessProfile?.name || profile.businessName,
+      { jobs, invoices, isDemo }
     );
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -121,7 +123,20 @@ export default function TechnicianReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/40 text-on-surface">
-                {technicians.map((tech) => (
+                {technicians.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-10 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 text-on-surface-variant">
+                        <Wrench className="w-8 h-8 text-outline" />
+                        <p className="font-semibold text-sm text-on-surface">No technician work records yet</p>
+                        <p className="text-xs max-w-sm">
+                          Dispatch technicians to field jobs and complete work orders to see completion rates, ratings, and revenue attribution.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  technicians.map((tech) => (
                   <tr key={tech.technicianName} className="hover:bg-surface-container-low/50 transition-colors">
                     <td className="py-3.5 font-bold flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
@@ -153,7 +168,8 @@ export default function TechnicianReportsPage() {
                     </td>
                     <td className="py-3.5 text-right font-mono text-on-surface-variant">{tech.reviewCount}</td>
                   </tr>
-                ))}
+                )))
+              }
               </tbody>
             </table>
           </div>

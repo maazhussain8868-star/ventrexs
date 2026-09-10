@@ -47,20 +47,28 @@ export class StripeCustomerPaymentAdapter implements PaymentProvider {
 
     try {
       const amountCents = Math.round(params.amount * 100);
+      const bodyData: Record<string, string> = {
+        amount: amountCents.toString(),
+        currency: (params.currency || 'usd').toLowerCase(),
+        'payment_method_types[]': params.method === 'ACH Transfer' ? 'us_bank_account' : 'card',
+        'metadata[business_id]': params.businessId,
+        'metadata[invoice_id]': params.invoiceId || '',
+        'metadata[customer_id]': params.customerId || '',
+      };
+
+      // Real Stripe Connect Express destination transfer (0% platform fee)
+      // Ventrexs takes 0% cut on customer transactions; NO application_fee_amount is set.
+      if (params.connectedAccountId) {
+        bodyData['transfer_data[destination]'] = params.connectedAccountId;
+      }
+
       const res = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({
-          amount: amountCents.toString(),
-          currency: (params.currency || 'usd').toLowerCase(),
-          'payment_method_types[]': params.method === 'ACH Transfer' ? 'us_bank_account' : 'card',
-          'metadata[business_id]': params.businessId,
-          'metadata[invoice_id]': params.invoiceId || '',
-          'metadata[customer_id]': params.customerId || '',
-        }),
+        body: new URLSearchParams(bodyData),
       });
 
       const data = await res.json();

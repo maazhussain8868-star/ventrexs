@@ -63,12 +63,6 @@ const LEAD_SOURCES: LeadSource[] = [
   'Other'
 ];
 
-const TEAM_MEMBERS = [
-  { id: 'user-marcus', name: 'Marcus Vance' },
-  { id: 'user-sarah', name: 'Sarah Jenkins' },
-  { id: 'user-leo', name: 'Leo Martinez' },
-];
-
 function PipelineContent() {
   const router = useRouter();
   const { 
@@ -76,6 +70,7 @@ function PipelineContent() {
     appointments,
     jobs,
     invoices,
+    technicians,
     addLead, 
     updateLeadStatus, 
     assignLead,
@@ -85,6 +80,12 @@ function PipelineContent() {
     pipelineValue,
     conversionRate
   } = useApp();
+
+  const teamMembers = useMemo(() => {
+    return technicians
+      .filter(t => t.status !== 'deactivated')
+      .map(t => ({ id: t.id, name: t.name }));
+  }, [technicians]);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -110,7 +111,7 @@ function PipelineContent() {
   const [serviceRequested, setServiceRequested] = useState('');
   const [estimatedValue, setEstimatedValue] = useState<number>(2500);
   const [priority, setPriority] = useState<LeadPriority>('medium');
-  const [assignedUserName, setAssignedUserName] = useState('Marcus Vance');
+  const [assignedUserName, setAssignedUserName] = useState('');
 
   const selectedLead = useMemo(() => {
     return leads.find(l => l.id === selectedLeadId) || null;
@@ -186,7 +187,7 @@ function PipelineContent() {
     setServiceRequested('');
     setEstimatedValue(2500);
     setPriority('medium');
-    setAssignedUserName('Marcus Vance');
+    setAssignedUserName(teamMembers[0]?.name || '');
     setIsAddModalOpen(true);
   };
 
@@ -194,7 +195,7 @@ function PipelineContent() {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const assignedMember = TEAM_MEMBERS.find(m => m.name === assignedUserName);
+    const assignedMember = teamMembers.find(m => m.name === assignedUserName);
 
     await addLead({
       name,
@@ -286,7 +287,7 @@ function PipelineContent() {
               className="bg-surface-container-lowest border border-outline-variant rounded-xl px-2.5 py-2 text-xs font-medium text-on-surface"
             >
               <option value="ALL">All Assignees</option>
-              {TEAM_MEMBERS.map(m => (
+              {teamMembers.map(m => (
                 <option key={m.id} value={m.name}>{m.name}</option>
               ))}
               <option value="UNASSIGNED">Unassigned</option>
@@ -628,7 +629,8 @@ function PipelineContent() {
                 onChange={(e) => setAssignedUserName(e.target.value)}
                 className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-2 text-xs text-on-surface"
               >
-                {TEAM_MEMBERS.map(m => (
+                <option value="">Unassigned</option>
+                {teamMembers.map(m => (
                   <option key={m.id} value={m.name}>{m.name}</option>
                 ))}
               </select>

@@ -74,12 +74,6 @@ const LEAD_SOURCES: LeadSource[] = [
   'Other'
 ];
 
-const TEAM_MEMBERS = [
-  { id: 'user-marcus', name: 'Marcus Vance' },
-  { id: 'user-sarah', name: 'Sarah Jenkins' },
-  { id: 'user-leo', name: 'Leo Martinez' },
-];
-
 function LeadsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,6 +83,7 @@ function LeadsContent() {
     appointments,
     jobs,
     invoices,
+    technicians,
     addLead, 
     updateLead,
     updateLeadStatus, 
@@ -113,6 +108,12 @@ function LeadsContent() {
     conversionRate,
     averageLeadScore
   } = useApp();
+
+  const teamMembers = useMemo(() => {
+    return technicians
+      .filter(t => t.status !== 'deactivated')
+      .map(t => ({ id: t.id, name: t.name, role: t.role }));
+  }, [technicians]);
 
   // Modals and Drawers
   const [isAddModalOpen, setIsAddModalOpen] = useState(searchParams.get('action') === 'create');
@@ -260,7 +261,7 @@ function LeadsContent() {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const assignedMember = TEAM_MEMBERS.find(m => m.name === assignedUserName);
+    const assignedMember = teamMembers.find(m => m.name === assignedUserName);
 
     await addLead({
       name,
@@ -285,7 +286,7 @@ function LeadsContent() {
     e.preventDefault();
     if (!selectedLead || !name.trim()) return;
 
-    const assignedMember = TEAM_MEMBERS.find(m => m.name === assignedUserName);
+    const assignedMember = teamMembers.find(m => m.name === assignedUserName);
 
     await updateLead({
       ...selectedLead,
@@ -526,7 +527,7 @@ function LeadsContent() {
                 className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-1.5 text-xs text-on-surface"
               >
                 <option value="ALL">All Assignees</option>
-                {TEAM_MEMBERS.map(m => (
+                {teamMembers.map(m => (
                   <option key={m.id} value={m.name}>{m.name}</option>
                 ))}
                 <option value="UNASSIGNED">Unassigned</option>
@@ -600,7 +601,7 @@ function LeadsContent() {
               <select
                 onChange={(e) => {
                   if (e.target.value) {
-                    const member = TEAM_MEMBERS.find(m => m.id === e.target.value);
+                    const member = teamMembers.find(m => m.id === e.target.value);
                     bulkAssignLeads(selectedLeadIds, member?.id || null, member?.name || null);
                     e.target.value = '';
                   }
@@ -609,7 +610,7 @@ function LeadsContent() {
                 className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-white/20 focus:outline-none cursor-pointer"
               >
                 <option value="" disabled className="text-black">Assign to...</option>
-                {TEAM_MEMBERS.map(m => (
+                {teamMembers.map(m => (
                   <option key={m.id} value={m.id} className="text-black">{m.name}</option>
                 ))}
                 <option value="unassign" className="text-black">Unassign</option>
@@ -735,13 +736,13 @@ function LeadsContent() {
                           value={lead.assignedUserName || ''}
                           onChange={(e) => {
                             const val = e.target.value;
-                            const member = TEAM_MEMBERS.find(m => m.name === val);
+                            const member = teamMembers.find(m => m.name === val);
                             assignLead(lead.id, member?.id || null, member?.name || null);
                           }}
                           className="bg-surface-container-lowest border border-outline-variant/60 rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
                         >
                           <option value="">Unassigned</option>
-                          {TEAM_MEMBERS.map(m => (
+                          {teamMembers.map(m => (
                             <option key={m.id} value={m.name}>{m.name}</option>
                           ))}
                         </select>
@@ -926,13 +927,13 @@ function LeadsContent() {
                       value={selectedLead.assignedUserName || ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        const member = TEAM_MEMBERS.find(m => m.name === val);
+                        const member = teamMembers.find(m => m.name === val);
                         assignLead(selectedLead.id, member?.id || null, member?.name || null);
                       }}
                       className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-2 text-xs font-semibold text-on-surface"
                     >
                       <option value="">Unassigned</option>
-                      {TEAM_MEMBERS.map(m => (
+                      {teamMembers.map(m => (
                         <option key={m.id} value={m.name}>{m.name}</option>
                       ))}
                     </select>
@@ -1333,7 +1334,7 @@ function LeadsContent() {
                   onChange={(e) => setAssignedUserName(e.target.value)}
                   className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-2 text-xs font-medium text-on-surface"
                 >
-                  {TEAM_MEMBERS.map(m => (
+                  {teamMembers.map(m => (
                     <option key={m.id} value={m.name}>{m.name}</option>
                   ))}
                 </select>
@@ -1450,7 +1451,7 @@ function LeadsContent() {
                   onChange={(e) => setAssignedUserName(e.target.value)}
                   className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-2 text-xs font-medium text-on-surface"
                 >
-                  {TEAM_MEMBERS.map(m => (
+                  {teamMembers.map(m => (
                     <option key={m.id} value={m.name}>{m.name}</option>
                   ))}
                 </select>

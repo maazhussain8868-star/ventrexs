@@ -25,7 +25,8 @@ import {
   TechnicianReputationMetric,
   BusinessSubscription,
   UsageRecord,
-  SubscriptionEvent
+  SubscriptionEvent,
+  Technician
 } from '@/types';
 
 export const initialProfile: UserProfile = {
@@ -1963,6 +1964,42 @@ export const initialSubscriptionEvents: SubscriptionEvent[] = [
     eventType: 'PAYMENT_SUCCEEDED',
     metadata: { invoiceId: 'in_1P8kQ92eZ_001', amountPaid: 49.00 },
     createdAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+  },
+];
+
+export const initialTechnicians: Technician[] = [
+  {
+    id: 'tech_001',
+    businessId: '11111111-1111-1111-1111-111111111111',
+    name: 'Marcus Vance',
+    email: 'marcus.v@apexcomfort.com',
+    phone: '+1 (555) 234-5678',
+    role: 'Lead HVAC Specialist',
+    status: 'active',
+    createdAt: '2026-01-15T09:00:00Z',
+    updatedAt: '2026-01-15T09:00:00Z',
+  },
+  {
+    id: 'tech_002',
+    businessId: '11111111-1111-1111-1111-111111111111',
+    name: 'Sarah Jenkins',
+    email: 'sarah.j@apexcomfort.com',
+    phone: '+1 (555) 345-6789',
+    role: 'Senior Diagnostic Tech',
+    status: 'active',
+    createdAt: '2026-02-01T10:30:00Z',
+    updatedAt: '2026-02-01T10:30:00Z',
+  },
+  {
+    id: 'tech_003',
+    businessId: '11111111-1111-1111-1111-111111111111',
+    name: 'Leo Martinez',
+    email: 'leo.m@apexcomfort.com',
+    phone: '+1 (555) 456-7890',
+    role: 'Apprentice Field Tech',
+    status: 'active',
+    createdAt: '2026-03-10T08:15:00Z',
+    updatedAt: '2026-03-10T08:15:00Z',
   },
 ];
 

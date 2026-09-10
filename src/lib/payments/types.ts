@@ -60,6 +60,7 @@ export interface ProcessPaymentParams {
   paymentToken?: string;
   idempotencyKey?: string;
   notes?: string;
+  connectedAccountId?: string;
   metadata?: Record<string, any>;
 }
 

@@ -165,6 +165,7 @@ export interface Job {
   actualTotal: number;
   assignedTechId?: string;
   assignedTechName?: string;
+  technicianId?: string;
   technicianName: string;
   notes?: string;
   internalNotes?: string;
@@ -382,6 +383,8 @@ export interface ServiceBusinessProfile {
   timezone: string;
   about?: string;
   onboardingCompleted: boolean;
+  stripeAccountId?: string | null;
+  stripeConnected?: boolean;
 }
 
 export interface UserProfile {
@@ -416,9 +419,25 @@ export interface BusinessSettings {
   paymentTermsDays: number;
   defaultNotes: string;
   stripeConnected: boolean;
+  stripeAccountId?: string | null;
+  stripeDetailsSubmitted?: boolean;
   achConnected: boolean;
   autoReminderEnabled: boolean;
   onboardingCompleted?: boolean;
+}
+
+export type TechnicianStatus = 'active' | 'inactive' | 'deactivated';
+
+export interface Technician {
+  id: string;
+  businessId: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  role: string;
+  status: TechnicianStatus;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AdminStats {

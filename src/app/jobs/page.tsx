@@ -42,6 +42,7 @@ function JobsContent() {
     jobStats,
     customers,
     leads,
+    technicians,
     addJob, 
     updateJobStatus,
     assignJobTechnician,
@@ -61,7 +62,8 @@ function JobsContent() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [propertyAddress, setPropertyAddress] = useState('');
   const [serviceType, setServiceType] = useState('HVAC Repair & Diagnostic');
-  const [technicianName, setTechnicianName] = useState('Leo Martinez');
+  const [technicianId, setTechnicianId] = useState('');
+  const [technicianName, setTechnicianName] = useState('');
   const [priority, setPriority] = useState<PriorityLevel>('medium');
   const [estimatedDuration, setEstimatedDuration] = useState(120);
   const [estimatedTotal, setEstimatedTotal] = useState<number>(1500);
@@ -84,12 +86,13 @@ function JobsContent() {
 
   const uniqueTechnicians = useMemo(() => {
     const names = new Set<string>();
+    technicians.filter(t => t.status !== 'deactivated').forEach(t => names.add(t.name));
     jobs.forEach(j => {
       if (j.technicianName && j.technicianName !== 'Unassigned') names.add(j.technicianName);
       if (j.assignedTechName) names.add(j.assignedTechName);
     });
     return Array.from(names);
-  }, [jobs]);
+  }, [technicians, jobs]);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter(j => {
@@ -134,8 +137,10 @@ function JobsContent() {
       description,
       status: 'NEW',
       priority,
-      technicianName,
-      assignedTechName: technicianName,
+      technicianId: technicianId || undefined,
+      technicianName: technicianName || 'Unassigned',
+      assignedTechId: technicianId || undefined,
+      assignedTechName: technicianName || 'Unassigned',
       scheduledDate,
       estimatedDurationMinutes: Number(estimatedDuration) || 60,
       estimatedTotal: Number(estimatedTotal) || 0,
@@ -579,15 +584,23 @@ function JobsContent() {
                 Assigned Technician
               </label>
               <select
-                value={technicianName}
-                onChange={(e) => setTechnicianName(e.target.value)}
+                value={technicianId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setTechnicianId(id);
+                  const found = technicians.find(t => t.id === id);
+                  setTechnicianName(found ? found.name : 'Unassigned');
+                }}
                 className="w-full px-3 py-2 text-sm bg-surface-container rounded-lg border border-outline-variant focus:outline-none focus:border-primary text-on-surface"
               >
-                <option value="Leo Martinez">Leo Martinez (Master HVAC)</option>
-                <option value="Sam Ortiz">Sam Ortiz (Senior Tech)</option>
-                <option value="Sarah Jenkins">Sarah Jenkins (Field Estimator)</option>
-                <option value="Carlos Rodriguez">Carlos Rodriguez (Plumbing Master)</option>
-                <option value="Marcus Vance">Marcus Vance (Operations Lead)</option>
+                <option value="">Unassigned</option>
+                {technicians
+                  .filter(t => t.status !== 'deactivated')
+                  .map(tech => (
+                    <option key={tech.id} value={tech.id}>
+                      {tech.name} {tech.role ? `(${tech.role})` : ''}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

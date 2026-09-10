@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -25,7 +25,16 @@ import {
   Lock,
   ChevronRight,
   Info,
+  Users,
+  ArrowUpRight,
+  Check,
+  Loader2,
 } from 'lucide-react';
+import {
+  createStripeConnectAccountAction,
+  syncStripeConnectStatusAction,
+  createStripeDashboardLinkAction,
+} from '@/app/actions/stripe-connect';
 
 const legalLinks = [
   { label: 'Privacy Policy', href: '/privacy', desc: 'Google Play & GDPR compliant data practices' },
@@ -43,7 +52,8 @@ const legalLinks = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { settings, businessProfile, updateSettings, updateBusinessProfile, showToast, deleteAccount } = useApp();
+  const searchParams = useSearchParams();
+  const { settings, businessProfile, businessId, updateSettings, updateBusinessProfile, showToast, deleteAccount } = useApp();
 
   const [businessName, setBusinessName] = useState(businessProfile?.name || settings.businessName);
   const [businessEmail, setBusinessEmail] = useState(businessProfile?.email || settings.businessEmail);
@@ -58,6 +68,78 @@ export default function SettingsPage() {
   const [achConnected, setAchConnected] = useState(settings.achConnected);
   const [autoReminderEnabled, setAutoReminderEnabled] = useState(settings.autoReminderEnabled);
   const [isSaving, setIsSaving] = useState(false);
+  const [isStripeLoading, setIsStripeLoading] = useState(false);
+  const [isDashboardLoading, setIsDashboardLoading] = useState(false);
+
+  // Sync Stripe status if returning from Stripe Connect onboarding
+  useEffect(() => {
+    const connectStatus = searchParams?.get('stripe_connect');
+    if (connectStatus === 'return' && businessId) {
+      syncStripeConnectStatusAction(businessId).then(res => {
+        if (res.success) {
+          const isChargesEnabled = Boolean(res.chargesEnabled || res.accountId);
+          setStripeConnected(isChargesEnabled);
+          setAchConnected(true);
+          updateSettings({
+            stripeConnected: isChargesEnabled,
+            achConnected: true,
+          });
+          showToast({
+            title: res.chargesEnabled ? 'Stripe Connect Active' : 'Stripe Account Submitted',
+            description: res.chargesEnabled
+              ? 'Your account is verified to collect payments with 0% platform fee and automatic bank payouts.'
+              : 'Stripe is reviewing your verification details. Payouts will activate shortly.',
+            type: 'success',
+          });
+        }
+      });
+    }
+  }, [searchParams, businessId, updateSettings, showToast]);
+
+  const handleConnectStripe = async () => {
+    if (!businessId) {
+      showToast({ title: 'Workspace error', description: 'No active business ID found', type: 'error' });
+      return;
+    }
+    setIsStripeLoading(true);
+    try {
+      const res = await createStripeConnectAccountAction(businessId);
+      if (res.success && res.onboardingUrl) {
+        window.location.href = res.onboardingUrl;
+      } else {
+        showToast({
+          title: 'Stripe Connect Error',
+          description: res.error || 'Failed to generate Stripe onboarding link',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      showToast({ title: 'Connection Error', description: err.message, type: 'error' });
+    } finally {
+      setIsStripeLoading(false);
+    }
+  };
+
+  const handleOpenStripeDashboard = async () => {
+    if (!businessId) return;
+    setIsDashboardLoading(true);
+    try {
+      const res = await createStripeDashboardLinkAction(businessId);
+      if (res.success && res.url) {
+        window.open(res.url, '_blank');
+      } else {
+        showToast({
+          title: 'Dashboard Link Error',
+          description: res.error || 'Failed to generate Stripe Express login link',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      showToast({ title: 'Error', description: err.message, type: 'error' });
+    } finally {
+      setIsDashboardLoading(false);
+    }
+  };
 
   // Account deletion modal states
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -252,55 +334,106 @@ export default function SettingsPage() {
 
           {/* Payment Gateway Integrations */}
           <section className="bg-surface-container-lowest border border-outline-variant/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 mb-2 pb-3 border-b border-outline-variant">
-              <span className="material-symbols-outlined text-primary text-[22px]">payments</span>
-              <h2 className="font-bold text-base text-on-surface">Direct Merchant Settlement Rails</h2>
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">payments</span>
+                <h2 className="font-bold text-base text-on-surface">Direct Merchant Settlement Rails</h2>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                0% Platform Fee
+              </span>
             </div>
 
-            <div className="p-4 rounded-xl border border-outline-variant bg-surface flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center font-bold text-sm">
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Connect your verified bank account via Stripe Connect Express. Ventrexs charges <strong>0% platform cut</strong> on your invoice collections — 100% of customer payments transfer directly into your business bank account.
+            </p>
+
+            {/* Stripe Card Processing */}
+            <div className="p-4 rounded-xl border border-outline-variant bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center font-bold text-sm shrink-0">
                   Stripe
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-on-surface">Credit & Debit Card Processing</p>
-                  <p className="text-xs text-on-surface-variant">Instant customer checkout via Stripe Connect</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-on-surface">Credit & Debit Card Processing</p>
+                    {stripeConnected && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <Check className="w-3 h-3" /> Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-on-surface-variant">
+                    {stripeConnected
+                      ? 'Connected via Stripe Express. Automatic direct bank payouts enabled.'
+                      : 'Accept Visa, Mastercard, Amex, Apple Pay & Google Pay with 0% platform surcharge.'}
+                  </p>
                 </div>
               </div>
-              <Button
-                type="button"
-                variant={stripeConnected ? 'secondary' : 'primary'}
-                size="sm"
-                onClick={() => {
-                  setStripeConnected(!stripeConnected);
-                  showToast({ title: stripeConnected ? 'Stripe Disconnected' : 'Stripe Connected!', type: 'info' });
-                }}
-              >
-                {stripeConnected ? 'Connected ✓' : 'Connect Stripe'}
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                {stripeConnected ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenStripeDashboard}
+                      disabled={isDashboardLoading}
+                      className="gap-1 text-xs"
+                    >
+                      {isDashboardLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                      Express Portal
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleConnectStripe}
+                      disabled={isStripeLoading}
+                      className="gap-1 text-xs"
+                    >
+                      {isStripeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Re-verify'}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleConnectStripe}
+                    disabled={isStripeLoading}
+                    className="gap-1.5"
+                  >
+                    {isStripeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}
+                    Connect Stripe Express
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-outline-variant bg-surface flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-tertiary-container/15 text-tertiary flex items-center justify-center font-bold">
+            {/* ACH Direct Bank Debit */}
+            <div className="p-4 rounded-xl border border-outline-variant bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-tertiary-container/15 text-tertiary flex items-center justify-center font-bold shrink-0">
                   <span className="material-symbols-outlined text-[20px]">account_balance</span>
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-on-surface">ACH Direct Bank Debit</p>
-                  <p className="text-xs text-on-surface-variant">Automated low-fee bank wire & debit transfers</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-on-surface">ACH Direct Bank Debit</p>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      Enabled via Stripe
+                    </span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant">
+                    Low-fee automated bank wires powered automatically by your connected Stripe Express settlement rail.
+                  </p>
                 </div>
               </div>
-              <Button
-                type="button"
-                variant={achConnected ? 'secondary' : 'primary'}
-                size="sm"
-                onClick={() => {
-                  setAchConnected(!achConnected);
-                  showToast({ title: achConnected ? 'ACH Disconnected' : 'ACH Rails Connected!', type: 'info' });
-                }}
-              >
-                {achConnected ? 'Connected ✓' : 'Connect ACH'}
-              </Button>
+              <div className="shrink-0">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 inline-flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Auto-Configured
+                </span>
+              </div>
             </div>
           </section>
 
@@ -351,7 +484,21 @@ export default function SettingsPage() {
             <span className="text-[11px] font-mono text-outline">Service OS Hub</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link
+              href="/settings/team"
+              className="p-4 rounded-xl border border-outline-variant/80 bg-surface hover:border-primary/50 transition-all flex flex-col justify-between group shadow-xs"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center justify-between mb-1">
+                  <Users className="w-5 h-5 text-indigo-500" />
+                  <ChevronRight className="w-4 h-4 text-outline group-hover:text-indigo-500 transition-colors" />
+                </div>
+                <h3 className="text-xs font-bold text-on-surface group-hover:text-indigo-500">Team & Technicians</h3>
+                <p className="text-[11px] text-on-surface-variant">Manage staff, roles, and dispatchable field technicians.</p>
+              </div>
+            </Link>
+
             <Link
               href="/settings/billing"
               className="p-4 rounded-xl border border-outline-variant/80 bg-surface hover:border-primary/50 transition-all flex flex-col justify-between group shadow-xs"
