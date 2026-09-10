@@ -19,6 +19,7 @@ import {
 import { saveSelectedPlanAction } from '@/app/actions/checkout';
 import { startFreeTrialAction } from '@/app/actions/billing';
 import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
+import { trackCompleteRegistration } from '@/components/analytics/MetaPixel';
 
 export default function BillingPage() {
   const router = useRouter();
@@ -106,6 +107,13 @@ export default function BillingPage() {
         });
         return;
       }
+
+      trackCompleteRegistration({
+        userId: user?.id,
+        email: user?.email,
+        plan: planKey,
+        contentName: `7-Day Free Trial - ${planKey}`,
+      });
 
       showToast({
         title: '7-Day Free Trial Activated!',

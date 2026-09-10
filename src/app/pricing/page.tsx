@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { createClient } from '@/lib/supabase/client';
 import { PLANS_CONFIG, AGENCY_PLANS_CONFIG, PlanKey, AgencyPlanKey, BillingInterval } from '@/lib/billing/types';
 import { startFreeTrialAction } from '@/app/actions/billing';
+import { trackCompleteRegistration } from '@/components/analytics/MetaPixel';
 import { 
   CheckCircle2, 
   Sparkles, 
@@ -105,6 +106,13 @@ export default function PricingPage() {
         });
         return;
       }
+
+      trackCompleteRegistration({
+        userId: user?.id,
+        email: user?.email,
+        plan: planKey,
+        contentName: `7-Day Free Trial - ${planKey}`,
+      });
 
       showToast({
         title: '7-Day Free Trial Started!',

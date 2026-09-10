@@ -8,6 +8,7 @@ import { SignupAccountType } from '@/lib/acquisition/types';
 import { captureAcquisitionAttribution, getStoredAttribution } from '@/lib/acquisition/tracker';
 import { recordAcquisitionAttributionAction } from '@/app/actions/acquisition';
 import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
+import { trackCompleteRegistration } from '@/components/analytics/MetaPixel';
 import {
   Building2,
   Globe,
@@ -120,11 +121,12 @@ export default function SignupPage() {
           plan: selectedPlan || 'Professional',
         });
 
-        // Meta Pixel: CompleteRegistration
-        if (typeof window !== 'undefined' && typeof (window as any).fbq === 'function') {
-          (window as any).fbq('track', 'CompleteRegistration', {
-            content_name: selectedPlan || 'Professional',
-            status: 'success',
+        // Meta Pixel: CompleteRegistration (fired strictly once for successful new account creation)
+        if (!res.isExistingUser) {
+          trackCompleteRegistration({
+            email: email.trim(),
+            plan: selectedPlan || 'Professional',
+            contentName: `7-Day Free Trial - ${selectedPlan || 'Professional'}`,
           });
         }
 

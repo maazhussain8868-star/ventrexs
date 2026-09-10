@@ -28,6 +28,7 @@ import { IndustryType } from '@/types';
 import { PLANS_CONFIG, PlanKey } from '@/lib/billing/types';
 import { Button } from '@/components/ui/Button';
 import { ConversionTracker } from '@/lib/analytics/conversion-tracker';
+import { trackCompleteRegistration } from '@/components/analytics/MetaPixel';
 import { ExpiredTrialBlocker } from '@/components/billing/ExpiredTrialBlocker';
 
 const INDUSTRY_OPTIONS: { id: IndustryType; label: string; icon: string }[] = [
@@ -185,6 +186,11 @@ export default function BusinessOnboardingPage() {
       if (isTrial) {
         const trialRes = await startFreeTrialAction({ plan: selectedPlan });
         if (trialRes.success) {
+          trackCompleteRegistration({
+            email: ownerEmail,
+            plan: selectedPlan,
+            contentName: `7-Day Free Trial - ${selectedPlan || 'Professional'}`,
+          });
           showToast({
             title: '7-Day Free Trial Activated!',
             description: 'Your workspace is ready with full access.',

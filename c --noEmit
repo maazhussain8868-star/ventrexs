@@ -1,0 +1,15 @@
+warning: in the working copy of '.env.example', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/billing/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/onboarding/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/pricing/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/signup/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/analytics/MetaPixel.tsx', LF will be replaced by CRLF the next time Git touches it
+ .env.example                           |   3 [32m+[m
+ src/app/billing/page.tsx               |   8 [32m++[m
+ src/app/layout.tsx                     |  25 [32m++++[m
+ src/app/onboarding/page.tsx            |   6 [32m+[m
+ src/app/pricing/page.tsx               |   8 [32m++[m
+ src/app/signup/page.tsx                |  12 [32m+[m[31m-[m
+ src/components/analytics/MetaPixel.tsx | 207 [32m++++++++++++++++++++++++[m[31m---------[m
+ 7 files changed, 207 insertions(+), 62 deletions(-)
