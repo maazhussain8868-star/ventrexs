@@ -60,7 +60,7 @@ export async function resendVerificationEmailAction(rawEmail: string, origin?: s
         return {
           success: false,
           error:
-            'A verification email was recently requested for this address. Please check your inbox (including spam), or wait a few minutes before trying again.',
+            'A verification email was recently requested for this address. Please check your inbox (and spam folder) or wait 60 seconds before requesting another.',
           cooldownRemaining: 60,
         };
       }
@@ -94,7 +94,7 @@ export async function resendVerificationEmailAction(rawEmail: string, origin?: s
       return {
         success: false,
         error:
-          'A verification email was recently requested for this address. Please check your inbox or wait a few minutes before requesting another.',
+          'A verification email was recently requested for this address. Please check your inbox (and spam folder) or wait 60 seconds before requesting another.',
         cooldownRemaining: 60,
       };
     }
@@ -168,3 +168,123 @@ export async function resetPasswordForEmailAction(rawEmail: string, origin?: str
     };
   }
 }
+
+export interface EmailAuthProviderCheckResult {
+  exists: boolean;
+  hasPassword: boolean;
+  hasGoogle: boolean;
+  isGoogleOnly: boolean;
+  providers: string[];
+  loginMessage?: string;
+  signupMessage?: string;
+}
+
+/**
+ * Checks whether an email is registered in Supabase Auth and whether it only possesses
+ * OAuth (e.g. Google) identities without an active password set.
+ * 
+ * Used to avoid generic "Invalid login credentials" confusion when a user attempts
+ * email/password authentication on an account created through Google Sign-In.
+ */
+export async function checkEmailAuthProviderAction(rawEmail: string): Promise<EmailAuthProviderCheckResult> {
+  const email = (rawEmail || '').trim().toLowerCase();
+
+  const emptyResult: EmailAuthProviderCheckResult = {
+    exists: false,
+    hasPassword: false,
+    hasGoogle: false,
+    isGoogleOnly: false,
+    providers: [],
+  };
+
+  if (!email || !email.includes('@')) {
+    return emptyResult;
+  }
+
+  try {
+    const adminSupabase = createAdminClient();
+
+    // 1. Primary path: Call the dedicated database function via RPC
+    try {
+      const { data: rpcData, error: rpcError } = await (adminSupabase as any).rpc(
+        'check_user_auth_provider',
+        { target_email: email }
+      );
+
+      if (!rpcError && rpcData && typeof rpcData === 'object') {
+        const isGoogleOnly = Boolean(rpcData.isGoogleOnly);
+        return {
+          exists: Boolean(rpcData.exists),
+          hasPassword: Boolean(rpcData.hasPassword),
+          hasGoogle: Boolean(rpcData.hasGoogle),
+          isGoogleOnly,
+          providers: Array.isArray(rpcData.providers) ? rpcData.providers : [],
+          loginMessage: isGoogleOnly
+            ? "This email is registered via Google Sign-In. Please use the 'Sign in with Google' button, or click 'Forgot Password' to set a password for email login."
+            : undefined,
+          signupMessage: isGoogleOnly
+            ? "An account already exists for this email via Google Sign-In. Sign in with Google, or reset your password to enable email/password login."
+            : undefined,
+        };
+      }
+    } catch (rpcErr) {
+      // Non-blocking: fallback to Supabase Admin API
+      console.warn('RPC check_user_auth_provider notice, trying admin API fallback:', rpcErr);
+    }
+
+    // 2. Fallback path: Query Supabase Auth Admin API
+    try {
+      const { data, error } = await adminSupabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+
+      if (!error && data?.users) {
+        const user = data.users.find(
+          (u) => u.email?.toLowerCase() === email
+        );
+
+        if (user) {
+          const appMeta = user.app_metadata || {};
+          const identities = user.identities || [];
+
+          const hasGoogle =
+            identities.some((i: any) => i.provider === 'google') ||
+            appMeta.provider === 'google' ||
+            (Array.isArray(appMeta.providers) && appMeta.providers.includes('google'));
+
+          const hasPassword =
+            identities.some((i: any) => i.provider === 'email') ||
+            (Array.isArray(appMeta.providers) && appMeta.providers.includes('email'));
+
+          const isGoogleOnly = Boolean(hasGoogle && !hasPassword);
+          const providers: string[] = [];
+          if (hasGoogle) providers.push('google');
+          if (hasPassword) providers.push('email');
+
+          return {
+            exists: true,
+            hasPassword,
+            hasGoogle,
+            isGoogleOnly,
+            providers,
+            loginMessage: isGoogleOnly
+              ? "This email is registered via Google Sign-In. Please use the 'Sign in with Google' button, or click 'Forgot Password' to set a password for email login."
+              : undefined,
+            signupMessage: isGoogleOnly
+              ? "An account already exists for this email via Google Sign-In. Sign in with Google, or reset your password to enable email/password login."
+              : undefined,
+          };
+        }
+      }
+    } catch (adminErr) {
+      console.warn('Admin API listUsers check notice:', adminErr);
+    }
+
+    return emptyResult;
+  } catch (err) {
+    // If admin client credentials are not configured or network fails, safely return empty result
+    return emptyResult;
+  }
+}
+

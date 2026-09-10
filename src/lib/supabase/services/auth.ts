@@ -1,9 +1,13 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types';
+import { checkEmailAuthProviderAction } from '@/app/actions/auth';
 
 export function formatAuthErrorMessage(error: any): string {
   if (!error) return 'An unexpected authentication error occurred.';
   const msg = typeof error === 'string' ? error : error.message || error.error_description || error.msg || '';
+  if (msg.includes('Google Sign-In') || msg.includes('Google sign-in')) {
+    return msg;
+  }
   const code = typeof error === 'object' && error !== null ? String(error.code || error.error_code || '') : '';
   const lower = (msg + ' ' + code).toLowerCase();
 
@@ -23,10 +27,10 @@ export function formatAuthErrorMessage(error: any): string {
     lower.includes('too many requests') ||
     lower.includes('email_rate_limit_exceeded') ||
     lower.includes('email rate limit exceeded') ||
-    error.status === 429 ||
-    error.statusCode === 429
+    error?.status === 429 ||
+    error?.statusCode === 429
   ) {
-    return 'A verification email was recently requested for this address. Please check your inbox (and spam folder) or wait a few minutes before requesting another.';
+    return 'Email verification rate limit reached. Supabase temporarily restricts sending to prevent spam. Please check your inbox (including Spam folder), or wait 60 seconds before requesting another.';
   }
 
   if (
@@ -54,31 +58,31 @@ export function formatAuthErrorMessage(error: any): string {
 }
 
 /**
- * Environment-safe URL resolution for production and development.
- * In production, this NEVER returns localhost:3000 or 127.0.0.1.
- * Always resolves strictly to https://www.ventrexs.com (or non-local NEXT_PUBLIC_APP_URL).
+ * Environment-safe URL resolution for production, staging, and development.
+ * In the browser, always uses the active window.location.origin so redirects stay
+ * on the exact domain (e.g. localhost, apex https://ventrexs.com, or https://www.ventrexs.com).
+ * On the server, uses the provided request origin, NEXT_PUBLIC_APP_URL, or https://www.ventrexs.com.
  */
 export function resolveAppUrl(origin?: string): string {
-  const isProd = process.env.NODE_ENV === 'production';
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-
-  if (isProd) {
-    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
-      return envUrl.replace(/\/$/, '');
+  // 1. Browser context: always use the active window origin
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const browserOrigin = window.location.origin.replace(/\/$/, '');
+    if (browserOrigin && !browserOrigin.includes('undefined')) {
+      return browserOrigin;
     }
-    return 'https://www.ventrexs.com';
   }
 
-  // Non-production environment:
+  // 2. Server context with explicit origin passed from request
   if (origin && !origin.includes('undefined')) {
     return origin.replace(/\/$/, '');
   }
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin.replace(/\/$/, '');
-  }
-  if (envUrl) {
+
+  // 3. Server fallback from environment
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl && !envUrl.includes('undefined')) {
     return envUrl.replace(/\/$/, '');
   }
+
   return 'https://www.ventrexs.com';
 }
 
@@ -216,15 +220,32 @@ export class AuthService {
       if (authError) throw authError;
       if (!authData.user) throw new Error('Failed to create user account');
 
-      // Supabase returns an empty identities array if the user already exists
+      // Supabase returns an empty identities array if the user already exists (user enumeration protection)
       const isExistingUser =
         authData.user &&
         Array.isArray(authData.user.identities) &&
         authData.user.identities.length === 0;
 
+      if (isExistingUser) {
+        // In Supabase, if identities.length === 0, NO verification email was sent because the account already exists!
+        // Check if the user is registered via Google OAuth or standard email/password
+        try {
+          const providerCheck = await checkEmailAuthProviderAction(params.email);
+          if (providerCheck.isGoogleOnly && providerCheck.signupMessage) {
+            throw new Error(providerCheck.signupMessage);
+          }
+        } catch (checkErr: any) {
+          if (checkErr?.message?.includes('Google Sign-In')) {
+            throw checkErr;
+          }
+        }
+        throw new Error(
+          'An account with this email already exists. Please sign in instead, or request a verification email below if your account is not yet confirmed.'
+        );
+      }
+
       let business = null;
-      // Only attempt client-side workspace creation if we have an active authenticated session.
-      // If email confirmation is required, session is null, and ensureUserWorkspace will run upon first login.
+      // If a session was returned (email confirmation disabled in Supabase), ensure workspace immediately
       if (authData.session) {
         try {
           const result = await this.ensureUserWorkspace({
@@ -244,9 +265,27 @@ export class AuthService {
         session: authData.session,
         business,
         needsEmailConfirmation: !authData.session,
-        isExistingUser,
+        isExistingUser: false,
+        isGoogleOnlyAccount: false,
       };
     } catch (err: any) {
+      const msg = (err?.message || '').toLowerCase();
+      if (
+        msg.includes('user already registered') ||
+        msg.includes('email already in use') ||
+        msg.includes('already exists')
+      ) {
+        try {
+          const providerCheck = await checkEmailAuthProviderAction(params.email);
+          if (providerCheck.isGoogleOnly && providerCheck.signupMessage) {
+            throw new Error(providerCheck.signupMessage);
+          }
+        } catch (checkErr: any) {
+          if (checkErr?.message?.includes('Google Sign-In')) {
+            throw checkErr;
+          }
+        }
+      }
       const formatted = formatAuthErrorMessage(err);
       throw new Error(formatted);
     }
@@ -338,6 +377,25 @@ export class AuthService {
       if (error) throw error;
       return data;
     } catch (err: any) {
+      const msg = (err?.message || '').toLowerCase();
+      const code = (err?.code || err?.error_code || '').toLowerCase();
+      if (
+        msg.includes('invalid login credentials') ||
+        msg.includes('invalid_credentials') ||
+        msg.includes('invalid credentials') ||
+        code.includes('invalid_credentials')
+      ) {
+        try {
+          const providerCheck = await checkEmailAuthProviderAction(params.email);
+          if (providerCheck.isGoogleOnly && providerCheck.loginMessage) {
+            throw new Error(providerCheck.loginMessage);
+          }
+        } catch (checkErr: any) {
+          if (checkErr?.message?.includes('Google Sign-In')) {
+            throw checkErr;
+          }
+        }
+      }
       const formatted = formatAuthErrorMessage(err);
       throw new Error(formatted);
     }

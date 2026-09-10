@@ -195,7 +195,7 @@ interface AppContextType {
   enterDemoMode: () => void;
   exitDemoMode: () => void;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (params: { email: string; password: string; name: string; businessName: string; plan?: string }) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; isExistingUser?: boolean; error?: string }>;
+  signUp: (params: { email: string; password: string; name: string; businessName: string; plan?: string }) => Promise<{ success: boolean; needsEmailConfirmation?: boolean; isExistingUser?: boolean; isGoogleOnlyAccount?: boolean; error?: string }>;
   resendVerificationEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
   resetPasswordForEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
   updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
@@ -414,21 +414,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const supabase = useMemo(() => createClient(), []);
   const services = useMemo(() => createSupabaseServices(supabase), [supabase]);
 
-  // Toast Helper
-  const showToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
-    const id = 'toast-' + Math.random().toString(36).substring(2, 9);
-    const newToast: ToastMessage = { ...toast, id };
-    setToasts(prev => [...prev, newToast]);
-
-    const duration = toast.duration || 4500;
-    setTimeout(() => {
-      dismissToast(id);
-    }, duration);
-  }, []);
-
   const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
+
+  // Toast Helper with duplicate suppression and max-queue capping
+  const showToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
+    setToasts(prev => {
+      // 1. Prevent duplicate stacking if an active toast has the same title and description
+      const hasDuplicate = prev.some(
+        t => t.title === toast.title && t.description === toast.description
+      );
+      if (hasDuplicate) {
+        return prev;
+      }
+
+      const id = 'toast-' + Math.random().toString(36).substring(2, 9);
+      const newToast: ToastMessage = { ...toast, id };
+
+      const duration = toast.duration || 4500;
+      setTimeout(() => {
+        dismissToast(id);
+      }, duration);
+
+      // Keep maximum 3 toasts visible at once
+      const capped = prev.length >= 3 ? prev.slice(prev.length - 2) : prev;
+      return [...capped, newToast];
+    });
+  }, [dismissToast]);
 
   const enterDemoMode = useCallback(() => {
     setIsDemoMode(true);
@@ -783,11 +796,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     name: string;
     businessName: string;
     plan?: string;
-  }): Promise<{ success: boolean; needsEmailConfirmation?: boolean; isExistingUser?: boolean; error?: string }> => {
+  }): Promise<{ success: boolean; needsEmailConfirmation?: boolean; isExistingUser?: boolean; isGoogleOnlyAccount?: boolean; error?: string }> => {
     setIsLoading(true);
     try {
       const res = await services.auth.signUp(params);
-      const { user: authUser, session: authSession, business, needsEmailConfirmation, isExistingUser } = res;
+      const { user: authUser, session: authSession, business, needsEmailConfirmation, isExistingUser, isGoogleOnlyAccount } = res;
       setUser(authUser);
       setSession(authSession);
       setIsDemoMode(false);
@@ -812,10 +825,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (needsEmailConfirmation) {
         showToast({
-          title: isExistingUser ? 'Account Exists — Please Confirm' : 'Verification Email Sent',
-          description: isExistingUser
-            ? `An account already exists for ${params.email}. Please check your email to activate it, or sign in.`
-            : `Please check ${params.email} to confirm your account and complete setup.`,
+          title: 'Verification Email Sent',
+          description: `Please check ${params.email} (including your Spam folder) to confirm your account and complete setup.`,
           type: 'info',
         });
       } else {
@@ -826,7 +837,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
       setIsLoading(false);
-      return { success: true, needsEmailConfirmation, isExistingUser };
+      return { success: true, needsEmailConfirmation, isExistingUser: false, isGoogleOnlyAccount: false };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Failed to create account.';
       setIsLoading(false);

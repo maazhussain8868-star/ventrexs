@@ -1,18 +1,27 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Mail, ArrowRight, Loader2, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
+  const emailParam = searchParams.get('email') || '';
   const { resetPasswordForEmail } = useApp();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(emailParam);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (emailParam && !email) {
+      setEmail(emailParam);
+    }
+  }, [emailParam, email]);
 
   const isSubmittingRef = useRef(false);
 
@@ -154,5 +163,13 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }
